@@ -32,3 +32,6 @@ build/
 
 # macOS specific files
 .DS_Store
+
+# Coverage
+htmlcov
