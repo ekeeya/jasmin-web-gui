@@ -1,0 +1,92 @@
+services:
+
+  redis:
+    image: redis:alpine
+    restart: unless-stopped
+    healthcheck:
+      test: redis-cli ping | grep PONG
+    deploy:
+      resources:
+        limits:
+          cpus: '0.2'
+          memory: 128M
+    security_opt:
+      - no-new-privileges:true
+
+  rabbit-mq:
+    image: rabbitmq:3.10-management-alpine
+    restart: unless-stopped
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 525M
+    security_opt:
+      - no-new-privileges:true
+
+  django:
+    image: django-docker:0.0.1
+    build: .
+    ports:
+      - 8000:8000
+    volumes:
+      - .:/app
+    environment:
+      - DEBUG=True
+
+  jasmin:
+    image: jookies/jasmin:0.10
+    container_name: jasmin
+    restart: unless-stopped
+    ports:
+      - 2775:2775
+      - 8990:8990
+      - 1401:1401
+    depends_on:
+      redis:
+        condition: service_healthy
+      rabbit-mq:
+        condition: service_healthy
+    environment:
+      REDIS_CLIENT_HOST: redis
+      AMQP_BROKER_HOST: rabbit-mq
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 256M
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - ./entrypoint.sh:/usr/local/bin/entrypoint.sh
+    entrypoint: [ "/usr/local/bin/entrypoint.sh" ]
+    command: [ "jasmin" ]
+
+  jasmin_celery:
+    image: jookies/jasmin:0.10
+    restart: unless-stopped
+    container_name: jasmin_celery
+    depends_on:
+      - rabbit-mq
+      - redis
+    entrypoint: [ "/usr/local/bin/celery", "-A", "jasmin.protocols.rest.tasks", "worker", "-l", "INFO", "-c", "4" ]
+    environment:
+      CELERY_BROKER_URL: amqp://guest:guest@rabbit-mq:5672//
+      CELERY_RESULT_BACKEND: redis://:@redis:6379/1
+
+  jasmin_rest:
+    build:
+      context: .
+      dockerfile: Dockerfile.rest
+    restart: unless-stopped
+    container_name: jasmin_rest
+    ports:
+      - 8080:8080
+    depends_on:
+      - jasmin
+      - jasmin_celery
+    entrypoint: [ "/usr/local/bin/python", "/usr/local/bin/twistd", "-n", "--pidfile=/tmp/twistd-web-restapi.pid", "web", "--wsgi=jasmin.protocols.rest.api" ]
+    environment:
+      JASMIN_OLD_API_URI: http://jasmin:1401

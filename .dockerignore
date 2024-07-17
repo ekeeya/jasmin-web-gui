@@ -1,0 +1,7 @@
+.idea
+venv
+.vscode/
+htmlcov
+*.log
+node_modules
+db.sqlite3

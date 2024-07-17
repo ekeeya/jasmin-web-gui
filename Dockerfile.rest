@@ -1,0 +1,13 @@
+FROM jookies/jasmin:0.10 as base
+
+WORKDIR /build
+COPY config.py /build/jasmin/protocols/rest/
+
+RUN pip install .
+
+FROM base
+
+WORKDIR /usr/jasmin
+ENV PATH=$PATH:/usr/local/bin
+
+ENTRYPOINT ["python", "twistd", "-n", "--pidfile=/tmp/twistd-web-restapi.pid", "web", "--wsgi=jasmin.protocols.rest.api"]
