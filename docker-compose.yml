@@ -38,12 +38,14 @@ services:
 
   jasmin:
     image: jookies/jasmin:0.10
-    container_name: jasmin
+    container_name: adapter
     restart: unless-stopped
     ports:
       - 2775:2775
       - 8990:8990
       - 1401:1401
+      - 8988:8988
+      - 8989:8989
     depends_on:
       redis:
         condition: service_healthy
@@ -59,10 +61,6 @@ services:
           memory: 256M
     security_opt:
       - no-new-privileges:true
-    volumes:
-      - ./entrypoint.sh:/usr/local/bin/entrypoint.sh
-    entrypoint: [ "/usr/local/bin/entrypoint.sh" ]
-    command: [ "jasmin" ]
 
   jasmin_celery:
     image: jookies/jasmin:0.10
@@ -71,7 +69,7 @@ services:
     depends_on:
       - rabbit-mq
       - redis
-    entrypoint: [ "/usr/local/bin/celery", "-A", "jasmin.protocols.rest.tasks", "worker", "-l", "INFO", "-c", "4" ]
+    entrypoint: [ "/usr/local/bin/celery", "-A", "adapter.protocols.rest.tasks", "worker", "-l", "INFO", "-c", "4" ]
     environment:
       CELERY_BROKER_URL: amqp://guest:guest@rabbit-mq:5672//
       CELERY_RESULT_BACKEND: redis://:@redis:6379/1
@@ -87,6 +85,6 @@ services:
     depends_on:
       - jasmin
       - jasmin_celery
-    entrypoint: [ "/usr/local/bin/python", "/usr/local/bin/twistd", "-n", "--pidfile=/tmp/twistd-web-restapi.pid", "web", "--wsgi=jasmin.protocols.rest.api" ]
+    entrypoint: [ "/usr/local/bin/python", "/usr/local/bin/twistd", "-n", "--pidfile=/tmp/twistd-web-restapi.pid", "web", "--wsgi=adapter.protocols.rest.api" ]
     environment:
       JASMIN_OLD_API_URI: http://jasmin:1401

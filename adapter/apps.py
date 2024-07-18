@@ -18,16 +18,9 @@
 #  If not, see <http://www.gnu.org/licenses/>.
 #
 
-from django.test import TestCase
-from .models import Post
+from django.apps import AppConfig
 
 
-# Create your tests here.
-
-
-class ModelTestCase(TestCase):
-    def setUp(self):
-        self.post = Post.objects.create(title="django", author="ekeeya", slug="django")
-
-    def test_instance(self):
-        self.assertTrue(isinstance(self.post, Post))
+class AdapterConfig(AppConfig):
+    default_auto_field = 'django.db.models.BigAutoField'
+    name = 'adapter'

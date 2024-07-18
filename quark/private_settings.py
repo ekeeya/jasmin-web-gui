@@ -1,4 +1,3 @@
-
 #
 #  Copyright (c) 2024
 #  File created on 2024/7/17
@@ -18,16 +17,19 @@
 #  If not, see <http://www.gnu.org/licenses/>.
 #
 
-from django.test import TestCase
-from .models import Post
+
+JASMIN_HOST = "127.0.0.1"
+JASMIN_PORT = "8990"
+JASMIN_JCLI_USERNAME = ""
+JASMIN_JCLI_PASSWORD = ""
+
+JASMIN_ROUTER_PB_HOST = "127.0.0.1"
+JASMIN_ROUTER_PB_PORT = 8988
+JASMIN_ROUTER_PB_USERNAME = "radmin"
+JASMIN_ROUTER_PB_PASSWORD = "rpwd"
 
 
-# Create your tests here.
-
-
-class ModelTestCase(TestCase):
-    def setUp(self):
-        self.post = Post.objects.create(title="django", author="ekeeya", slug="django")
-
-    def test_instance(self):
-        self.assertTrue(isinstance(self.post, Post))
+JASMIN_SMPP_PB_HOST = "127.0.0.1"
+JASMIN_SMPP_PB_PORT = 8989
+JASMIN_SMPP_PB_USERNAME = "cmadmin"
+JASMIN_SMPP_PB_PASSWORD = "cmpwd"
