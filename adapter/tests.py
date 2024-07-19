@@ -22,9 +22,11 @@ from twisted.internet.defer import Deferred
 from twisted.internet import reactor, defer
 from jasmin.routing.jasminApi import User, Group
 from django.test import TestCase
+from django.contrib.auth.models import User
 from adapter.router_pb import RouterPBInterface
 from quark.utils import logger, to_dict
 from .serializers import JasminUserSerializer
+from .models import JasminGroup
 import json
 
 
@@ -33,6 +35,7 @@ class JasminAdapterTestCase(TestCase):
 
     def setUp(self):
         self.router_pb_interface = RouterPBInterface()
+        self.user = User.objects.create_user(username='testuser', password='12345678')
 
     def test_jasmin_interface(self):
         @defer.inlineCallbacks
@@ -44,17 +47,16 @@ class JasminAdapterTestCase(TestCase):
                 yield self.router_pb_interface.add_user('test_user', 'password', g1, False)
                 users = yield self.router_pb_interface.get_all_users()
                 groups = yield self.router_pb_interface.get_all_groups()
-                logger.debug('users: %s', users)
-                logger.debug('groups: %s', groups)
                 self.router_pb_interface.close()
                 self.assertIsInstance(users, list)
                 self.assertIsInstance(groups, list)
-                for user in users:
-                    serializer = JasminUserSerializer(user)
-                    logger.debug('Found user: %s', serializer.data)
-
             except Exception as e:
                 logger.error(e)
                 self.router_pb_interface.close()
 
         self.router_pb_interface.execute(workflow)
+
+    def test_db_jasmin_group_creation(self):
+        self.client.login(username='testuser', password='12345678')
+        group = JasminGroup.create("db_test_group")
+        self.assertIsInstance(group, JasminGroup)

@@ -7,7 +7,8 @@ from jasmin.protocols.cli.smppccm import JCliSMPPClientConfig as SmppClientConne
 from jasmin.routing.jasminApi import User, Group
 from quark.utils import logger
 from django.conf import settings
-from jasmin.tools.proxies import ConnectedPB
+from twisted.internet.task import deferLater
+from twisted.internet.threads import deferToThread
 
 
 class RouterPBInterface(RouterPBProxy):
@@ -35,6 +36,7 @@ class RouterPBInterface(RouterPBProxy):
                 yield self.persist()
         except Exception as e:
             logger.error("Error adding group to Jasmin PB: %s", e)
+            raise e
 
     @defer.inlineCallbacks
     def add_user(self, username: str, password: str, group: Group, persist: bool = True):
@@ -80,10 +82,10 @@ class RouterPBInterface(RouterPBProxy):
         # Placeholder for MO router functionality
         pass
 
-    def close(self):
-        if reactor.running:  # only stop if running
-            reactor.stop()
-
     def execute(self, callback):
         reactor.callWhenRunning(callback)
         reactor.run()
+
+    def close(self):
+        if reactor.running:
+            reactor.stop()

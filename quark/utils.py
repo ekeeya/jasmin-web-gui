@@ -17,9 +17,27 @@
 #  If not, see <http://www.gnu.org/licenses/>.
 #
 import logging
+import threading
 from typing import Any
+from django.db import models
+from django.contrib.auth.models import User
 
 logger = logging.getLogger('main')
+
+
+_thread_locals = threading.local()
+
+
+def set_current_user(user):
+    _thread_locals.user = user
+
+
+def get_current_user():
+    return getattr(_thread_locals, 'user', None)
+
+
+def remove_current_user():
+    _thread_locals.user = None
 
 
 def to_dict(obj: Any) -> dict:
@@ -48,3 +66,23 @@ def to_dict(obj: Any) -> dict:
             result[key] = element
 
     return result
+
+
+class BaseModel(models.Model):
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=False, editable=False,
+                                   related_name='%(class)s_created')
+    modified_by = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=False, editable=False,
+                                    related_name='%(class)s_modified')
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True, blank=False, null=True)
+    modified_at = models.DateTimeField(auto_now=True, db_index=True, blank=False, null=True)
+
+    def save(self, *args, **kwargs):
+        user = get_current_user()
+        if user and user.is_authenticated:
+            self.modified_by = user
+            if not self.id:
+                self.created_by = user
+        super(BaseModel, self).save(*args, **kwargs)
+
+    class Meta:
+        abstract = True

@@ -45,7 +45,7 @@ class JasminUserSerializer(serializers.Serializer):
 
 
 class JasminFilterSerializer(serializers.Serializer):
-    userFor = serializers.ListSerializer()
+    userFor = serializers.ListSerializer(child=serializers.CharField())
     connector = JasminConnectorSerializer()
     user = serializers.CharField()
     group = serializers.CharField()
