@@ -1,6 +1,7 @@
 import pickle
 from twisted.internet import defer, reactor
 from jasmin.routing.proxies import RouterPBProxy
+from twisted.internet.defer import Deferred, inlineCallbacks
 from jasmin.routing.Filters import DestinationAddrFilter
 from jasmin.routing.Routes import DefaultRoute, StaticMTRoute
 from jasmin.protocols.cli.smppccm import JCliSMPPClientConfig as SmppClientConnector
@@ -8,35 +9,36 @@ from jasmin.routing.jasminApi import User, Group
 from quark.utils import logger
 from django.conf import settings
 from twisted.internet.task import deferLater
-from twisted.internet.threads import deferToThread
+from twisted.internet.threads import deferToThread, blockingCallFromThread
 
 
-class RouterPBInterface(RouterPBProxy):
+class RouterPBInterface (RouterPBProxy):
     host = settings.JASMIN_ROUTER_PB_HOST
     port = settings.JASMIN_ROUTER_PB_PORT
     username = settings.JASMIN_ROUTER_PB_USERNAME
     password = settings.JASMIN_ROUTER_PB_PASSWORD
 
     def __init__(self):
-        super().__init__()
+        self.deferred = None
 
-    @defer.inlineCallbacks
-    def connect(self):
-        try:
-            yield super().connect(self.host, self.port, self.username, self.password)
-        except Exception as e:
-            logger.error(f"Error connecting to Jasmin PB: {e}")
+    def set_deferred(self, deferred):
+        self.deferred = deferred
 
     @defer.inlineCallbacks
     def add_group(self, group_name: str, persist: bool = True):
         try:
+            logger.info("Establishing a connection to jasmin")
+            yield super().connect(self.host, self.port, self.username, self.password)
             group = Group(group_name)
             yield self.group_add(group)
+            logger.info(f"Added group {group_name}")
             if persist:
                 yield self.persist()
         except Exception as e:
-            logger.error("Error adding group to Jasmin PB: %s", e)
-            raise e
+            logger.error(e)
+        finally:
+            logger.debug("Will disconnect from jasmin")
+            self.disconnect()
 
     @defer.inlineCallbacks
     def add_user(self, username: str, password: str, group: Group, persist: bool = True):
@@ -77,15 +79,9 @@ class RouterPBInterface(RouterPBProxy):
         except Exception as e:
             logger.error("Error adding MT router to Jasmin PB: %s", e)
 
-    @defer.inlineCallbacks
-    def add_morouter(self, connector, filter=None, persist=True):
-        # Placeholder for MO router functionality
-        pass
-
-    def execute(self, callback):
-        reactor.callWhenRunning(callback)
-        reactor.run()
-
-    def close(self):
-        if reactor.running:
-            reactor.stop()
+    def execute(self):
+        def run():
+            d = self.deferred
+        # see https://docs.twistedmatrix.com/en/stable/api/twisted.internet.threads.html#blockingCallFromThread
+        # # force our deferred to execute sync
+        blockingCallFromThread(reactor, run)

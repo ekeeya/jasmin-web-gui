@@ -73,8 +73,8 @@ class BaseModel(models.Model):
                                    related_name='%(class)s_created')
     modified_by = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=False, editable=False,
                                     related_name='%(class)s_modified')
-    created_at = models.DateTimeField(auto_now_add=True, db_index=True, blank=False, null=True)
-    modified_at = models.DateTimeField(auto_now=True, db_index=True, blank=False, null=True)
+    created_on = models.DateTimeField(auto_now_add=True, db_index=True, blank=False, null=True)
+    modified_on = models.DateTimeField(auto_now=True, db_index=True, blank=False, null=True)
 
     def save(self, *args, **kwargs):
         user = get_current_user()

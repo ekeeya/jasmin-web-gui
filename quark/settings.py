@@ -1,4 +1,3 @@
-
 #
 #  Copyright (c) 2024
 #  File created on 2024/7/17
@@ -21,9 +20,10 @@
 import os
 from pathlib import Path
 from .private_settings import *
+from .datasource import *
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
@@ -35,7 +35,6 @@ SECRET_KEY = 'django-insecure-nl7ec)b+qk$@ytxui!65^bt27x&538$g7h@i&l#282l-#&jpa$
 DEBUG = True
 
 ALLOWED_HOSTS = ["*"]
-
 
 # Application definition
 
@@ -82,16 +81,8 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'quark.wsgi.application'
 
-
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
-
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
-}
 
 
 # Password validation
@@ -112,7 +103,6 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-
 # Internationalization
 # https://docs.djangoproject.com/en/5.0/topics/i18n/
 
@@ -124,7 +114,6 @@ USE_I18N = True
 
 USE_TZ = True
 
-
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.0/howto/static-files/
 
@@ -135,7 +124,6 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -144,7 +132,7 @@ LOGGING = {
         'main_formatter': {
             'format': '{asctime} {levelname} {module} {process:d} {thread:d} {message}',
             'style': '{',
-            'datefmt': '%Y-%m-%d %H:%M:%S'  # Custom date format
+            'datefmt': '%Y-%m-%d %H:%M:%S'
         },
     },
     'handlers': {
@@ -161,3 +149,8 @@ LOGGING = {
         }
     }
 }
+
+JASMIN_PERSIST = True
+
+CELERY_BROKER_URL = 'redis://localhost:6379/0'
+CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'

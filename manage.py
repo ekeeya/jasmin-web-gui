@@ -22,6 +22,21 @@
 
 import os
 import sys
+import atexit
+from twisted.internet import reactor
+import threading
+
+
+def cleanup():
+    if reactor.running:
+        reactor.stop()
+
+
+def run_reactor():
+    reactor.run(installSignalHandlers=False)
+
+
+atexit.register(cleanup)
 
 
 def main():
@@ -29,12 +44,17 @@ def main():
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'quark.settings')
     try:
         from django.core.management import execute_from_command_line
+
     except ImportError as exc:
         raise ImportError(
             "Couldn't import Django. Are you sure it's installed and "
             "available on your PYTHONPATH environment variable? Did you "
             "forget to activate a virtual environment?"
         ) from exc
+
+    reactor_thread = threading.Thread(target=run_reactor, daemon=True)
+    reactor_thread.start()
+
     execute_from_command_line(sys.argv)
 
 

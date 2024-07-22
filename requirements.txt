@@ -31,6 +31,7 @@ mccabe==0.7.0
 pexpect==4.9.0
 prometheus-client==0.18.0
 prompt_toolkit==3.0.47
+psycopg2==2.9.9
 ptyprocess==0.7.0
 pyasn1==0.5.1
 pyasn1_modules==0.4.0

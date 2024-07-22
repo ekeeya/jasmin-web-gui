@@ -4,7 +4,8 @@ from django.contrib import admin
 from .models import *
 
 models = [
-    JasminGroup
+    JasminGroup,
+    JasminUser
 ]
 
 admin.site.register(models)
