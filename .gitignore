@@ -37,3 +37,4 @@ build/
 htmlcov
 
 datasource.py
+profile.txt

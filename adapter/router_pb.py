@@ -12,7 +12,7 @@ from twisted.internet.task import deferLater
 from twisted.internet.threads import deferToThread, blockingCallFromThread
 
 
-class RouterPBInterface (RouterPBProxy):
+class RouterPBInterface(RouterPBProxy):
     host = settings.JASMIN_ROUTER_PB_HOST
     port = settings.JASMIN_ROUTER_PB_PORT
     username = settings.JASMIN_ROUTER_PB_USERNAME
@@ -27,16 +27,32 @@ class RouterPBInterface (RouterPBProxy):
     @defer.inlineCallbacks
     def add_group(self, group_name: str, persist: bool = True):
         try:
-            logger.info("Establishing a connection to jasmin")
+            logger.debug("Establishing a connection to jasmin")
             yield super().connect(self.host, self.port, self.username, self.password)
             group = Group(group_name)
             yield self.group_add(group)
-            logger.info(f"Added group {group_name}")
+            logger.debug(f"Added group {group_name}")
             if persist:
                 yield self.persist()
         except Exception as e:
             logger.error(e)
         finally:
+            logger.debug("Will disconnect from jasmin")
+            self.disconnect()
+
+    @defer.inlineCallbacks
+    def remove_groups(self, group_name: str = None):
+        try:
+            logger.debug("Establishing a connection to jasmin")
+            yield super().connect(self.host, self.port, self.username, self.password)
+            if group_name:
+                yield self.group_remove(group_name)
+            else:
+                yield self.group_remove_all()
+        except Exception as e:
+            logger.error(e)
+        finally:
+            yield self.persist()
             logger.debug("Will disconnect from jasmin")
             self.disconnect()
 
@@ -82,6 +98,7 @@ class RouterPBInterface (RouterPBProxy):
     def execute(self):
         def run():
             d = self.deferred
+
         # see https://docs.twistedmatrix.com/en/stable/api/twisted.internet.threads.html#blockingCallFromThread
         # # force our deferred to execute sync
         blockingCallFromThread(reactor, run)

@@ -79,7 +79,7 @@ def run_reactor():
     reactor.run(installSignalHandlers=0)
 
 
-class JasminGroup(BaseModel):
+class JasminGroup(SmartModel):
     gid = models.CharField(
         max_length=255,
         unique=True,
@@ -88,29 +88,71 @@ class JasminGroup(BaseModel):
         help_text=_("This matches the group id created in Jasmin"),
         verbose_name=_("Group Id")
     )
+    description = models.TextField(
+        null=True,
+        help_text=_("Short description about purpose of this group."),
+        verbose_name=_("Description"),
+        blank=True)
 
     def __str__(self):
         return self.gid
 
     def handle_result(self, result):
-        logger.info("Result from Twisted operation:")
+        logger.debug(f"Result from Twisted operation: {result}")
 
     def handle_error(self, error):
         logger.error("Error in Twisted operation:")
 
     def save(self, *args, **kwargs):
         # Save the Django model first
+        is_new = self.pk is None
+        # Since there is no jamin command to update the gid so
+        if not is_new:
+            raise Exception("Updating a gid is not allowed, just delete and recreate.")
         super().save(*args, **kwargs)
-        logger.info(f"Twisted reactor: {reactor.running}")
         router = RouterPBInterface()
         router.set_deferred(router.add_group(self.gid))
+        router.execute()
+
+    @classmethod
+    def map_jasmin_group(cls, jasmin_group):
+        group = None
+        try:
+            group = cls.objects.get(gid=jasmin_group)
+        except Exception as e:
+            logger.error(e)
+        return group
+
+    @classmethod
+    def map_bulk_jasmin_groups(cls, group_list):
+        groups = []
+        for group in group_list:
+            g = map_jasmin_group(group)
+            if g is not None:
+                groups.append(g)
+        return groups
+
+    def activate(self):
+        if self.is_active:
+            raise Exception("Group already activated")
+        self.is_active = True
+        router = RouterPBInterface()
+        router.set_deferred(router.group_enable(self.gid))
+        router.execute()
+
+    def deactivate(self):
+        if not self.is_active:
+            raise Exception("Group already deactivated")
+        self.is_active = False
+        router = RouterPBInterface()
+        router.set_deferred(router.group_disable(self.gid))
         router.execute()
 
     class Meta:
         db_table = 'jasmin_group'
 
 
-class JasminUser(BaseModel):
+class JasminUser(SmartModel):
     username = models.CharField(
         max_length=255,
         unique=True,
@@ -142,6 +184,7 @@ class JasminUser(BaseModel):
                 'authorization': SMPP_AUTHORIZATIONS,
                 'quota': SMPP_QUOTAS,
             }
+
         is_new = self.pk is None
         super().save(*args, **kwargs)
 
