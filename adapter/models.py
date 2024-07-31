@@ -25,7 +25,6 @@ from django.db import models, transaction
 from django.utils.translation import gettext_lazy as _
 from typing import Any
 from .data_classes import JasminUserConfig
-from .tasks import perform_operations_task
 from django.conf import settings
 import threading
 
@@ -97,12 +96,6 @@ class JasminGroup(SmartModel):
     def __str__(self):
         return self.gid
 
-    def handle_result(self, result):
-        logger.debug(f"Result from Twisted operation: {result}")
-
-    def handle_error(self, error):
-        logger.error("Error in Twisted operation:")
-
     def save(self, *args, **kwargs):
         # Save the Django model first
         is_new = self.pk is None
@@ -115,7 +108,7 @@ class JasminGroup(SmartModel):
         router.execute()
 
     @classmethod
-    def map_jasmin_group(cls, jasmin_group):
+    def map_from_jasmin(cls, jasmin_group):
         group = None
         try:
             group = cls.objects.get(gid=jasmin_group)
@@ -124,10 +117,10 @@ class JasminGroup(SmartModel):
         return group
 
     @classmethod
-    def map_bulk_jasmin_groups(cls, group_list):
+    def map_bulk_from_jasmin(cls, group_list):
         groups = []
         for group in group_list:
-            g = map_jasmin_group(group)
+            g = map_from_jasmin(group)
             if g is not None:
                 groups.append(g)
         return groups

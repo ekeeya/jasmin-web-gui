@@ -1,12 +1,10 @@
 [run]
-# Specify the source directories to include
 source =
     engine
     web 
     api
     adapter
 
-# Exclude specific directories or files
 omit =
     */migrations/*
     */tests/*
@@ -28,4 +26,4 @@ omit =
     env/*
     .venv/*
     .env/*
-    ./*.py
+    .idea/*

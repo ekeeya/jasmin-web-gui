@@ -25,6 +25,12 @@ class RouterPBInterface(RouterPBProxy):
         self.deferred = deferred
 
     @defer.inlineCallbacks
+    def pb_connect(self):
+        logger.debug("Establishing a connection to jasmin")
+        yield super().connect(self.host, self.port, self.username, self.password)
+        logger.debug("Established a connection to jasmin")
+
+    @defer.inlineCallbacks
     def add_group(self, group_name: str, persist: bool = True):
         try:
             logger.debug("Establishing a connection to jasmin")
@@ -43,14 +49,16 @@ class RouterPBInterface(RouterPBProxy):
     @defer.inlineCallbacks
     def remove_groups(self, group_name: str = None):
         try:
-            logger.debug("Establishing a connection to jasmin")
-            yield super().connect(self.host, self.port, self.username, self.password)
+            yield self.pb_connect()
             if group_name:
+                logger.debug(f"Removing group {group_name}")
                 yield self.group_remove(group_name)
             else:
+                logger.debug(f"Removing all groups")
                 yield self.group_remove_all()
         except Exception as e:
             logger.error(e)
+            raise e  # raise it again
         finally:
             yield self.persist()
             logger.debug("Will disconnect from jasmin")
@@ -59,6 +67,7 @@ class RouterPBInterface(RouterPBProxy):
     @defer.inlineCallbacks
     def add_user(self, username: str, password: str, group: Group, persist: bool = True):
         try:
+            yield self.pb_connect()
             user = User(username=username, password=password, group=group, uid=username)
             yield self.user_add(user)
             if persist:
@@ -69,6 +78,7 @@ class RouterPBInterface(RouterPBProxy):
     @defer.inlineCallbacks
     def get_all_users(self):
         try:
+            yield self.pb_connect()
             users = yield self.user_get_all()
             return pickle.loads(users)
         except Exception as e:
@@ -77,10 +87,11 @@ class RouterPBInterface(RouterPBProxy):
     @defer.inlineCallbacks
     def get_all_groups(self):
         try:
+            yield self.pb_connect()
             groups = yield self.group_get_all()
             return pickle.loads(groups)
-        except Exception as e:
-            logger.error("Error getting all groups from Jasmin PB: %s", e)
+        finally:
+            self.disconnect()
 
     @defer.inlineCallbacks
     def add_mtrouter(self, connector, filter=None, persist=True):
