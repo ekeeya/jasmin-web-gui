@@ -121,3 +121,14 @@ If this project helped you avoid hours of pain, consider showing some love, unfo
 Every sip counts and boosts moral!
 
 ---
+
+
+## 📬 Contact
+
+Want to get in touch?
+
+- **Email:** ekeeya@ds.co.ug
+- **Phone:** +256 765 810-344  
+- **X:** [@keldoticom](https://x.com/keldoticom)
+
+For business inquiries, feel free to reach out any time.
