@@ -20,6 +20,6 @@ This is a minimal Django 5.0 project.
 1. Create a virtualenv
     `python3.11 -m venv venv` // whichever way you always create this
 2. Activate the virtualenv
-     `source venv/bin/activate`
+    `source venv/bin/activate`
 3. Install the dependencies using pip
 4. `pip install -r requirements.txt`

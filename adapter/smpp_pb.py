@@ -25,7 +25,7 @@ from jasmin.protocols.cli.smppccm import JCliSMPPClientConfig as SmppClientConne
 import pickle as pickle
 
 
-class SmppPBAdapter:
+class SmppPBAdapter(SMPPClientManagerPBProxy):
     host = settings.JASMIN_SMPP_PB_HOST
     port = settings.JASMIN_SMPP_PB_PORT
     username = settings.JASMIN_SMPP_PB_USERNAME
@@ -37,40 +37,35 @@ class SmppPBAdapter:
     @defer.inlineCallbacks
     def connect(self):
         try:
-            self.proxy_smpp = SMPPClientManagerPBProxy()
-            yield self.proxy_smpp.connect(self.host,
-                                          self.port,
-                                          self.username,
-                                          self.password)
+            yield self.connect(self.host, self.port, self.username, self.password)
         except Exception as e:
-            self.proxy_smpp = None
             logger.error(f"Error connecting to Jasmin PB: {e}")
 
     @defer.inlineCallbacks
     def add_connector(self, params: dict):
         config = SMPPClientConfig(**params)
-        yield self.proxy_smpp.add(config)
+        yield self.add(config)
 
     @defer.inlineCallbacks
     def start_connector(self, cid: str):
-        yield self.proxy_smpp.start(cid)
+        yield self.start(cid)
 
     @defer.inlineCallbacks
     def stop_connector(self, cid: str):
-        yield self.proxy_smpp.stop(cid)
+        yield self.stop(cid)
 
     @defer.inlineCallbacks
     def delete_connector(self, cid: str):
-        yield self.proxy_smpp.remove(cid)
+        yield self.remove(cid)
 
     @defer.inlineCallbacks
     def get_connector(self, cid: str):
-        connector = yield self.proxy_smpp.connector_details(cid)
+        connector = yield self.connector_details(cid)
         return pickle.loads(connector)
 
     @defer.inlineCallbacks
     def connector_status(self, cid: str):
-        status = yield self.proxy_smpp.service_status(cid)
+        status = yield self.service_status(cid)
         return pickle.loads(status)
 
     @defer.inlineCallbacks

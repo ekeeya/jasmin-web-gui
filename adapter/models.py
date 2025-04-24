@@ -19,14 +19,9 @@
 from smartmin.models import SmartModel
 from quark.utils import logger, BaseModel
 from adapter.router_pb import RouterPBInterface
-from jasmin.routing.jasminApi import Group
-from twisted.internet import defer, reactor
-from django.db import models, transaction
+from twisted.internet import reactor
+from django.db import models
 from django.utils.translation import gettext_lazy as _
-from typing import Any
-from .data_classes import JasminUserConfig
-from django.conf import settings
-import threading
 
 MESSAGING_AUTHORIZATIONS = {
     'http_send': True,
@@ -120,7 +115,7 @@ class JasminGroup(SmartModel):
     def map_bulk_from_jasmin(cls, group_list):
         groups = []
         for group in group_list:
-            g = map_from_jasmin(group)
+            g = cls.map_from_jasmin(group)
             if g is not None:
                 groups.append(g)
         return groups
