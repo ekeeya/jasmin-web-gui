@@ -38,10 +38,10 @@ This project uses [Poetry](https://python-poetry.org) for dependency management 
 
 1. Clone the project:
     ```bash
-    git clone https://github.com/ekeeya/jasmin-web-gui.git 
+   git clone https://github.com/ekeeya/jasmin-web-gui.git 
     ```
    ```bash
-    cd jasmin-web-gui
+   cd jasmin-web-gui
     ```
 
 2. Create and activate virtual environment:
@@ -49,11 +49,11 @@ This project uses [Poetry](https://python-poetry.org) for dependency management 
    python3.11 -m venv venv
    ```
    ```bash
-    source venv/bin/activate
+   source venv/bin/activate
    ```
    Optionally install poetry in the ven if you do not have it globally using pip
    ```bash
-    pip install poerty
+   pip install poerty
    ```
 
 3. Install dependencies:
@@ -63,7 +63,7 @@ This project uses [Poetry](https://python-poetry.org) for dependency management 
 
 4. Apply migrations:
    ```bash
-    python manage.py migrate
+   python manage.py migrate
     ```
 
 5. Start server:
@@ -93,7 +93,7 @@ This project is a complete, containerized environment for Jasmin and supporting 
 To bring up the services:
 
    ```bash
-   docker-compose up --build
+   docker compose up --build
    ```
 
 ---
@@ -117,6 +117,7 @@ If this project helped you avoid hours of pain, consider showing some love, unfo
 **BTC Wallet:** `13it3P99sbMrtobij7S9ecJbE6jTciUw7E`
 
 **ETH Wallet:** `0xA83a39024BEd22ebcE2e64c8D28b541140A9d18d`
+
 Every sip counts and boosts moral!
 
 ---
