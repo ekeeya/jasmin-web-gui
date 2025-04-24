@@ -1,15 +1,15 @@
 import pickle
-from twisted.internet import defer, reactor
-from jasmin.routing.proxies import RouterPBProxy
-from twisted.internet.defer import Deferred, inlineCallbacks
+
+from django.conf import settings
+from jasmin.protocols.cli.smppccm import JCliSMPPClientConfig as SmppClientConnector
 from jasmin.routing.Filters import DestinationAddrFilter
 from jasmin.routing.Routes import DefaultRoute, StaticMTRoute
-from jasmin.protocols.cli.smppccm import JCliSMPPClientConfig as SmppClientConnector
 from jasmin.routing.jasminApi import User, Group
+from jasmin.routing.proxies import RouterPBProxy
+from twisted.internet import defer, reactor
+from twisted.internet.threads import blockingCallFromThread
+
 from quark.utils import logger
-from django.conf import settings
-from twisted.internet.task import deferLater
-from twisted.internet.threads import deferToThread, blockingCallFromThread
 
 
 class RouterPBInterface(RouterPBProxy):

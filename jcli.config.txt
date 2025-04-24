@@ -1,26 +1,26 @@
 # Create group
 
 group -a
-gid goip
+gid sms
 ok
 
 # create user
 
 user -a
-username goip_user
-password 123456
-gid goip
-uid goip_user
+username tester
+password test
+gid sms
+uid tester
 ok
 
 # create smpp client connector
 
 smppccm -a
-cid smsc-goip-connectoer
-host 127.0.0.1
-port 2775
-username goip_user
-password 123456
+cid smsc-test-connectoer
+host smppsim
+port 2776
+username smppclient1
+password password
 src_ton 1
 src_npi 1
 dst_ton 1
@@ -28,30 +28,31 @@ dst_npi 1
 bind ton 1
 bind npi 1
 bind transceiver
-submit_throughput 1
+submit_throughput 110
 ok
 
 # start the connector
 
-smppccm -1 smsc-goip-connectoer
+smppccm -1 smsc-test-connectoer
 
 
 # configure a default MT router
 
 mtrouter -a
-type defaultrouter
-connector smppc(smsc-goip-connectoer)
+type DefaultRoute
+connector smppc(smsc-test-connectoer)
 rate 200
 ok
 
-curl -L 'http://localhost:1401/send' \
+curl -L 'http://127.0.0.1:1401/send' \
 -H 'Content-Type: application/json' \
 -d '
 {
-    "username":"ekeeya",
-    "password":"123456",
+    "username":"tester",
+    "password":"test",
     "to":"0787411849",
     "content":"This is amazing, I must tell you my friend.",
     "dlr-url":"http://172.18.0.4:8000/api/dlr",
     "dlr-level": 3
 }'
+

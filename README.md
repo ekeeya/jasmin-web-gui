@@ -1,25 +1,122 @@
-# Jasmin-web-gui: Joyce
-Tired of the jcli, you are not sure how to get things quickly running in [Jasmin](https://docs.jasminsms.com/), well take a deep breathe and thank God I had some free time on my hands.
+# ☕ Joyce: Django GUI for Jasmin SMS Gateway
 
-[Jasmin](https://docs.jasminsms.com/) allows you to programmatically manage groups, users routers, connectors, etc. using its [Perspective broker API](https://docs.jasminsms.com/en/latest/faq/developers.html) 
-In this project we are not "teleneting" our way to jcli, we are abandoning it entirely in favor of the [Perspective broker API](https://docs.jasminsms.com/en/latest/faq/developers.html).
+Tired of fiddling with `jcli`? Joyce is a friendly Django interface that lets you manage Jasmin SMS Gateway using its powerful Perspective Broker API. Send SMS, create groups, add users, and more — all through a clean UI.
 
-Joyce is a simple [Django](http://www.djangoproject.com) application that  helps you interface and configure different Jasmin components to get your SMSs out on the way as fast as possible.
-**NOTE:** We have prepared all the components you need as docker images so you do not have to worry about how to get everything spinning, just take a 14min docker tutorial and you are ready to go.
+---
 
-The steps in this document assume that you have some at least some programming experience. but fear not, if you are not a developer.
-We also have a script you can just run to get everything up for you. We want you to start sending SMS via Jasim as fast as you want.
+## 🎯 Purpose
 
-## Local development
-In the setup below, makesure you have jasmin installed and running on your machine.
-If you do not want hustle with installing Jasmin manually see (docker images)
+[Jasmin](https://docs.jasminsms.com/) allows managing SMS routing via CLI (`jcli`) or the more developer-friendly [Perspective Broker API](https://docs.jasminsms.com/en/latest/faq/developers.html). Joyce uses the PB API to offer:
 
-This is a minimal Django 5.0 project. 
+- Group management
+- User management
+- Route configuration
+- And more...
+- No more `telnet`, no more `jcli`
 
-### Using  pip 
-1. Create a virtualenv
-    `python3.11 -m venv venv` // whichever way you always create this
-2. Activate the virtualenv
-    `source venv/bin/activate`
-3. Install the dependencies using pip
-4. `pip install -r requirements.txt`
+---
+
+## 🔌 Integration with Jasmin
+
+This Django application uses the Twisted framework to communicate with the Jasmin RouterPB service.
+
+The integration relies on a custom service layer that uses Twisted’s asynchronous Perspective Broker client to interact with the running Jasmin service.
+
+
+## 🛠 Setup Guide
+
+This project uses [Poetry](https://python-poetry.org) for dependency management and includes Docker support for consistent local environments.
+
+### Requirements
+
+- Python 3.11+
+- Poetry
+- Docker (optional but recommended)
+- Jasmin SMS Gateway (via Docker or manual installation)
+
+### Step-by-step (Local)
+
+1. Clone the project:
+    ```bash
+    git clone https://github.com/ekeeya/jasmin-web-gui.git 
+    ```
+   ```bash
+    cd jasmin-web-gui
+    ```
+
+2. Create and activate virtual environment:
+    ```bash
+   python3.11 -m venv venv
+   ```
+   ```bash
+    source venv/bin/activate
+   ```
+   Optionally install poetry in the ven if you do not have it globally using pip
+   ```bash
+    pip install poerty
+   ```
+
+3. Install dependencies:
+    ```bash
+   poetry install
+   ```
+
+4. Apply migrations:
+   ```bash
+    python manage.py migrate
+    ```
+
+5. Start server:
+   ```bash
+   python manage.py runserver
+   ```
+
+---
+
+## 🐳 Running Services Docker  
+
+We recommend using Docker for local dev environments. The full Docker setup is defined in `docker-compose.yml`.
+In production you may want to add your django service to `docker-compose.yml` but in dev, you may want to run the django project in an IDE that allows debugging.
+That is why we have excluded (commented it out by default)
+
+### 📦 What's Included
+
+This project is a complete, containerized environment for Jasmin and supporting services:
+
+- A Django web GUI for Jasmin (disabled in docker by default as explained above )
+- Redis (for caching and Celery results)
+- RabbitMQ (as Celery broker)
+- Jasmin SMS Gateway
+- Jasmin REST API container (served via twistd + WSGI)
+- A test SMPP server (`smppsim`) for development
+
+To bring up the services:
+
+   ```bash
+   docker-compose up --build
+   ```
+
+---
+
+## 🤝 Contributing
+
+If you find this useful, feel free to fork, improve, and submit pull requests. Bug reports and feature suggestions are always welcome.
+
+---
+
+## ❤️ Thanks
+
+Thanks to the amazing [Jasmin team](https://www.jasminsms.com/) for building such a powerful and extensible SMS gateway. This project is made possible because of their work.
+
+---
+
+## ☕ Buy Me a Coffee on Crypto
+
+If this project helped you avoid hours of pain, consider showing some love, unfortunately we only have crypto:
+
+**BTC Wallet:** `13it3P99sbMrtobij7S9ecJbE6jTciUw7E`
+
+**ETH Wallet:** `0xA83a39024BEd22ebcE2e64c8D28b541140A9d18d`
+Every sip counts and boosts moral!
+
+---

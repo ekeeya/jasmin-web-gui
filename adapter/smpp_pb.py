@@ -16,13 +16,14 @@
 #  You should have received a copy of the GNU General Public License along with this project.
 #  If not, see <http://www.gnu.org/licenses/>.
 #
-from quark.utils import logger
+import pickle as pickle
+
 from django.conf import settings
-from twisted.internet import reactor, defer
 from jasmin.managers.proxies import SMPPClientManagerPBProxy
 from jasmin.protocols.smpp.configs import SMPPClientConfig
-from jasmin.protocols.cli.smppccm import JCliSMPPClientConfig as SmppClientConnector
-import pickle as pickle
+from twisted.internet import reactor, defer
+
+from quark.utils import logger
 
 
 class SmppPBAdapter(SMPPClientManagerPBProxy):

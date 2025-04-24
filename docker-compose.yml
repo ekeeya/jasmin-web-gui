@@ -34,7 +34,7 @@ services:
 #    volumes:
 #      - .:/app
 #    environment:
-#      - DEBUG=True
+#      - DEBUG=False
 
   jasmin:
     image: jookies/jasmin:0.10
@@ -46,6 +46,8 @@ services:
       - 1401:1401
       - 8988:8988
       - 8989:8989
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       redis:
         condition: service_healthy
@@ -88,3 +90,21 @@ services:
     entrypoint: [ "/usr/local/bin/python", "/usr/local/bin/twistd", "-n", "--pidfile=/tmp/twistd-web-restapi.pid", "web", "--wsgi=jasmin.protocols.rest.api" ]
     environment:
       JASMIN_OLD_API_URI: http://jasmin:1401
+
+# Jasmin comes with a test smpp smsc on port 2775 but if you doubt it use this one
+  smppsim:
+    build:
+      context: ./smppsim
+      dockerfile: Dockerfile
+    container_name: smppsim
+    ports:
+      - 2776:2776
+    restart: unless-stopped
+    entrypoint: [ "/entrypoint.sh" ]
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+    security_opt:
+      - no-new-privileges:true
