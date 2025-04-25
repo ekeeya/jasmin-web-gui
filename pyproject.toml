@@ -74,6 +74,10 @@ zope-interface = "6.4.post2"
 coverage = "^7.6.0"
 psycopg2 = "^2.9.10"
 smartmin = "^5.1.2"
+pandas = "^2.2.3"
+django-timezone-field = "^7.1"
+django-countries = {version = "^7.6.1", extras = ["pyuca"]}
+iso8601 = "^2.1.0"
 
 
 [build-system]

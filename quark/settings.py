@@ -46,8 +46,13 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
-    'web',
-    'adapter'
+    'django_countries',
+    'smartmin',
+    'quark.web',
+    'quark.adapter',
+    'quark.api',
+    'quark.utils',
+    'quark.workspace',
 ]
 
 MIDDLEWARE = [
@@ -58,25 +63,11 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    "quark.middleware.WorkspaceMiddleware",
+    "quark.middleware.TimezoneMiddleware",
 ]
 
 ROOT_URLCONF = 'quark.urls'
-
-TEMPLATES = [
-    {
-        'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [os.path.join(BASE_DIR, 'quark/templates')],
-        'APP_DIRS': True,
-        'OPTIONS': {
-            'context_processors': [
-                'django.template.context_processors.debug',
-                'django.template.context_processors.request',
-                'django.contrib.auth.context_processors.auth',
-                'django.contrib.messages.context_processors.messages',
-            ],
-        },
-    },
-]
 
 WSGI_APPLICATION = 'quark.wsgi.application'
 
@@ -88,18 +79,7 @@ WSGI_APPLICATION = 'quark.wsgi.application'
 # https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators
 
 AUTH_PASSWORD_VALIDATORS = [
-    {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
-    },
+    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator", "OPTIONS": {"min_length": 6}},
 ]
 
 # Internationalization
@@ -116,12 +96,44 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.0/howto/static-files/
 
-STATIC_URL = 'static/'
+PROJECT_DIR = os.path.join(os.path.abspath(os.path.dirname(__file__)))
+STATICFILES_DIRS = (
+    os.path.join(PROJECT_DIR, "../static"),
+    os.path.join(PROJECT_DIR, "../media"),
+)
+STATIC_ROOT = os.path.join(PROJECT_DIR, "../sitestatic")
+STATIC_URL = "/sitestatic/"
+MEDIA_ROOT = os.path.join(PROJECT_DIR, "../media")
+MEDIA_URL = "/media/"
+
+
+TEMPLATES = [
+    {
+        'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        "DIRS": [
+            os.path.join(PROJECT_DIR, "../templates"),
+        ],
+        'APP_DIRS': True,
+        'OPTIONS': {
+            'context_processors': [
+                'django.template.context_processors.debug',
+                'django.template.context_processors.request',
+                'django.contrib.auth.context_processors.auth',
+                'django.contrib.messages.context_processors.messages',
+            ],
+        },
+    },
+]
+
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+AUTH_USER_MODEL = "workspace.User"
+
+APP_LOG_FILE = f"{BASE_DIR}/logs/app.log"
 
 LOGGING = {
     'version': 1,
@@ -139,6 +151,11 @@ LOGGING = {
             'class': "logging.StreamHandler",
             'formatter': 'main_formatter'
         },
+        'file_normal': {
+            'class': 'logging.FileHandler',
+            'filename': APP_LOG_FILE,
+            'formatter': 'main_formatter',
+        }
     },
     'loggers': {
         'main': {
@@ -153,3 +170,7 @@ JASMIN_PERSIST = True
 
 CELERY_BROKER_URL = 'redis://localhost:6379/0'
 CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+
+SMARTMIN_DEFAULT_MESSAGES = False
+
+# AUTHENTICATION_BACKENDS = ("quark.workspace.backend.AuthenticationBackend",)

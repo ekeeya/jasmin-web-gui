@@ -7,8 +7,7 @@ venv/
 # Django
 *.log
 db.sqlite3
-/media/
-/static/
+sitestatic
 
 # React
 node_modules/
@@ -35,6 +34,18 @@ build/
 
 # Coverage
 htmlcov
+.coverage
+coverage.xml
+celerybeat-schedule.db
+celerybeat-schedule
 
 datasource.py
 profile.txt
+
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*.so
+
+

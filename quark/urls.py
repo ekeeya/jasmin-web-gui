@@ -14,7 +14,8 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
-
+from django.conf import settings
+from django.conf.urls.static import static
 #
 #  Copyright (c) 2024
 #  File created on 2024/7/17
@@ -36,9 +37,18 @@ Including another URLconf
 
 from django.contrib import admin
 from django.urls import path
-from django.urls.conf import include
+from django.urls.conf import include, re_path
+
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/', include('web.urls'))
+    path('api/', include('quark.web.urls')),
 ]
+
+urlpatterns +=[
+    re_path(r"^", include("quark.workspace.urls")),
+]
+
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
