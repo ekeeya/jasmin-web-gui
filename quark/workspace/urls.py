@@ -17,9 +17,17 @@
 #
 
 
-from django.conf.urls import include
 from django.urls import re_path
 
-from .views import WorkSpaceCRUDL
+from .views import (
+    WorkspaceCRUDL,
+    LoginView,
+    LogoutView
+)
 
-urlpatterns = WorkSpaceCRUDL().as_urlpatterns()
+urlpatterns = WorkspaceCRUDL().as_urlpatterns()
+
+urlpatterns += [
+    re_path(r"^users/login/$", LoginView.as_view(), name="workspace.login"),
+    re_path(r"^users/logout/$", LogoutView.as_view(), name="workspace.logout"),
+]

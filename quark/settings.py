@@ -92,6 +92,7 @@ TIME_ZONE = 'UTC'
 USE_I18N = True
 
 USE_TZ = True
+USER_TIME_ZONE = "Africa/Kampala"
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.0/howto/static-files/
@@ -105,7 +106,6 @@ STATIC_ROOT = os.path.join(PROJECT_DIR, "../sitestatic")
 STATIC_URL = "/sitestatic/"
 MEDIA_ROOT = os.path.join(PROJECT_DIR, "../media")
 MEDIA_URL = "/media/"
-
 
 TEMPLATES = [
     {
@@ -124,7 +124,6 @@ TEMPLATES = [
         },
     },
 ]
-
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
@@ -173,4 +172,13 @@ CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
 
 SMARTMIN_DEFAULT_MESSAGES = False
 
-# AUTHENTICATION_BACKENDS = ("quark.workspace.backend.AuthenticationBackend",)
+# Smartmin settings
+
+GROUP_PERMISSIONS = {
+    "Administrators": (
+        "workspace.workspace_create",
+        "workspace.workspace_list",
+        "workspace.workspace_update",
+        "workspace.workspace_delete",
+    )
+}

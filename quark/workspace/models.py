@@ -83,6 +83,9 @@ class User(AbstractUser):
 
         return request.user.workspaces.filter(is_active=True).order_by("name")
 
+    def __str__(self):
+        return self.name if self.name else self.username
+
     class Meta:
         db_table = "auth_user"
 
@@ -165,9 +168,9 @@ class WorkSpace(SmartModel):
     is_flagged = models.BooleanField(default=False, help_text="Whether this workspace is currently flagged.")
     is_suspended = models.BooleanField(default=False, help_text="Whether this workspace is currently suspended.")
 
-    suspended_on = models.DateTimeField(null=True)
-    released_on = models.DateTimeField(null=True)
-    deleted_on = models.DateTimeField(null=True)
+    suspended_on = models.DateTimeField(null=True, blank=True)
+    released_on = models.DateTimeField(null=True, blank=True)
+    deleted_on = models.DateTimeField(null=True, blank=True)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -185,7 +188,13 @@ class WorkSpace(SmartModel):
                 unique_prefix = "%s-%d" % (prefix, count)
                 existing = cls.objects.filter(slug=unique_prefix).exists()
                 count += 1
-            return unique_prefix
+            return unique_prefix.replace("-", "_")
+
+    def save(self, *args, **kwargs):
+        if self.pk is not None:
+            # regenerate the prefix on each save
+            self.prefix = self.generate_prefix(self.name)
+        super().save(*args, **kwargs)
 
     @classmethod
     def create(cls, user, country, name: str, tz):
@@ -287,6 +296,9 @@ class WorkSpace(SmartModel):
 
     class Meta:
         db_table = "workspace"
+
+    def __str__(self):
+        return f"{self.name} ({self.users.count() if self.users else 0})"
 
 
 class WorkSpaceMembership(models.Model):
