@@ -19,7 +19,7 @@
 from django.db.models.signals import pre_delete
 from django.dispatch import receiver
 from twisted.internet import defer
-from quark.adapter.router_pb import RouterPBInterface
+from quark.jasmin.router_pb import RouterPBInterface
 
 from quark.utils import logger
 from .models import JasminGroup

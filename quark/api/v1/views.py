@@ -2,7 +2,7 @@ from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.renderers import JSONRenderer, BrowsableAPIRenderer
 from rest_framework.throttling import ScopedRateThrottle
 
-from quark.adapter.models import JasminGroup
+from quark.jasmin.models import JasminGroup
 from quark.api.helper import APISessionAuthentication, APIBasicAuthentication
 from quark.api.v1.serializers import JasminGroupWriteSerializer, JasminGroupReadSerializer
 from quark.api.views import WriteAPIMixin, BaseAPIView, ListAPIMixin

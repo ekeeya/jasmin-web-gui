@@ -1,4 +1,3 @@
-
 #
 #  Copyright (c) 2024
 #  File created on 2024/7/17
@@ -22,8 +21,10 @@ import logging
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
+from smartmin.views import SmartTemplateView
 
 from quark.web.renderers.renderers import PlainTextRenderer, CustomPlainTextRenderer
+from quark.workspace.views.mixins import WorkspacePermsMixin
 
 logger = logging.getLogger('main')
 
@@ -44,3 +45,22 @@ class SMSCallback(APIView):
         except Exception as e:
             logger.error(f"Error processing DLR: {e}")
         return Response('Error', status=status.HTTP_500_INTERNAL_SERVER_ERROR, content_type='text/plain')
+
+
+class Home(WorkspacePermsMixin, SmartTemplateView):
+    """
+    The main dashboard view
+    """
+
+    title = "Dashboard"
+    permission = "workspace.workspace_dashboard"
+    template_name = "home/home.html"
+
+    def get(self, request, *args, **kwargs):
+        workspace = request.workspace or "Admin"
+        user = request.user
+        context = dict(
+            workspace=workspace,
+            user=user,
+        )
+        return self.render_to_response(context)

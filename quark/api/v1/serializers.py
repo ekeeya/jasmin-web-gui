@@ -7,7 +7,7 @@ from quark.api.v1.fields import JoyceUniqueFieldValidator
 from quark.utils import json
 from quark.utils.utils import strprice
 
-from quark.adapter.models import JasminGroup
+from quark.jasmin.models import JasminGroup
 
 logger = logging.getLogger(__name__)
 

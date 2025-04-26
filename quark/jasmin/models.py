@@ -22,7 +22,7 @@ from smartmin.models import SmartModel
 
 from quark.utils.jasmin.extras import BaseJasminModel
 from quark.utils.utils import logger
-from quark.adapter.router_pb import RouterPBInterface
+from quark.jasmin.router_pb import RouterPBInterface
 from twisted.internet import reactor
 from django.db import models
 from django.utils.translation import gettext_lazy as _
@@ -79,13 +79,15 @@ def run_reactor():
 
 class JasminGroup(BaseJasminModel, SmartModel):
     gid = models.CharField(
-        max_length=255,
+        max_length=30,
         unique=True,
         null=False,
         db_index=True,
-        help_text=_("This matches the group id created in Jasmin"),
+        help_text=_("This matches the group id created in Jasmin and will be prefixed with Workspace's prefix"),
         verbose_name=_("Group Id")
     )
+    workspace = models.ForeignKey("workspace.WorkSpace", related_name="jasmin_groups", on_delete=models.CASCADE,
+                                  null=True)
     description = models.TextField(
         null=True,
         help_text=_("Short description about purpose of this group."),
@@ -94,6 +96,10 @@ class JasminGroup(BaseJasminModel, SmartModel):
 
     def __str__(self):
         return self.gid
+
+    @classmethod
+    def create(cls, gid: str, description: str, workspace):
+        return cls(gid=gid, workspace=workspace, description=description)
 
     def save(self, *args, **kwargs):
         # Save the Django model first

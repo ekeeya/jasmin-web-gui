@@ -72,8 +72,18 @@ class User(AbstractUser):
     def name(self) -> str:
         return self.get_full_name()
 
+    @property
     def get_workspaces(self):
         return self.workspaces.filter(is_active=True).order_by("name")
+
+    def has_workspace_perm(self, workspace, permission):
+        if self.is_staff:
+            return True
+
+        if workspace.id in [workspace.id for workspace in self.get_workspaces]:
+            return True
+
+        return False
 
     @classmethod
     def get_workspaces_for_request(cls, request):
@@ -97,7 +107,7 @@ class WorkSpaceRole(Enum):
         Depending on the role, we shall redirect them to the appropriate page upon login
     """
     ADMINISTRATOR = ("A", "Administrator", "Administrators", "Administrators", "web.dashboard")
-    GATEWAY_MANAGER = ("GM", "Gateway Manager", "Gateway_Managers", "Gateway_Managers", "adapter.configure")
+    GATEWAY_MANAGER = ("GM", "Gateway Manager", "Gateway_Managers", "Gateway_Managers", "jasmin.configure")
     REPORT = ("R", "Report", "Reports", "Reports", "reports.ticket_list")
     API = ("API", "Rest API", "APIs", "API_Access", None)
 
@@ -176,6 +186,10 @@ class WorkSpace(SmartModel):
         super().__init__(*args, **kwargs)
 
         self._membership_cache = {}
+
+    @property
+    def jasmin_groups(self):
+        return self.jasmin_groups.all()
 
     @classmethod
     def generate_prefix(cls, name: str) -> str:

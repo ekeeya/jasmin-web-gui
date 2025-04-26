@@ -33,7 +33,7 @@ from quark.workspace.models import WorkSpace, User
 from quark.workspace.views.forms import SignupForm
 
 
-def switch_to_workspace(request, workspace:WorkSpace):
+def switch_to_workspace(request, workspace: WorkSpace):
     request.session["workspace_id"] = workspace.id if workspace else None
 
 
@@ -43,7 +43,7 @@ class LoginView(AuthLoginView):
     """
 
     template_name = "workspace/login/login.html"
-    two_factor = True
+    redirect_authenticated_user = True
 
     def post(self, request, *args, **kwargs):
         form = self.get_form()
@@ -78,8 +78,7 @@ class LoginView(AuthLoginView):
         # if there are too many failed logins, take them to the failed page
         if len(failures) >= failed_login_limit:
             logout(request)
-            return HttpResponseRedirect("/")
-            # return HttpResponseRedirect(reverse("orgs.user_failed"))
+            return HttpResponseRedirect(reverse("workspace.login"))
 
         # pass through the normal login process
         if form_is_valid:

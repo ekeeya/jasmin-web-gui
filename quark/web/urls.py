@@ -18,9 +18,10 @@
 #  If not, see <http://www.gnu.org/licenses/>.
 #
 
-from .views import SMSCallback
-from django.urls import path
+from .views import SMSCallback, Home
+from django.urls import path, re_path
 
 urlpatterns = [
     path("dlr", SMSCallback.as_view(), name="dlr"),
+    path("", Home.as_view(), {}, "dashboard.dashboard_home"),
 ]

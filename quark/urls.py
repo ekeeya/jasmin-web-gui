@@ -41,12 +41,14 @@ from django.urls.conf import include, re_path
 
 
 urlpatterns = [
+    path('', include('quark.web.urls')),
     path('admin/', admin.site.urls),
-    path('api/', include('quark.web.urls')),
+    path('api/', include('quark.api.urls')),
 ]
 
 urlpatterns +=[
     re_path(r"^", include("quark.workspace.urls")),
+    re_path(r"^", include("quark.jasmin.urls")),
 ]
 
 

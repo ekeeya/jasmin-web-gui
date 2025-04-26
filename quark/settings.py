@@ -49,7 +49,7 @@ INSTALLED_APPS = [
     'django_countries',
     'smartmin',
     'quark.web',
-    'quark.adapter',
+    'quark.jasmin',
     'quark.api',
     'quark.utils',
     'quark.workspace',
@@ -173,12 +173,41 @@ CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
 SMARTMIN_DEFAULT_MESSAGES = False
 
 # Smartmin settings
+# https://smartmin.readthedocs.io/en/latest/perms.html#defining-permissions
+
+PERMISSIONS = {
+    '*': ('create',  # can create an object
+          'read',  # can read an object, viewing it's details
+          'update',  # can update an object
+          'delete',  # can delete an object,
+          'list',  # can view a list of the objects
+          ),
+    "workspace.workspace": (
+        "signup",
+        "read",
+        "dashboard",
+        "update",
+        "delete",
+        "list",),
+    "jasmin.jasmingroup": ("activate", "deactivate"),
+}
 
 GROUP_PERMISSIONS = {
     "Administrators": (
         "workspace.workspace_create",
         "workspace.workspace_list",
+        "workspace.workspace_dashboard",
         "workspace.workspace_update",
+        "workspace.workspace_signup",
         "workspace.workspace_delete",
+        "jasmin.jasmingroup_create",
+        "jasmin.jasmingroup_update",
+        "jasmin.jasmingroup_delete",
+        "jasmin.jasmingroup_list",
+        "jasmin.jasmingroup_activate",
+        "jasmin.jasmingroup_deactivate"
     )
 }
+
+LOGIN_REDIRECT_URL = "/"
+LOGIN_URL = "users/login/"

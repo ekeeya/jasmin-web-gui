@@ -1,6 +1,5 @@
-#
-#  Copyright (c) 2024
-#  File created on 2024/7/17
+#  Copyright (c) 2025
+#  File created on 2025/4/26
 #  By: Emmanuel Keeya
 #  Email: ekeeya@thothcode.tech
 #
@@ -17,12 +16,6 @@
 #  If not, see <http://www.gnu.org/licenses/>.
 #
 
-from django.apps import AppConfig
+from .views import JasminGroupCRUDL
 
-
-class AdapterConfig(AppConfig):
-    default_auto_field = 'django.db.models.BigAutoField'
-    name = 'quark.adapter'
-
-    def ready(self):
-        pass
+urlpatterns = JasminGroupCRUDL().as_urlpatterns()
