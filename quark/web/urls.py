@@ -18,10 +18,15 @@
 #  If not, see <http://www.gnu.org/licenses/>.
 #
 
-from .views import SMSCallback, Home
+from .views import SMSCallback, Home, profile
 from django.urls import path, re_path
 
 urlpatterns = [
     path("dlr", SMSCallback.as_view(), name="dlr"),
     path("", Home.as_view(), {}, "dashboard.dashboard_home"),
+]
+
+
+urlpatterns += [
+    path("users/profile/<int:user_id>/", profile, name="users.user_profile"),
 ]

@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.humanize',
     'rest_framework',
     'django_countries',
     'smartmin',
@@ -158,7 +159,7 @@ LOGGING = {
     },
     'loggers': {
         'main': {
-            'handlers': ['console_normal'],
+            'handlers': ['console_normal', 'file_normal'],
             'propagate': True,
             'level': "DEBUG"
         }

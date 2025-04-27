@@ -15,12 +15,13 @@
 #  You should have received a copy of the GNU General Public License along with this project.
 #  If not, see <http://www.gnu.org/licenses/>.
 #
-from django.urls import reverse
+from django.http import HttpResponseRedirect
 from smartmin.mixins import NonAtomicMixin
-from smartmin.views import SmartCRUDL, SmartCreateView
+from smartmin.views import SmartCRUDL, SmartCreateView, SmartListView, SmartUpdateView
 
 from quark.jasmin.models import JasminGroup
 from quark.jasmin.views.forms import JasminGroupForm
+from quark.workspace.views.base import BaseListView
 from quark.workspace.views.mixins import WorkspacePermsMixin
 
 
@@ -33,23 +34,51 @@ class JasminGroupCRUDL(SmartCRUDL):
         form_class = JasminGroupForm
         permission = "jasmin.jasmingroup_create"
         template_name = "jasmin/group_create.html"
+        success_url = "@jasmin.jasmingroup_list"
 
         def get_form_kwargs(self):
             kwargs = super().get_form_kwargs()
             kwargs["workspace"] = self.derive_workspace()
             return kwargs
 
+        def get_context_data(self, **kwargs):
+            context = super().get_context_data(**kwargs)
+            workspace = self.derive_workspace()
+            context["workspace"] = workspace
+            return context
+
         def form_valid(self, form):
             self.object = JasminGroup.create(
                 form.cleaned_data["gid"],
+                self.request.user,
                 form.cleaned_data["workspace"],
                 form.cleaned_data["description"],
             )
 
-            response = self.render_to_response(
-                self.get_context_data(
-                    form=form,
-                    success_url=self.get_success_url(),
-                )
-            )
-            return response
+            return HttpResponseRedirect(self.get_success_url())
+
+    class List(BaseListView):
+        title = "Jasmin Groups"
+        ordering = ("-created_on",)
+        permission = "jasmin.jasmingroup_list"
+        paginate_by = 10
+        template_name = "jasmin/group_list.html"
+        fields = ("gid", "created_on", "description",)
+        search_fields = ("gid",)
+
+        def get_context_data(self, **kwargs):
+            context = super().get_context_data(**kwargs)
+            workspace = self.derive_workspace()
+            context['workspace'] = workspace
+
+            return context
+
+    class Update(WorkspacePermsMixin, SmartUpdateView):
+        title = "Update Jasmin Group"
+        form_class = JasminGroupForm
+        permission = "jasmin.jasmingroup_update"
+
+        def get_form_kwargs(self):
+            kwargs = super().get_form_kwargs()
+            kwargs["workspace"] = self.derive_workspace()
+            return kwargs

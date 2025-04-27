@@ -15,6 +15,8 @@
 #  You should have received a copy of the GNU General Public License along with this project.
 #  If not, see <http://www.gnu.org/licenses/>.
 #
+import re
+
 from django import forms
 from django.utils.text import slugify
 
@@ -23,7 +25,7 @@ from quark.jasmin.models import JasminGroup
 
 class JasminGroupForm(forms.ModelForm):
     gid = forms.CharField(
-        label="Workspace",
+        label="Group ID*",
         max_length=JasminGroup._meta.get_field("gid").max_length,
         help_text=JasminGroup._meta.get_field("gid").help_text,
         widget=forms.TextInput(attrs={
@@ -41,11 +43,19 @@ class JasminGroupForm(forms.ModelForm):
 
     def clean_gid(self):
         gid = self.cleaned_data["gid"]
-        # concat workspace
-        name = f"{self.workspace.prefix}_{slugify(gid)}"
-        clean_name = name.replace("-", "_").lower()
-        if JasminGroup.objects.filter(name=clean_name).exists():
-            raise forms.ValidationError(f"JasminGroup with name {clean_name} already exists")
+        prefix = f"g{self.workspace.id}"
+        clean_name = f"{prefix}_{slugify(gid)}".lower()
+        regex = re.compile(r'^[A-Za-z0-9_-]{1,16}$')
+
+        if not regex.match(clean_name):
+            raise forms.ValidationError(
+                f"Group ID must be 1-16 characters long and contain only letters, numbers, underscores, or hyphens."
+                f" Note that we also prefix it with {prefix}_"
+            )
+
+        # Check for existing group
+        if JasminGroup.objects.filter(gid=clean_name).exists():
+            raise forms.ValidationError(f"JasminGroup with name {gid} already exists")
 
         return clean_name
 

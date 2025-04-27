@@ -202,7 +202,7 @@ class WorkSpace(SmartModel):
                 unique_prefix = "%s-%d" % (prefix, count)
                 existing = cls.objects.filter(slug=unique_prefix).exists()
                 count += 1
-            return unique_prefix.replace("-", "_")
+            return unique_prefix.replace("-", "").replace("_", "")
 
     def save(self, *args, **kwargs):
         if self.pk is not None:

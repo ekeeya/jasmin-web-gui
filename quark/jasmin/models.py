@@ -79,10 +79,11 @@ def run_reactor():
 
 class JasminGroup(BaseJasminModel, SmartModel):
     gid = models.CharField(
-        max_length=30,
+        max_length=16, # we are restricted by jasmin 16
         unique=True,
         null=False,
         db_index=True,
+
         help_text=_("This matches the group id created in Jasmin and will be prefixed with Workspace's prefix"),
         verbose_name=_("Group Id")
     )
@@ -98,8 +99,15 @@ class JasminGroup(BaseJasminModel, SmartModel):
         return self.gid
 
     @classmethod
-    def create(cls, gid: str, description: str, workspace):
-        return cls(gid=gid, workspace=workspace, description=description)
+    def create(cls, gid: str, user, workspace, description: str):
+
+        return JasminGroup.objects.create(
+            gid=gid,
+            workspace=workspace,
+            description=description,
+            created_by=user,
+            modified_by=user
+        )
 
     def save(self, *args, **kwargs):
         # Save the Django model first

@@ -1,5 +1,5 @@
 #  Copyright (c) 2025
-#  File created on 2025/4/25
+#  File created on 2025/4/27
 #  By: Emmanuel Keeya
 #  Email: ekeeya@thothcode.tech
 #
@@ -15,19 +15,15 @@
 #  You should have received a copy of the GNU General Public License along with this project.
 #  If not, see <http://www.gnu.org/licenses/>.
 #
+from smartmin.views import SmartListView
+
+from quark.workspace.views.mixins import WorkspacePermsMixin
 
 
-from django.urls import re_path
+class BaseListView(WorkspacePermsMixin, SmartListView):
+    """
+        Filter list records that belong to a given workspace
+    """
 
-from .views import (
-    WorkspaceCRUDL,
-    LoginView,
-    LogoutView
-)
-
-urlpatterns = WorkspaceCRUDL().as_urlpatterns()
-
-urlpatterns += [
-    re_path(r"^users/login/$", LoginView.as_view(), name="workspace.login"),
-    re_path(r"^users/logout/$", LogoutView.as_view(), name="users.user_logout"),
-]
+    def derive_queryset(self, **kwargs):
+        return super().derive_queryset(**kwargs).filter(workspace=self.request.workspace)

@@ -42,6 +42,8 @@ class RouterPBInterface(RouterPBProxy):
                 yield self.persist()
         except Exception as e:
             logger.error(e)
+            self.disconnect()
+            raise e  # raise it again such that we pass it on to the caller
         finally:
             logger.debug("Will disconnect from jasmin")
             self.disconnect()

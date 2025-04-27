@@ -18,6 +18,8 @@
 #
 
 import logging
+
+from django.http import HttpResponse
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -64,3 +66,7 @@ class Home(WorkspacePermsMixin, SmartTemplateView):
             user=user,
         )
         return self.render_to_response(context)
+
+
+def profile(request,user_id):
+    return HttpResponse("<h1>Page was found</h1>")
