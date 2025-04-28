@@ -125,22 +125,8 @@ class JasminUserForm(forms.ModelForm):
             self.smpps_quota_form = SMPPQuotasForm(
                 initial=smpps_data.get('quotas', {}), prefix='smpps_quota')
 
-    password_confirm = forms.CharField(
-        label='Confirm Password',
-        widget=forms.PasswordInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'Confirm password'
-        })
-    )
-
     def clean(self):
         cleaned_data = super().clean()
-        password = cleaned_data.get('password')
-        password_confirm = cleaned_data.get('password_confirm')
-
-        # Validate password confirmation
-        if password and password_confirm and password != password_confirm:
-            raise forms.ValidationError("Passwords do not match")
 
         # Validate mt_credentials subforms
         mt_forms = [
@@ -196,6 +182,3 @@ class JasminUserForm(forms.ModelForm):
     class Meta:
         model = JasminUser
         fields = ('username', 'password', 'group', 'mt_credential', 'smpps_credential')
-        widgets = {
-            'password': forms.PasswordInput(),
-        }

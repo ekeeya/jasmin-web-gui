@@ -62,7 +62,7 @@ MESSAGING_QUOTAS = {
     'submit_sm_count': None,
     'http_throughput': None,
     'smpps_throughput': None,
-    'quota_updated':False
+    'quota_updated': False
 }
 
 SMPP_AUTHORIZATIONS = {
@@ -113,18 +113,10 @@ class JasminGroup(BaseJasminModel, SmartModel):
     def save(self, *args, **kwargs):
         # Save the Django model first
         super().save(*args, **kwargs)
-        router = RouterPBInterface()
-
-        deferred = router.add_group(self.gid, settings.JASMIN_PERSIST)
-        deferred.addCallbacks(self.handle_write_result, self.handle_write_error)
-        router.set_deferred(deferred)
-        router.execute()
+        self.jasmin_add_group()
 
     def delete(self, using=None, keep_parents=False):
-        super().delete(using, keep_parents)
-        router = RouterPBInterface()
-        router.set_deferred(router.remove_groups(self.gid))
-        router.execute()
+        self.jasmin_remove_group()
 
     @classmethod
     def map_from_jasmin(cls, jasmin_group):
@@ -148,17 +140,13 @@ class JasminGroup(BaseJasminModel, SmartModel):
         if self.is_active:
             raise Exception("Group already activated")
         self.is_active = True
-        router = RouterPBInterface()
-        router.set_deferred(router.group_enable(self.gid))
-        router.execute()
+        self.jasmin_enable_group()
 
     def deactivate(self):
         if not self.is_active:
             raise Exception("Group already deactivated")
         self.is_active = False
-        router = RouterPBInterface()
-        router.set_deferred(router.group_disable(self.gid))
-        router.execute()
+        self.jasmin_disable_group()
 
     class Meta:
         db_table = 'jasmin_group'
@@ -196,34 +184,11 @@ class JasminUser(SmartModel, BaseJasminModel):
                 'authorizations': SMPP_AUTHORIZATIONS,
                 'quotas': SMPP_QUOTAS,
             }
-        is_new = self.pk is None
-        # before we save, let's contruct mt and smpp credentials
-        mt_creds = to_jsmin_mt_creds(self.mt_credential, is_new)
-
-        smpp_creds = to_jasmin_smpp_creds(self.smpps_credential, is_new)
-        # is_new = self.pk is None
         super().save(*args, **kwargs)
-
-        # let's save the user
-        router = RouterPBInterface()
-        deferred = router.add_user(
-            self.username,
-            self.password,
-            Group(self.group.gid),
-            mt_creds,
-            smpp_creds,
-            settings.JASMIN_PERSIST
-        )
-        deferred.addCallbacks(self.handle_write_result, self.handle_write_error)
-        router.set_deferred(deferred)
-        router.execute()
+        self.jasmin_add_user()
 
     def delete(self, using=None, keep_parents=False):
-        router = RouterPBInterface()
-        future = router.set_deferred(router.user_remove(self.username))
-        future.addCallbacks(self.handle_remove_result, self.handle_remove_error)
-        router.set_deferred(future)
-        router.execute()
+        self.jasmin_remove_user()
 
     def __str__(self):
         return self.username
