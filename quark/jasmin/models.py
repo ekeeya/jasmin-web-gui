@@ -17,9 +17,10 @@
 #  If not, see <http://www.gnu.org/licenses/>.
 #
 from django.conf import settings
-from jasmin.routing.jasminApi import Group
+from jasmin.routing.jasminApi import Group, MtMessagingCredential
 from smartmin.models import SmartModel
 
+from quark.jasmin.utils import to_jsmin_mt_creds, to_jasmin_smpp_creds
 from quark.utils.jasmin.extras import BaseJasminModel
 from quark.utils.utils import logger
 from quark.jasmin.router_pb import RouterPBInterface
@@ -34,34 +35,33 @@ MESSAGING_AUTHORIZATIONS = {
     'http_bulk': False,
     'smpps_send': True,
     'http_long_content': True,
-    'dlr_level': True,
-    'http_dlr_method': True,
-    'src_addr': True,
-    'priority': True,
-    'validity_period': True,
-    'schedule_delivery_time': True,
-    'hex_content': True
+    'set_dlr_level': True,
+    'http_set_dlr_method': True,
+    'set_source_address': True,
+    'set_priority': True,
+    'set_validity_period': True,
+    'set_schedule_delivery_time': True,
+    'set_hex_content': True
 }
 
 MESSAGING_VALUE_FILTERS = {
-    'dst_addr': ".*",
-    'src_addr': ".*",
+    'destination_address': ".*",
+    'source_address': ".*",
     'priority': "^[0-3]$",
     'validity_period': "^\d+$",
     'content': ".*"
 }
 
 MESSAGING_DEFAULTS = {
-    'src_addr': None
+    'source_address': None
 }
 
 MESSAGING_QUOTAS = {
-    'balance': "ND",
-    'early_percent': "ND",
-    'sms_count': "ND",
-    'http_throughput': "ND",
-    'smpps_throughput': "ND",
-    'quotas_updated': False
+    'balance': None,
+    'early_decrement_balance_percent': None,
+    'submit_sm_count': None,
+    'http_throughput': None,
+    'smpps_throughput': None,
 }
 
 SMPP_AUTHORIZATIONS = {
@@ -79,7 +79,7 @@ def run_reactor():
 
 class JasminGroup(BaseJasminModel, SmartModel):
     gid = models.CharField(
-        max_length=16, # we are restricted by jasmin 16
+        max_length=16,  # we are restricted by jasmin 16
         unique=True,
         null=False,
         db_index=True,
@@ -119,7 +119,7 @@ class JasminGroup(BaseJasminModel, SmartModel):
         router = RouterPBInterface()
 
         deferred = router.add_group(self.gid, settings.JASMIN_PERSIST)
-        deferred.addCallbacks(self.handle_result, self.handle_error)
+        deferred.addCallbacks(self.handle_write_result, self.handle_write_error)
         router.set_deferred(deferred)
         router.execute()
 
@@ -167,7 +167,7 @@ class JasminGroup(BaseJasminModel, SmartModel):
         db_table = 'jasmin_group'
 
 
-class JasminUser(SmartModel):
+class JasminUser(SmartModel, BaseJasminModel):
     username = models.CharField(
         max_length=255,
         unique=True,
@@ -188,30 +188,45 @@ class JasminUser(SmartModel):
     def save(self, *args, **kwargs):
         if self.mt_credential is None or self.mt_credential == {}:
             self.mt_credential = {
-                'authorization': MESSAGING_AUTHORIZATIONS,
-                'valuefilter': MESSAGING_VALUE_FILTERS,
-                'defaultvalue': MESSAGING_DEFAULTS,
-                'quota': MESSAGING_QUOTAS,
+                'authorizations': MESSAGING_AUTHORIZATIONS,
+                'value_filters': MESSAGING_VALUE_FILTERS,
+                'defaults': MESSAGING_DEFAULTS,
+                'quotas': MESSAGING_QUOTAS,
             }
 
         if self.smpps_credential is None or self.smpps_credential == {}:
             self.smpps_credential = {
-                'authorization': SMPP_AUTHORIZATIONS,
-                'quota': SMPP_QUOTAS,
+                'authorizations': SMPP_AUTHORIZATIONS,
+                'quotas': SMPP_QUOTAS,
             }
-
+        # before we save, let's contruct mt and smpp credentials
+        mt_creds = to_jsmin_mt_creds(self.mt_credential),
+        smpp_creds = to_jasmin_smpp_creds(self.smpps_credential),
         # is_new = self.pk is None
         super().save(*args, **kwargs)
 
         # let's save the user
         router = RouterPBInterface()
 
-        router.set_deferred(router.add_user(
+        router.execute()
+
+        deferred = router.set_deferred(router.add_user(
             self.username,
             self.password,
             Group(self.group.gid),
+            mt_creds,
+            smpp_creds,
             settings.JASMIN_PERSIST
         ))
+        deferred.addCallbacks(self.handle_write_result, self.handle_write_error)
+        router.set_deferred(deferred)
+        router.execute()
+
+    def delete(self, using=None, keep_parents=False):
+        router = RouterPBInterface()
+        future = router.set_deferred(router.user_remove(self.username))
+        future.addCallbacks(self.handle_remove_result, self.handle_remove_error)
+        router.set_deferred(future)
         router.execute()
 
     def __str__(self):

@@ -1,5 +1,5 @@
 #  Copyright (c) 2025
-#  File created on 2025/4/26
+#  File created on 2025/4/28
 #  By: Emmanuel Keeya
 #  Email: ekeeya@thothcode.tech
 #
@@ -15,11 +15,4 @@
 #  You should have received a copy of the GNU General Public License along with this project.
 #  If not, see <http://www.gnu.org/licenses/>.
 #
-
-from .views import (
-    JasminGroupCRUDL,
-    JasminUserCRUDL
-)
-
-urlpatterns = JasminGroupCRUDL().as_urlpatterns()
-urlpatterns += JasminUserCRUDL().as_urlpatterns()
+from .utils import *

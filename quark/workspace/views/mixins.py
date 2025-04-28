@@ -17,6 +17,8 @@
 #
 
 
+
+
 class WorkspacePermsMixin:
     """
     Mixin for views that require workspace permissions. `has_permission` will be called to determine if the current view is

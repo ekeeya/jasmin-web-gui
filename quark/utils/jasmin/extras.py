@@ -25,12 +25,21 @@ class BaseJasminModel(models.Model):
         This base class also defines methods to help us update our django object mapped to a jamin object.
         If something goes wrong in jasmin, we have to delete the django object
     """
-    def handle_result(self, result):
+    def handle_write_result(self, result):
         logger.debug(f"Result from Twisted operation: {result}")
 
-    def handle_error(self, error):
+    def handle_write_error(self, error):
         logger.error(f"Error in Twisted operation: {error}")
         self.delete()
+
+    def handle_remove_result(self, result):
+        logger.debug(f"Result from Twisted operation: {result}")
+        # only after success should one delete
+        self.delete(None, False)
+
+    def handle_remove_error(self, error):
+        logger.error(f"Error in Twisted operation: {error}")
+
 
     class Meta:
         abstract = True  # so we do not try persist it

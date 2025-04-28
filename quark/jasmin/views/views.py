@@ -17,10 +17,10 @@
 #
 from django.http import HttpResponseRedirect
 from smartmin.mixins import NonAtomicMixin
-from smartmin.views import SmartCRUDL, SmartCreateView, SmartListView, SmartUpdateView
+from smartmin.views import SmartCRUDL, SmartCreateView, SmartListView, SmartUpdateView, SmartDeleteView
 
-from quark.jasmin.models import JasminGroup
-from quark.jasmin.views.forms import JasminGroupForm
+from quark.jasmin.models import JasminGroup, JasminUser
+from quark.jasmin.views.forms import JasminGroupForm, UpdateJasminGroupForm, JasminUserForm
 from quark.workspace.views.base import BaseListView
 from quark.workspace.views.mixins import WorkspacePermsMixin
 
@@ -75,10 +75,52 @@ class JasminGroupCRUDL(SmartCRUDL):
 
     class Update(WorkspacePermsMixin, SmartUpdateView):
         title = "Update Jasmin Group"
-        form_class = JasminGroupForm
+        form_class = UpdateJasminGroupForm
         permission = "jasmin.jasmingroup_update"
 
         def get_form_kwargs(self):
             kwargs = super().get_form_kwargs()
             kwargs["workspace"] = self.derive_workspace()
             return kwargs
+
+    class Delete(WorkspacePermsMixin, NonAtomicMixin, SmartDeleteView):
+        title = "Delete Jasmin Group"
+        permission = "jasmin.jasmingroup_delete"
+        success_url = "@jasmin.jasmingroup_list"
+
+
+class JasminUserCRUDL(SmartCRUDL):
+    actions = ("create", "list", "update", "delete",)
+    model = JasminUser
+
+    class Create(WorkspacePermsMixin, NonAtomicMixin, SmartCreateView):
+        permission = "jasmin.jasminuser_create"
+        form_class = JasminUserForm
+        template_name = "jasmin/user_create.html"
+
+        def get_form_kwargs(self):
+            kwargs = super().get_form_kwargs()
+            kwargs["workspace"] = self.derive_workspace()
+            return kwargs
+
+    class Update(WorkspacePermsMixin, NonAtomicMixin, SmartUpdateView):
+        permission = "jasmin.jasminuser_update"
+        template_name = "jasmin/user_create.html"
+        form_class = JasminUserForm
+
+        def get_form_kwargs(self):
+            kwargs = super().get_form_kwargs()
+            kwargs["workspace"] = self.derive_workspace()
+            return kwargs
+
+    class List(WorkspacePermsMixin, NonAtomicMixin, SmartListView):
+        permission = "jasmin.jasminuser_list"
+        fields = ("username", "groups", 'enabled', 'mt_credential', 'smpp_credential')
+
+        def derive_queryset(self, **kwargs):
+            # only users whose group belongs to our workspace
+            return super().derive_queryset(**kwargs).filter(group__workspace=self.request.workspace)
+
+    class Delete(WorkspacePermsMixin, NonAtomicMixin, SmartDeleteView):
+        permission = "jasmin.jasminuser_delete"
+        redirect_url = "@jasmin.jasminuser_list"

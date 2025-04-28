@@ -20,7 +20,9 @@ import re
 from django import forms
 from django.utils.text import slugify
 
-from quark.jasmin.models import JasminGroup
+from quark.jasmin.models import JasminGroup, JasminUser
+from quark.jasmin.views.sub_forms import MessagingAuthorizationsForm, MessagingValueFiltersForm, MessagingDefaultsForm, \
+    MessagingQuotasForm, SMPPAuthorizationsForm, SMPPQuotasForm
 
 
 class JasminGroupForm(forms.ModelForm):
@@ -66,3 +68,134 @@ class JasminGroupForm(forms.ModelForm):
     class Meta:
         model = JasminGroup
         fields = ('gid', 'description')
+
+
+class UpdateJasminGroupForm(forms.ModelForm):
+    def __init__(self, workspace, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.workspace = workspace
+
+    class Meta:
+        model = JasminGroup
+        fields = ('description',)  # we can only update the description
+
+
+class JasminUserForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        # Inject the workspace
+        self.workspace = kwargs["workspace"]
+        del kwargs["workspace"]
+        super().__init__(*args, **kwargs)
+
+        # Must conform to our workspace.
+        self.fields['group'].queryset = self.workspace.jasmin_groups
+
+        # Get the data for subforms
+        mt_data = self.instance.mt_credential if self.instance.pk else {}
+        smpps_data = self.instance.smpps_credential if self.instance.pk else {}
+
+        # Initialize subforms with data if this is a POST request i.e when form is bound
+        if self.is_bound:
+            self.mt_auth_form = MessagingAuthorizationsForm(
+                data=self.data, prefix='mt_auth')
+            self.mt_filter_form = MessagingValueFiltersForm(
+                data=self.data, prefix='mt_filter')
+            self.mt_default_form = MessagingDefaultsForm(
+                data=self.data, prefix='mt_default')
+            self.mt_quota_form = MessagingQuotasForm(
+                data=self.data, prefix='mt_quota')
+
+            self.smpps_auth_form = SMPPAuthorizationsForm(
+                data=self.data, prefix='smpps_auth')
+            self.smpps_quota_form = SMPPQuotasForm(
+                data=self.data, prefix='smpps_quota')
+        else:
+            # For GET requests, use initial data
+            self.mt_auth_form = MessagingAuthorizationsForm(
+                initial=mt_data.get('authorization', {}), prefix='mt_auth')
+            self.mt_filter_form = MessagingValueFiltersForm(
+                initial=mt_data.get('valuefilter', {}), prefix='mt_filter')
+            self.mt_default_form = MessagingDefaultsForm(
+                initial=mt_data.get('defaultvalue', {}), prefix='mt_default')
+            self.mt_quota_form = MessagingQuotasForm(
+                initial=mt_data.get('quota', {}), prefix='mt_quota')
+
+            self.smpps_auth_form = SMPPAuthorizationsForm(
+                initial=smpps_data.get('authorization', {}), prefix='smpps_auth')
+            self.smpps_quota_form = SMPPQuotasForm(
+                initial=smpps_data.get('quota', {}), prefix='smpps_quota')
+
+    password_confirm = forms.CharField(
+        label='Confirm Password',
+        widget=forms.PasswordInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Confirm password'
+        })
+    )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        password = cleaned_data.get('password')
+        password_confirm = cleaned_data.get('password_confirm')
+
+        # Validate password confirmation
+        if password and password_confirm and password != password_confirm:
+            raise forms.ValidationError("Passwords do not match")
+
+        # Validate mt_credentials subforms
+        mt_forms = [
+            (self.mt_auth_form, 'Messaging Authorizations'),
+            (self.mt_filter_form, 'Messaging Value Filters'),
+            # (self.mt_default_form, 'Messaging Defaults'),
+            (self.mt_quota_form, 'Messaging Quotas'),
+        ]
+        for form, label in mt_forms:
+            if not form.is_valid():
+                errors = []
+                for field, field_errors in form.errors.items():
+                    for error in field_errors:
+                        errors.append(f"{field}: {error}")
+                raise forms.ValidationError(f"Invalid {label}: {', '.join(errors)}")
+
+        # Validate smpps_credential subforms
+        smpps_forms = [
+            (self.smpps_auth_form, 'SMPP Authorizations'),
+            (self.smpps_quota_form, 'SMPP Quotas'),
+        ]
+        for form, label in smpps_forms:
+            if not form.is_valid():
+                errors = []
+                for field, field_errors in form.errors.items():
+                    for error in field_errors:
+                        errors.append(f"{field}: {error}")
+                raise forms.ValidationError(f"Invalid {label}: {', '.join(errors)}")
+
+        return cleaned_data
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+
+        # Construct mt_credential
+        instance.mt_credential = {
+            'authorizations': self.mt_auth_form.cleaned_data,
+            'value_filters': self.mt_filter_form.cleaned_data,
+            # 'defaults': self.mt_default_form.cleaned_data,
+            'quotas': self.mt_quota_form.cleaned_data,
+        }
+
+        # Construct smpps_credential
+        instance.smpps_credential = {
+            'authorizations': self.smpps_auth_form.cleaned_data,
+            'quotas': self.smpps_quota_form.cleaned_data,
+        }
+
+        if commit:
+            instance.save()
+        return instance
+
+    class Meta:
+        model = JasminUser
+        fields = ('username', 'password', 'group', 'mt_credential', 'smpps_credential')
+        widgets = {
+            'password': forms.PasswordInput(),
+        }

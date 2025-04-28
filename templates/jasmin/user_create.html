@@ -1,0 +1,82 @@
+{% extends "smartmin/create.html" %}
+
+{% block content %}
+<form method="post">
+    {% csrf_token %}
+    <div class="mb-3">
+        {{ form.username.label_tag }}
+        {{ form.username }}
+        {{ form.username.errors }}
+    </div>
+    <div class="mb-3">
+        {{ form.password.label_tag }}
+        {{ form.password }}
+        {{ form.password.errors }}
+    </div>
+    <div class="mb-3">
+        {{ form.password_confirm.label_tag }}
+        {{ form.password_confirm }}
+        {{ form.password_confirm.errors }}
+    </div>
+    <div class="mb-3">
+        {{ form.group.label_tag }}
+        {{ form.group }}
+        {{ form.group.errors }}
+    </div>
+    <div class="mb-3">
+        {{ form.enabled.label_tag }}
+        {{ form.enabled }}
+        {{ form.enabled.errors }}
+    </div>
+    <h3>Messaging Authorizations</h3>
+    {% for field in form.mt_auth_form %}
+        <div class="mb-3 form-check">
+            {{ field }} {{ field.label_tag }}
+            {{ field.errors }}
+        </div>
+    {% endfor %}
+    <h3>Messaging Value Filters</h3>
+    {% for field in form.mt_filter_form %}
+        <div class="mb-3">
+            {{ field.label_tag }}
+            {{ field }}
+            {{ field.errors }}
+        </div>
+    {% endfor %}
+    <h3>Messaging Defaults</h3>
+    {% for field in form.mt_default_form %}
+        <div class="mb-3">
+            {{ field.label_tag }}
+            {{ field }}
+            {{ field.errors }}
+        </div>
+    {% endfor %}
+    <h3>Messaging Quotas</h3>
+    {% for field in form.mt_quota_form %}
+        <div class="mb-3">
+            {{ field.label_tag }}
+            {{ field }}
+            {{ field.errors }}
+        </div>
+    {% endfor %}
+    <h3>SMPP Authorizations</h3>
+    {% for field in form.smpps_auth_form %}
+        <div class="mb-3 form-check">
+            {{ field }} {{ field.label_tag }}
+            {{ field.errors }}
+        </div>
+    {% endfor %}
+    <h3>SMPP Quotas</h3>
+    {% for field in form.smpps_quota_form %}
+        <div class="mb-3">
+            {{ field.label_tag }}
+            {{ field }}
+            {{ field.errors }}
+        </div>
+    {% endfor %}
+    <button type="submit" class="btn btn-primary">Save</button>
+</form>
+    <div>
+        {{ form.errors }}
+    </div>
+{% endblock %}

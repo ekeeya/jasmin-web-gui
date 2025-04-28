@@ -191,6 +191,7 @@ PERMISSIONS = {
         "delete",
         "list",),
     "jasmin.jasmingroup": ("activate", "deactivate"),
+    "jasmin.jasminuser":("activate", "deactivate"),
 }
 
 GROUP_PERMISSIONS = {
@@ -206,7 +207,11 @@ GROUP_PERMISSIONS = {
         "jasmin.jasmingroup_delete",
         "jasmin.jasmingroup_list",
         "jasmin.jasmingroup_activate",
-        "jasmin.jasmingroup_deactivate"
+        "jasmin.jasmingroup_deactivate",
+        "jasmin.jasminuser_create",
+        "jasmin.jasminuser_list",
+        "jasmin.jasminuser_update",
+        "jasmin.jasminuser_delete",
     )
 }
 

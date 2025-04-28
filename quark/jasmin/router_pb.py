@@ -67,10 +67,14 @@ class RouterPBInterface(RouterPBProxy):
             self.disconnect()
 
     @defer.inlineCallbacks
-    def add_user(self, username: str, password: str, group: Group, persist: bool = True):
+    def add_user(self, username: str, password: str, group: Group,
+                 mt_credentials,
+                 smpps_credential,
+                 persist: bool = True):
         try:
             yield self.pb_connect()
-            user = User(username=username, password=password, group=group, uid=username)
+            user = User(username=username, password=password, group=group, uid=username, mt_credential=mt_credentials,
+                        smpps_credential=smpps_credential)
             yield self.user_add(user)
             if persist:
                 yield self.persist()
