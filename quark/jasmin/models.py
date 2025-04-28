@@ -62,6 +62,7 @@ MESSAGING_QUOTAS = {
     'submit_sm_count': None,
     'http_throughput': None,
     'smpps_throughput': None,
+    'quota_updated':False
 }
 
 SMPP_AUTHORIZATIONS = {
@@ -111,10 +112,6 @@ class JasminGroup(BaseJasminModel, SmartModel):
 
     def save(self, *args, **kwargs):
         # Save the Django model first
-        is_new = self.pk is None
-        # Since there is no jamin command to update the gid so
-        if not is_new:
-            raise Exception("Updating a gid is not allowed, just delete and recreate.")
         super().save(*args, **kwargs)
         router = RouterPBInterface()
 
@@ -199,25 +196,24 @@ class JasminUser(SmartModel, BaseJasminModel):
                 'authorizations': SMPP_AUTHORIZATIONS,
                 'quotas': SMPP_QUOTAS,
             }
+        is_new = self.pk is None
         # before we save, let's contruct mt and smpp credentials
-        mt_creds = to_jsmin_mt_creds(self.mt_credential),
-        smpp_creds = to_jasmin_smpp_creds(self.smpps_credential),
+        mt_creds = to_jsmin_mt_creds(self.mt_credential, is_new)
+
+        smpp_creds = to_jasmin_smpp_creds(self.smpps_credential, is_new)
         # is_new = self.pk is None
         super().save(*args, **kwargs)
 
         # let's save the user
         router = RouterPBInterface()
-
-        router.execute()
-
-        deferred = router.set_deferred(router.add_user(
+        deferred = router.add_user(
             self.username,
             self.password,
             Group(self.group.gid),
             mt_creds,
             smpp_creds,
             settings.JASMIN_PERSIST
-        ))
+        )
         deferred.addCallbacks(self.handle_write_result, self.handle_write_error)
         router.set_deferred(deferred)
         router.execute()

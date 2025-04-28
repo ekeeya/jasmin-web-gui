@@ -78,10 +78,15 @@ class JasminGroupCRUDL(SmartCRUDL):
         form_class = UpdateJasminGroupForm
         permission = "jasmin.jasmingroup_update"
 
+        exclude = ("gid", "created_by", "modified_by",)
+
         def get_form_kwargs(self):
             kwargs = super().get_form_kwargs()
             kwargs["workspace"] = self.derive_workspace()
             return kwargs
+
+        def save(self, obj):
+            return super().save(obj)
 
     class Delete(WorkspacePermsMixin, NonAtomicMixin, SmartDeleteView):
         title = "Delete Jasmin Group"
@@ -115,7 +120,7 @@ class JasminUserCRUDL(SmartCRUDL):
 
     class List(WorkspacePermsMixin, NonAtomicMixin, SmartListView):
         permission = "jasmin.jasminuser_list"
-        fields = ("username", "groups", 'enabled', 'mt_credential', 'smpp_credential')
+        fields = ("username", "groups", 'enabled', 'mt_credential', 'smpps_credential')
 
         def derive_queryset(self, **kwargs):
             # only users whose group belongs to our workspace

@@ -18,7 +18,7 @@
 from jasmin.routing.jasminApi import MtMessagingCredential, SmppsCredential
 
 
-def to_jsmin_mt_creds(creds: dict) -> MtMessagingCredential:
+def to_jsmin_mt_creds(creds: dict, is_new: bool) -> MtMessagingCredential:
     jasmin_mt_creds = MtMessagingCredential()
     for key, value in creds.items():
         iterator = creds[key].items()
@@ -28,13 +28,13 @@ def to_jsmin_mt_creds(creds: dict) -> MtMessagingCredential:
             elif key == "value_filters":
                 jasmin_mt_creds.setValueFilter(k, v)
             elif key == "defaults":
-                jasmin_mt_creds.setValueFilter(k, v)
+                jasmin_mt_creds.setDefaultValue(k, v)
             else:
-                jasmin_mt_creds.setQuota(k, v)
+                jasmin_mt_creds.setQuota(k, v) if is_new else jasmin_mt_creds.updateQuota(k, v)
     return jasmin_mt_creds
 
 
-def to_jasmin_smpp_creds(creds: dict) -> SmppsCredential:
+def to_jasmin_smpp_creds(creds: dict, is_new: bool) -> SmppsCredential:
     jasmin_smpp_creds = SmppsCredential()
     for key, value in creds.items():
         iterator = creds[key].items()
@@ -42,5 +42,5 @@ def to_jasmin_smpp_creds(creds: dict) -> SmppsCredential:
             if key == "authorizations":
                 jasmin_smpp_creds.setAuthorization(k, v)
             else:
-                jasmin_smpp_creds.setQuota(k, v)
+                jasmin_smpp_creds.setQuota(k, v) if is_new else jasmin_smpp_creds.updateQuota(k, v)
     return jasmin_smpp_creds

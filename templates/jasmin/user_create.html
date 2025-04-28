@@ -43,14 +43,6 @@
             {{ field.errors }}
         </div>
     {% endfor %}
-    <h3>Messaging Defaults</h3>
-    {% for field in form.mt_default_form %}
-        <div class="mb-3">
-            {{ field.label_tag }}
-            {{ field }}
-            {{ field.errors }}
-        </div>
-    {% endfor %}
     <h3>Messaging Quotas</h3>
     {% for field in form.mt_quota_form %}
         <div class="mb-3">

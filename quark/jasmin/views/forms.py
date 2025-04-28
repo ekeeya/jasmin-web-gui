@@ -112,18 +112,18 @@ class JasminUserForm(forms.ModelForm):
         else:
             # For GET requests, use initial data
             self.mt_auth_form = MessagingAuthorizationsForm(
-                initial=mt_data.get('authorization', {}), prefix='mt_auth')
+                initial=mt_data.get('authorizations', {}), prefix='mt_auth')
             self.mt_filter_form = MessagingValueFiltersForm(
-                initial=mt_data.get('valuefilter', {}), prefix='mt_filter')
+                initial=mt_data.get('value_filters', {}), prefix='mt_filter')
             self.mt_default_form = MessagingDefaultsForm(
-                initial=mt_data.get('defaultvalue', {}), prefix='mt_default')
+                initial=mt_data.get('defaults', {}), prefix='mt_default')
             self.mt_quota_form = MessagingQuotasForm(
-                initial=mt_data.get('quota', {}), prefix='mt_quota')
+                initial=mt_data.get('quotas', {}), prefix='mt_quota')
 
             self.smpps_auth_form = SMPPAuthorizationsForm(
-                initial=smpps_data.get('authorization', {}), prefix='smpps_auth')
+                initial=smpps_data.get('authorizations', {}), prefix='smpps_auth')
             self.smpps_quota_form = SMPPQuotasForm(
-                initial=smpps_data.get('quota', {}), prefix='smpps_quota')
+                initial=smpps_data.get('quotas', {}), prefix='smpps_quota')
 
     password_confirm = forms.CharField(
         label='Confirm Password',
