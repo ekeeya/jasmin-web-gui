@@ -32,7 +32,6 @@ submit_throughput 110
 ok
 
 # start the connector
-
 smppccm -1 smsc-test-connectoer
 
 

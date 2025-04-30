@@ -18,8 +18,10 @@
 
 from .views import (
     JasminGroupCRUDL,
-    JasminUserCRUDL
+    JasminUserCRUDL,
+    JasminSMPPConnectorCRUDL
 )
 
 urlpatterns = JasminGroupCRUDL().as_urlpatterns()
 urlpatterns += JasminUserCRUDL().as_urlpatterns()
+urlpatterns += JasminSMPPConnectorCRUDL().as_urlpatterns()

@@ -39,6 +39,3 @@ class SystemOnlyMixin:
 
     def has_permission(self, request, *args, **kwargs):
         return self.request.user.is_staff or request.user.is_superuser
-
-
-

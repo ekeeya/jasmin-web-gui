@@ -15,12 +15,14 @@
 #  You should have received a copy of the GNU General Public License along with this project.
 #  If not, see <http://www.gnu.org/licenses/>.
 #
+from django.core.paginator import Paginator
 from django.http import HttpResponseRedirect
+from rest_framework.pagination import LimitOffsetPagination
 from smartmin.mixins import NonAtomicMixin
 from smartmin.views import SmartCRUDL, SmartCreateView, SmartListView, SmartUpdateView, SmartDeleteView
 
-from quark.jasmin.models import JasminGroup, JasminUser
-from quark.jasmin.views.forms import JasminGroupForm, UpdateJasminGroupForm, JasminUserForm
+from quark.jasmin.models import JasminGroup, JasminUser, JasminSMPPConnector
+from quark.jasmin.views.forms import JasminGroupForm, UpdateJasminGroupForm, JasminUserForm, JasminSPPConnectorForm
 from quark.workspace.views.base import BaseListView
 from quark.workspace.views.mixins import WorkspacePermsMixin
 
@@ -129,3 +131,33 @@ class JasminUserCRUDL(SmartCRUDL):
     class Delete(WorkspacePermsMixin, NonAtomicMixin, SmartDeleteView):
         permission = "jasmin.jasminuser_delete"
         redirect_url = "@jasmin.jasminuser_list"
+
+
+class JasminSMPPConnectorCRUDL(SmartCRUDL):
+    actions = ("configure", "list", "update", "delete",)
+    model = JasminSMPPConnector
+
+    class Configure(WorkspacePermsMixin, NonAtomicMixin, SmartCreateView):
+        title = "Configure SMPP Connector"
+        permission = "jasmin.jasminsmppconnector_configure"
+        form_class = JasminSPPConnectorForm
+        success_url = "@jasmin.jasminsmppconnector_list"
+
+        def get_form_kwargs(self):
+            kwargs = super().get_form_kwargs()
+            kwargs["workspace"] = self.derive_workspace()
+            return kwargs
+
+    class List(BaseListView):
+        title = "SMPP Connectors"
+        permission = "jasmin.jasminsmppconnector_list"
+        paginator_class = Paginator
+        paginate_by = 10
+        fields = ("id", "cid", "host", "port", "is_active")
+
+        def get_context_data(self, **kwargs):
+            context = super().get_context_data(**kwargs)
+            workspace = self.derive_workspace()
+            context['workspace'] = workspace
+
+            return context

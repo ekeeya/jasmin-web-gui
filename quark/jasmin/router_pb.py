@@ -1,3 +1,4 @@
+import logging
 import pickle
 
 from django.conf import settings
@@ -9,7 +10,7 @@ from jasmin.routing.proxies import RouterPBProxy
 from twisted.internet import defer, reactor
 from twisted.internet.threads import blockingCallFromThread
 
-from quark.utils.utils import logger
+logger = logging.getLogger(__name__)
 
 
 class RouterPBInterface(RouterPBProxy):
@@ -34,7 +35,7 @@ class RouterPBInterface(RouterPBProxy):
     def add_group(self, group_name: str, persist: bool = True):
         try:
             logger.debug("Establishing a connection to jasmin")
-            yield super().connect(self.host, self.port, self.username, self.password)
+            self.pb_connect()
             group = Group(group_name)
             yield self.group_add(group)
             logger.debug(f"Added group {group_name}")
@@ -80,6 +81,8 @@ class RouterPBInterface(RouterPBProxy):
                 yield self.persist()
         except Exception as e:
             logger.error("Error adding user to Jasmin PB: %s", e)
+        finally:
+            self.disconnect()
 
     @defer.inlineCallbacks
     def get_all_users(self):

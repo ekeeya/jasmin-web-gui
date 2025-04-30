@@ -20,7 +20,7 @@ import re
 from django import forms
 from django.utils.text import slugify
 
-from quark.jasmin.models import JasminGroup, JasminUser
+from quark.jasmin.models import JasminGroup, JasminUser, JasminSMPPConnector
 from quark.jasmin.views.sub_forms import MessagingAuthorizationsForm, MessagingValueFiltersForm, MessagingDefaultsForm, \
     MessagingQuotasForm, SMPPAuthorizationsForm, SMPPQuotasForm
 
@@ -182,3 +182,34 @@ class JasminUserForm(forms.ModelForm):
     class Meta:
         model = JasminUser
         fields = ('username', 'password', 'group', 'mt_credential', 'smpps_credential')
+
+
+class JasminSPPConnectorForm(forms.ModelForm):
+
+    def __init__(self, *args, **kwargs):
+        # Inject the workspace
+        self.workspace = kwargs["workspace"]
+        del kwargs["workspace"]
+        super().__init__(*args, **kwargs)
+
+    def clean(self):
+        self.cleaned_data['workspace'] = self.workspace
+        log_file = self.cleaned_data['log_file']
+        if log_file == '':
+            # if log file is not set leave it upto jasmin to default it
+            del self.cleaned_data['log_file']
+        return self.cleaned_data
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+
+        # add workspace to instance
+        instance.workspace = self.cleaned_data['workspace']
+
+        if commit:
+            instance.save()
+        return instance
+
+    class Meta:
+        model = JasminSMPPConnector
+        exclude = ("cid","workspace")

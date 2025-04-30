@@ -192,6 +192,7 @@ PERMISSIONS = {
         "list",),
     "jasmin.jasmingroup": ("activate", "deactivate"),
     "jasmin.jasminuser":("activate", "deactivate"),
+    "jasmin.jasminsmppconnector": ("start", "stop", "configure"),
 }
 
 GROUP_PERMISSIONS = {
@@ -212,6 +213,13 @@ GROUP_PERMISSIONS = {
         "jasmin.jasminuser_list",
         "jasmin.jasminuser_update",
         "jasmin.jasminuser_delete",
+        "jasmin.jasminsmppconnector_configure",
+        "jasmin.jasminsmppconnector_update",
+        "jasmin.jasminsmppconnector_start",
+        "jasmin.jasminsmppconnector_stop",
+        "jasmin.jasminsmppconnector_delete",
+        "jasmin.jasminsmppconnector_list",
+
     )
 }
 

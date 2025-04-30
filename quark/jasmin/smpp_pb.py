@@ -16,14 +16,17 @@
 #  You should have received a copy of the GNU General Public License along with this project.
 #  If not, see <http://www.gnu.org/licenses/>.
 #
+import logging
 import pickle as pickle
 
 from django.conf import settings
 from jasmin.managers.proxies import SMPPClientManagerPBProxy
+from jasmin.protocols.cli.smppccm import JCliSMPPClientConfig
 from jasmin.protocols.smpp.configs import SMPPClientConfig
 from twisted.internet import reactor, defer
+from twisted.internet.threads import blockingCallFromThread
 
-from quark.utils import logger
+logger = logging.getLogger(__name__)
 
 
 class SmppPBAdapter(SMPPClientManagerPBProxy):
@@ -33,44 +36,65 @@ class SmppPBAdapter(SMPPClientManagerPBProxy):
     password = settings.JASMIN_SMPP_PB_PASSWORD
 
     def __init__(self):
-        self.proxy_smpp = None
+        self.deferred = None
+
+    def set_deferred(self, deferred):
+        self.deferred = deferred
 
     @defer.inlineCallbacks
-    def connect(self):
+    def pb_connect(self):
+        yield super().connect(self.host, self.port, self.username, self.password)
+
+    @defer.inlineCallbacks
+    def add_connector(self, smpp_config: JCliSMPPClientConfig, persist: bool = True):
         try:
-            yield self.connect(self.host, self.port, self.username, self.password)
-        except Exception as e:
-            logger.error(f"Error connecting to Jasmin PB: {e}")
+            logger.debug("Establishing a connection to jasmin")
 
-    @defer.inlineCallbacks
-    def add_connector(self, params: dict):
-        config = SMPPClientConfig(**params)
-        yield self.add(config)
+            yield self.pb_connect()
+            yield self.add(smpp_config)
+            logger.debug(f"Added SMPP client connector {smpp_config.id}")
+            if persist:
+                yield self.persist()
+        except Exception as e:
+            logger.error(e)
+            self.disconnect()
+            raise e  # raise it again such that we pass it on to the caller
+        finally:
+            self.disconnect()
 
     @defer.inlineCallbacks
     def start_connector(self, cid: str):
+        yield self.pb_connect()
         yield self.start(cid)
 
     @defer.inlineCallbacks
     def stop_connector(self, cid: str):
+        yield self.pb_connect()
         yield self.stop(cid)
 
     @defer.inlineCallbacks
-    def delete_connector(self, cid: str):
+    def delete_connector(self, cid: str, persist: bool = True):
+        yield self.pb_connect()
         yield self.remove(cid)
+        if persist:
+            yield self.persist()
 
     @defer.inlineCallbacks
     def get_connector(self, cid: str):
+        yield self.pb_connect()
         connector = yield self.connector_details(cid)
         return pickle.loads(connector)
 
     @defer.inlineCallbacks
     def connector_status(self, cid: str):
+        yield self.pb_connect()
         status = yield self.service_status(cid)
         return pickle.loads(status)
 
-    @defer.inlineCallbacks
-    def execute(self, callback):
-        # Start the reactor and call the provided callback
-        reactor.callWhenRunning(callback)
-        reactor.run()
+    def execute(self):
+        def run():
+            d = self.deferred
+
+        # see https://docs.twistedmatrix.com/en/stable/api/twisted.internet.threads.html#blockingCallFromThread
+        # # force our deferred to execute sync
+        blockingCallFromThread(reactor, run)
