@@ -18,14 +18,17 @@
 import re
 
 from django import forms
+from django.forms import HiddenInput
 from django.utils.text import slugify
 
-from quark.jasmin.models import JasminGroup, JasminUser, JasminSMPPConnector
+from quark.jasmin.models import JasminGroup, JasminUser, JasminSMPPConnector, JasminFilter, \
+    JasminMtRoute
 from quark.jasmin.views.sub_forms import MessagingAuthorizationsForm, MessagingValueFiltersForm, MessagingDefaultsForm, \
     MessagingQuotasForm, SMPPAuthorizationsForm, SMPPQuotasForm
+from quark.workspace.views.forms import BaseWorkspaceForm
 
 
-class JasminGroupForm(forms.ModelForm):
+class JasminGroupForm(BaseWorkspaceForm):
     gid = forms.CharField(
         label="Group ID*",
         max_length=JasminGroup._meta.get_field("gid").max_length,
@@ -36,12 +39,6 @@ class JasminGroupForm(forms.ModelForm):
             "placeholder": "test_group"
         }),
     )
-
-    def __init__(self, *args, **kwargs):
-        # Inject the workspace
-        self.workspace = kwargs["workspace"]
-        del kwargs["workspace"]
-        super().__init__(*args, **kwargs)
 
     def clean_gid(self):
         gid = self.cleaned_data["gid"]
@@ -70,21 +67,14 @@ class JasminGroupForm(forms.ModelForm):
         fields = ('gid', 'description')
 
 
-class UpdateJasminGroupForm(forms.ModelForm):
-    def __init__(self, workspace, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.workspace = workspace
-
+class UpdateJasminGroupForm(BaseWorkspaceForm):
     class Meta:
         model = JasminGroup
         fields = ('description',)  # we can only update the description
 
 
-class JasminUserForm(forms.ModelForm):
+class JasminUserForm(BaseWorkspaceForm):
     def __init__(self, *args, **kwargs):
-        # Inject the workspace
-        self.workspace = kwargs["workspace"]
-        del kwargs["workspace"]
         super().__init__(*args, **kwargs)
 
         # Must conform to our workspace.
@@ -184,13 +174,7 @@ class JasminUserForm(forms.ModelForm):
         fields = ('username', 'password', 'group', 'mt_credential', 'smpps_credential')
 
 
-class JasminSPPConnectorForm(forms.ModelForm):
-
-    def __init__(self, *args, **kwargs):
-        # Inject the workspace
-        self.workspace = kwargs["workspace"]
-        del kwargs["workspace"]
-        super().__init__(*args, **kwargs)
+class JasminSPPConnectorForm(BaseWorkspaceForm):
 
     def clean(self):
         self.cleaned_data['workspace'] = self.workspace
@@ -212,4 +196,85 @@ class JasminSPPConnectorForm(forms.ModelForm):
 
     class Meta:
         model = JasminSMPPConnector
-        exclude = ("cid","workspace")
+        exclude = ("cid", "workspace")
+
+
+class JasminFilterForm(BaseWorkspaceForm):
+    # Add these fields for the JSON param input
+    param_key = forms.CharField(
+        required=False,
+        label="Parameter Key",
+        help_text="Enter the parameter key"
+    )
+    param_value = forms.CharField(
+        required=False,
+        label="Parameter Value",
+        help_text="Enter the parameter value",
+        widget=forms.TextInput(attrs={'class': 'param-value-input'})
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # If we're editing an existing instance, pre-populate the param fields
+        if self.instance and self.instance.param:
+            self.fields['param_key'].initial = self.instance.param.get('key', '')
+            self.fields['param_value'].initial = self.instance.param.get('value', '')
+
+    def clean(self):
+        cleaned_data = super().clean()
+        cleaned_data['workspace'] = self.workspace
+
+        # Validate that if either key or value is provided, both must be provided
+        param_key = cleaned_data.get('param_key')
+        param_value = cleaned_data.get('param_value')
+
+        if bool(param_key) != bool(param_value):
+            raise forms.ValidationError(
+                "Both parameter key and value must be provided together or left blank"
+            )
+
+        return cleaned_data
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+
+        # Construct the param JSON from the form inputs
+        param_key = self.cleaned_data.get('param_key')
+        param_value = self.cleaned_data.get('param_value')
+
+        if param_key and param_value:
+            instance.param = {'key': param_key, 'value': param_value}
+        else:
+            instance.param = None
+
+        # add workspace to instance
+        instance.workspace = self.cleaned_data['workspace']
+
+        if commit:
+            instance.save()
+        return instance
+
+    class Meta:
+        model = JasminFilter
+        exclude = ("workspace", )
+        widgets = {
+            'param': HiddenInput(),  # Hide the original JSON field
+        }
+
+
+class JasminMTRouteForm(BaseWorkspaceForm):
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+
+        # add workspace to instance
+        instance.workspace = self.cleaned_data['workspace']
+
+        if commit:
+            instance.save()
+        return instance
+
+    class Meta:
+        model = JasminMtRoute
+        fields = ("router_type", "order", "filters", "connectors", "rate")

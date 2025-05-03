@@ -22,7 +22,7 @@ from jasmin.routing.jasminApi import Group
 
 from quark.jasmin.router_pb import RouterPBInterface
 from quark.jasmin.smpp_pb import SmppPBAdapter
-from quark.jasmin.utils import to_jsmin_mt_creds, to_jasmin_smpp_creds, to_smpp_client_config
+from quark.jasmin.utils import to_jsmin_mt_creds, to_jasmin_smpp_creds
 from quark.utils.utils import logger
 
 from enum import Enum
@@ -53,6 +53,8 @@ class BaseJasminModel(models.Model):
         REMOVE_USER = 'remove_user'
         USER_ENABLE = 'user_enable'
         USER_DISABLE = 'user_disable'
+        ADD_MT_ROUTE = 'add_mt_route'
+        REMOVE_MT_ROUTE = 'remove_mt_route'
 
         # SMPP PB Stuff
 
@@ -78,6 +80,7 @@ class BaseJasminModel(models.Model):
                 self.ReactorOperation.ADD_GROUP,
                 self.ReactorOperation.ADD_USER,
                 self.ReactorOperation.ADD_SMPP_CONNECTOR,
+                self.ReactorOperation.ADD_MT_ROUTE,
             ]:
                 deferred.addCallbacks(
                     self.handle_write_result,
@@ -110,7 +113,7 @@ class BaseJasminModel(models.Model):
     # Result handlers
     def handle_write_result(self, result):
         """Default success handler for write operations"""
-        logger.debug(f"Write operation succeeded: {result}")
+        logger.info(f"Write operation succeeded: {result}")
 
     def handle_write_error(self, error):
         """Default error handler for write operations, if write delete django object"""
@@ -119,7 +122,7 @@ class BaseJasminModel(models.Model):
 
     def handle_activate_result(self, result):
         """Default success handler for activate operations"""
-        logger.debug(f"Activate operation succeeded: {result}")
+        logger.info(f"Activate operation succeeded: {result}")
         self.is_active = not self.is_active
 
         self.save(run_on_reactor=False)
@@ -203,7 +206,7 @@ class BaseJasminModel(models.Model):
             )
 
     def jasmin_add_connector(self):
-        jasmin_connector = to_smpp_client_config(self)
+        jasmin_connector = self.to_smpp_client_config()
         self._execute_reactor_operation(
             self.ReactorOperation.ADD_SMPP_CONNECTOR,
             PBType.SmppPB,
@@ -235,6 +238,16 @@ class BaseJasminModel(models.Model):
                 self.cid,
                 settings.JASMIN_PERSIST
             )
+
+    def jasmin_add_mt_route(self):
+        route = self.to_jasmin_route()
+        self._execute_reactor_operation(
+            self.ReactorOperation.ADD_MT_ROUTE,
+            PBType.RouterPB,
+            route,
+                self.order,
+            settings.JASMIN_PERSIST
+        )
 
     class Meta:
         abstract = True

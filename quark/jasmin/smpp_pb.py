@@ -22,7 +22,6 @@ import pickle as pickle
 from django.conf import settings
 from jasmin.managers.proxies import SMPPClientManagerPBProxy
 from jasmin.protocols.cli.smppccm import JCliSMPPClientConfig
-from jasmin.protocols.smpp.configs import SMPPClientConfig
 from twisted.internet import reactor, defer
 from twisted.internet.threads import blockingCallFromThread
 

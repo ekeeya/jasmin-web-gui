@@ -36,6 +36,20 @@ from timezone_field import TimeZoneFormField
 from quark.workspace.models import User, WorkSpace
 
 
+class BaseWorkspaceForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        # Inject the workspace
+        self.workspace = kwargs["workspace"]
+        del kwargs["workspace"]
+        super().__init__(*args, **kwargs)
+
+    def clean(self):
+        self.cleaned_data = super().clean()
+        self.cleaned_data['workspace'] = self.workspace
+
+        return self.cleaned_data
+
+
 class SignupForm(forms.ModelForm):
     """
     Signup for new organizations

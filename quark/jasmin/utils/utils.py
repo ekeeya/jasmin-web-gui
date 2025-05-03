@@ -15,11 +15,27 @@
 #  You should have received a copy of the GNU General Public License along with this project.
 #  If not, see <http://www.gnu.org/licenses/>.
 #
-import re
 
-from jasmin.protocols.cli.smppccm import JCliSMPPClientConfig
+from django.core.exceptions import ValidationError
+from django.db import models
 from jasmin.routing.jasminApi import MtMessagingCredential, SmppsCredential
-from smpp.pdu.pdu_types import AddrTon, AddrNpi
+from smpp.pdu.pdu_types import AddrTon, AddrNpi, PriorityFlag, RegisteredDeliveryReceipt, ReplaceIfPresentFlag
+
+
+class StructuredJSONField(models.JSONField):
+    """Custom JSONField that enforces {"key": "", "value": ""} structure"""
+
+    def validate(self, value, model_instance):
+        super().validate(value, model_instance)
+        if value is not None:  # Allow null/blank
+            if not isinstance(value, dict):
+                raise ValidationError("Param must be a JSON object/dictionary")
+            if set(value.keys()) != {'key', 'value'}:
+                raise ValidationError('Param must have exactly two keys: "key" and "value"')
+            if not isinstance(value.get('key'), str) or not isinstance(value.get('value'),
+                                                                       (str, int, float, bool, type(None))):
+                raise ValidationError(
+                    'Param "key" must be a string and "value" must be a string, number, boolean or null')
 
 
 def to_jsmin_mt_creds(creds: dict, is_new: bool) -> MtMessagingCredential:
@@ -73,53 +89,19 @@ NPI_VALUES = {
     "18": AddrNpi.WAP_CLIENT_ID,
 }
 
+PRIORITY_VALUES = {
+    "0": PriorityFlag.LEVEL_0,
+    "1": PriorityFlag.LEVEL_1,
+    "2": PriorityFlag.LEVEL_2,
+    "3": PriorityFlag.LEVEL_3
+}
+REGISTERED_DELIVERY_VALUES = {
+    "0": RegisteredDeliveryReceipt.NO_SMSC_DELIVERY_RECEIPT_REQUESTED,
+    "1": RegisteredDeliveryReceipt.SMSC_DELIVERY_RECEIPT_REQUESTED,
+    "2": RegisteredDeliveryReceipt.SMSC_DELIVERY_RECEIPT_REQUESTED_FOR_FAILURE
+}
 
-def to_smpp_client_config(connector) -> JCliSMPPClientConfig:
-    """Convert Django model instance to SMPPClientConfig"""
-    connector_id = f"smppc_{connector.workspace.id}_{str(connector.id)}"
-    params = {
-        'id': connector_id,
-        'port': connector.port,
-        'host': connector.host,
-        'username': connector.username,
-        'password': connector.password,
-        'systemType': connector.system_type,
-        'log_file': connector.log_file,
-        'log_rotate': connector.log_rotate,
-        'log_level': connector.log_level,
-        'log_privacy': connector.log_privacy,
-        'sessionInitTimerSecs': connector.session_init_timer_secs,
-        'enquireLinkTimerSecs': connector.enquire_link_timer_secs,
-        'inactivityTimerSecs': connector.inactivity_timer_secs,
-        'responseTimerSecs': connector.response_timer_secs,
-        'pduReadTimerSecs': connector.pdu_read_timer_secs,
-        'dlr_expiry': connector.dlr_expiry,
-        'reconnectOnConnectionLoss': connector.reconnect_on_connection_loss,
-        'reconnectOnConnectionFailure': connector.reconnect_on_connection_failure,
-        'reconnectOnConnectionLossDelay': connector.reconnect_on_connection_loss_delay,
-        'reconnectOnConnectionFailureDelay': connector.reconnect_on_connection_failure_delay,
-        'useSSL': connector.use_ssl,
-        'SSLCertificateFile': connector.ssl_certificate_file,
-        'bindOperation': connector.bind_operation,
-        'source_addr': connector.source_addr,
-        'source_addr_ton': TON_VALUES[str(connector.source_addr_ton)],
-        'source_addr_npi': NPI_VALUES[str(connector.source_addr_npi)],
-        'dest_addr_ton': TON_VALUES[str(connector.dest_addr_ton)],
-        'dest_addr_npi': NPI_VALUES[str(connector.dest_addr_npi)],
-        'addressTon': TON_VALUES[str(connector.address_ton)],
-        'addressNpi': NPI_VALUES[str(connector.address_npi)],
-        'addressRange': connector.address_range,
-        'validity_period': connector.validity_period,
-        'priority_flag': connector.priority_flag,
-        'registered_delivery': connector.registered_delivery,
-        'replace_if_present_flag': connector.replace_if_present_flag,
-        'data_coding': connector.data_coding,
-        'requeue_delay': connector.requeue_delay,
-        'submit_sm_throughput': connector.submit_sm_throughput,
-        'dlr_msg_id_bases': connector.dlr_msg_id_bases,
-    }
-    if params["log_file"] is None:
-        # if log file is not set leave it upto jasmin to default it
-        del params['log_file']
-
-    return JCliSMPPClientConfig(**params)
+REPLACE_IF_PRESENT_VALUES = {
+    "0": ReplaceIfPresentFlag.DO_NOT_REPLACE,
+    "1": ReplaceIfPresentFlag.REPLACE,
+}

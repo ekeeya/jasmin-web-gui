@@ -22,14 +22,17 @@ from time import sleep
 
 from django.db import models
 from django.utils.translation import gettext_lazy as _
+from jasmin.protocols.cli.smppccm import JCliSMPPClientConfig
+from jasmin.routing.Routes import DefaultRoute, StaticMTRoute, RandomRoundrobinMTRoute, FailoverMTRoute
+from jasmin.routing.jasminApi import Connector, SmppClientConnector
 from smartmin.models import SmartModel
 from smpp.pdu.constants import *
-from smpp.pdu.pdu_types import (
-    AddrTon, AddrNpi,
-    EsmClass, EsmClassMode, EsmClassType,
-    RegisteredDelivery, RegisteredDeliveryReceipt,
-    ReplaceIfPresentFlag, PriorityFlag
-)
+from smpp.pdu.pdu_types import RegisteredDelivery
+
+from quark.jasmin.utils import PRIORITY_VALUES, TON_VALUES, NPI_VALUES, REGISTERED_DELIVERY_VALUES, \
+    REPLACE_IF_PRESENT_VALUES
+from quark.jasmin.utils.filters import JasminBaseFilter, MO, MoFilters, MTFilters, MT, AllFilters
+from quark.jasmin.utils.routers import JasminBaseRouter, MTRouterChoices, MTRouter
 from quark.utils.jasmin.extras import BaseJasminModel
 from quark.utils.utils import logger
 
@@ -490,8 +493,13 @@ class JasminSMPPConnector(BaseJasminModel, SmartModel):
         default=PRIORITY_0,
         help_text="SMS-MT default priority"
     )
-    registered_delivery = models.BooleanField(
-        default=False,
+    registered_delivery = models.IntegerField(
+        default=1,
+        choices=[
+            (1, "No SMSC Delivery Receipt Requested"),
+            (2, "SMSC Delivery Receipt Requested"),
+            (3, "SMSC Delivery Receipt Requested For Failure")
+        ],
         help_text="Request SMSC delivery receipt"
     )
     replace_if_present_flag = models.IntegerField(
@@ -565,6 +573,59 @@ class JasminSMPPConnector(BaseJasminModel, SmartModel):
     class Meta:
         db_table = "jasmin_smpp_connector"
 
+    def to_smpp_client_config(self) -> JCliSMPPClientConfig:
+        """Convert Django model instance to SMPPClientConfig"""
+        connector_id = f"smppc_{self.workspace.id}_{str(self.id)}"
+        params = {
+            'id': connector_id,
+            'port': self.port,
+            'host': self.host,
+            'username': self.username,
+            'password': self.password,
+            'systemType': self.system_type,
+            'log_file': self.log_file,
+            'log_rotate': self.log_rotate,
+            'log_level': self.log_level,
+            'log_privacy': self.log_privacy,
+            'sessionInitTimerSecs': self.session_init_timer_secs,
+            'enquireLinkTimerSecs': self.enquire_link_timer_secs,
+            'inactivityTimerSecs': self.inactivity_timer_secs,
+            'responseTimerSecs': self.response_timer_secs,
+            'pduReadTimerSecs': self.pdu_read_timer_secs,
+            'dlr_expiry': self.dlr_expiry,
+            'reconnectOnConnectionLoss': self.reconnect_on_connection_loss,
+            'reconnectOnConnectionFailure': self.reconnect_on_connection_failure,
+            'reconnectOnConnectionLossDelay': self.reconnect_on_connection_loss_delay,
+            'reconnectOnConnectionFailureDelay': self.reconnect_on_connection_failure_delay,
+            'useSSL': self.use_ssl,
+            'SSLCertificateFile': self.ssl_certificate_file,
+            'bindOperation': self.bind_operation,
+            'source_addr': self.source_addr,
+            'source_addr_ton': TON_VALUES[str(self.source_addr_ton)],
+            'source_addr_npi': NPI_VALUES[str(self.source_addr_npi)],
+            'dest_addr_ton': TON_VALUES[str(self.dest_addr_ton)],
+            'dest_addr_npi': NPI_VALUES[str(self.dest_addr_npi)],
+            'addressTon': TON_VALUES[str(self.address_ton)],
+            'addressNpi': NPI_VALUES[str(self.address_npi)],
+            'addressRange': self.address_range,
+            'validity_period': self.validity_period,
+            'priority_flag': PRIORITY_VALUES[str(self.priority_flag)],
+            'registered_delivery': RegisteredDelivery(REGISTERED_DELIVERY_VALUES[str(self.registered_delivery)]),
+            'replace_if_present_flag': REPLACE_IF_PRESENT_VALUES[str(self.replace_if_present_flag)],
+            'data_coding': self.data_coding,
+            'requeue_delay': self.requeue_delay,
+            'submit_sm_throughput': self.submit_sm_throughput,
+            'dlr_msg_id_bases': self.dlr_msg_id_bases,
+        }
+        if params["log_file"] is None:
+            # if log file is not set leave it upto jasmin to default it
+            del params['log_file']
+
+        return JCliSMPPClientConfig(**params)
+
+    def to_route_connector(self) -> Connector:
+        return SmppClientConnector(self.cid)
+
     @classmethod
     def from_smpp_client_config(cls, config_data, workspace):
         """Create Django model instance from SMPPClientConfig dictionary"""
@@ -612,3 +673,91 @@ class JasminSMPPConnector(BaseJasminModel, SmartModel):
         )
         # TODO, hand over to django, let it try to pick if by cid from db then update any
         #  field that do not match or just create a new on, handle clever way to link the workspace
+
+
+class JasminFilter(JasminBaseFilter, SmartModel):
+    """
+        Jasmin does not provide a PB for the filters as they are attached to an active session.
+        Just persist the Router using it and it will be persisted too.
+
+        Nonetheless, let us save them locally here in django, so we do not need to recreate them each time
+    """
+    filter_type = models.CharField(
+        max_length=40,
+        null=False
+    )
+
+    def save(self, *args, **kwargs):
+        # validate the params given a filter  and params
+        validated = None
+        if self.nature == MO:
+            validated = MoFilters.validate(self.filter_type, self.param.get("value"))
+        elif self.nature == MT:
+            validated = MTFilters.validate(self.filter_type, self.param.get("value"))
+        else:
+            if self.param and isinstance(self.param, dict):
+                validated = AllFilters.validate(self.filter_type, self.param.get("value"))
+        if validated:
+            self.param["value"] = validated
+        super(JasminFilter, self).save(*args, **kwargs)
+
+    def to_jasmin_filter(self):
+        if self.filter_type == MO:
+            jasmin_filter = MoFilters[self.filter_type].value[0]
+        elif self.filter_type == MT:
+            jasmin_filter = MTFilters[self.filter_type].value[0]
+        else:
+            jasmin_filter = AllFilters[self.filter_type].value[0]
+        if self.param and isinstance(self.param, dict):
+            payload = {self.param["key"]: self.param["value"]}
+            return jasmin_filter(**payload)
+
+        return jasmin_filter()
+
+    class Meta:
+        db_table = 'jasmin_filter'
+
+
+class JasminMtRoute(BaseJasminModel, JasminBaseRouter, SmartModel):
+    router_type = models.CharField(
+        max_length=25,
+        choices=MTRouterChoices,
+        default=MTRouterChoices.DefaultRoute)
+
+    filters = models.ManyToManyField(JasminFilter, related_name="mt_routers")
+    connectors = models.ManyToManyField(JasminSMPPConnector, related_name="routers")
+
+    def to_jasmin_route(self):
+
+        JasminMTRoute = MTRouter.jasmin_router_class(self.router_type)
+        filters = [f.to_jasmin_filter() for f in self.filters.all()]
+        connectors = [c.to_route_connector() for c in self.connectors.all()]
+        self.rate = float(self.rate)
+        if len(connectors) == 0:
+            raise Exception("Could not proceed saving MT router because No connectors found")
+        connector = connectors[0]
+
+        if JasminMTRoute == DefaultRoute:
+            route = DefaultRoute(connector=connector, rate=self.rate)
+        elif JasminMTRoute == StaticMTRoute:
+            route = StaticMTRoute(connector=connector, filters=filters, rate=self.rate)
+        elif JasminMTRoute == RandomRoundrobinMTRoute:
+            # multiple filters and multiple connectors
+            route = RandomRoundrobinMTRoute(filters=filters, connectors=connectors, rate=self.rate)
+        else:
+            route = FailoverMTRoute(filters=filters, connectors=connectors, rate=self.rate)
+        return route
+
+    def save(self, *args, **kwargs):
+        run_on_reactor = kwargs.pop('run_on_reactor', True)
+        super().save(*args, **kwargs)
+        if run_on_reactor:
+            self.jasmin_add_mt_route()
+
+    def delete(self, *args, **kwargs):
+        run_on_reactor = kwargs.pop('run_on_reactor', True)
+
+        super().delete(*args, **kwargs)
+
+    class Meta:
+        db_table = 'jasmin_mt_route'

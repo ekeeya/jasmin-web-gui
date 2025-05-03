@@ -2,9 +2,7 @@ import logging
 import pickle
 
 from django.conf import settings
-from jasmin.protocols.cli.smppccm import JCliSMPPClientConfig as SmppClientConnector
-from jasmin.routing.Filters import DestinationAddrFilter
-from jasmin.routing.Routes import DefaultRoute, StaticMTRoute
+from jasmin.routing.Routes import DefaultRoute, StaticMTRoute, RandomRoundrobinMTRoute, FailoverMTRoute, Route
 from jasmin.routing.jasminApi import User, Group
 from jasmin.routing.proxies import RouterPBProxy
 from twisted.internet import defer, reactor
@@ -35,7 +33,7 @@ class RouterPBInterface(RouterPBProxy):
     def add_group(self, group_name: str, persist: bool = True):
         try:
             logger.debug("Establishing a connection to jasmin")
-            self.pb_connect()
+            yield self.pb_connect()
             group = Group(group_name)
             yield self.group_add(group)
             logger.debug(f"Added group {group_name}")
@@ -43,7 +41,7 @@ class RouterPBInterface(RouterPBProxy):
                 yield self.persist()
         except Exception as e:
             logger.error(e)
-            self.disconnect()
+            yield self.disconnect()
             raise e  # raise it again such that we pass it on to the caller
         finally:
             logger.debug("Will disconnect from jasmin")
@@ -103,17 +101,24 @@ class RouterPBInterface(RouterPBProxy):
             self.disconnect()
 
     @defer.inlineCallbacks
-    def add_mtrouter(self, connector, filter=None, persist=True):
+    def add_mt_route(self,  route: Route, order, persist=True):
         try:
-            if filter:
-                destination = DestinationAddrFilter(destination_addr=filter)
-                yield self.mtroute_add(StaticMTRoute([destination], SmppClientConnector(connector)), 1000)
-            else:
-                yield self.mtroute_add(DefaultRoute(SmppClientConnector(connector)), 1000)
+            yield self.pb_connect()
+            yield self.mtroute_add(route, order)
             if persist:
                 yield self.persist()
         except Exception as e:
             logger.error("Error adding MT router to Jasmin PB: %s", e)
+
+    @defer.inlineCallbacks
+    def remove_mt_route(self, order, persist=True):
+        try:
+            yield self.pb_connect()
+            yield self.moroute_remove(order)
+            if persist:
+                yield self.persist()
+        except Exception as e:
+            logger.error("Error removing MT router to Jasmin PB: %s", e)
 
     def execute(self):
         def run():

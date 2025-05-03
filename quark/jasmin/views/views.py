@@ -21,8 +21,9 @@ from rest_framework.pagination import LimitOffsetPagination
 from smartmin.mixins import NonAtomicMixin
 from smartmin.views import SmartCRUDL, SmartCreateView, SmartListView, SmartUpdateView, SmartDeleteView
 
-from quark.jasmin.models import JasminGroup, JasminUser, JasminSMPPConnector
-from quark.jasmin.views.forms import JasminGroupForm, UpdateJasminGroupForm, JasminUserForm, JasminSPPConnectorForm
+from quark.jasmin.models import JasminGroup, JasminUser, JasminSMPPConnector, JasminFilter, JasminMtRoute
+from quark.jasmin.views.forms import JasminGroupForm, UpdateJasminGroupForm, JasminUserForm, JasminSPPConnectorForm, \
+    JasminFilterForm, JasminMTRouteForm
 from quark.workspace.views.base import BaseListView
 from quark.workspace.views.mixins import WorkspacePermsMixin
 
@@ -160,4 +161,78 @@ class JasminSMPPConnectorCRUDL(SmartCRUDL):
             workspace = self.derive_workspace()
             context['workspace'] = workspace
 
+            return context
+
+
+class JasminFilterCRUDL(SmartCRUDL):
+    actions = ("create", "list", "update", "delete",)
+    model = JasminFilter
+
+    class Create(WorkspacePermsMixin, NonAtomicMixin, SmartCreateView):
+        title = "Create Message Filter"
+        permission = "jasmin.jasminfilter_create"
+        form_class = JasminFilterForm
+        success_url = "@jasmin.jasminfilter_list"
+
+        def get_form_kwargs(self):
+            kwargs = super().get_form_kwargs()
+            kwargs["workspace"] = self.derive_workspace()
+            return kwargs
+
+    class List(BaseListView):
+        title = "Message Filters"
+        permission = "jasmin.jasminfilter_list"
+        paginator_class = Paginator
+        paginate_by = 10
+
+        def get_context_data(self, **kwargs):
+            context = super().get_context_data(**kwargs)
+            workspace = self.derive_workspace()
+            context['workspace'] = workspace
+
+            return context
+
+
+class JasminMTRouteCRUDL(SmartCRUDL):
+    actions = ("create", "list", "update", "delete",)
+    model = JasminMtRoute
+
+    class Create(WorkspacePermsMixin, NonAtomicMixin, SmartCreateView):
+        title = "Create MT Route"
+        permission = "jasmin.jasminmtroute_create"
+        form_class = JasminMTRouteForm
+        success_url = "@jasmin.jasminmtroute_list"
+
+        def get_form_kwargs(self):
+            kwargs = super().get_form_kwargs()
+            kwargs["workspace"] = self.derive_workspace()
+            return kwargs
+
+        def save(self, obj):
+            route = JasminMtRoute(
+                router_type=self.form.cleaned_data["router_type"],
+                workspace=self.derive_workspace(),
+                order=self.form.cleaned_data["order"],
+                rate=self.form.cleaned_data["rate"],
+                created_by=self.request.user,
+                modified_by=self.request.user,
+            )
+            route.save(run_on_reactor=False)  # save it but do not run reactor yet
+
+            route.connectors.set(self.form.cleaned_data["connectors"])
+            route.filters.set(self.form.cleaned_data["filters"])
+            route.save()  # now run on reactor
+
+            return route
+
+    class List(BaseListView):
+        title = "MT Routes"
+        permission = "jasmin.jasminmtroute_list"
+        paginator_class = Paginator
+        paginate_by = 10
+
+        def get_context_data(self, **kwargs):
+            context = super().get_context_data(**kwargs)
+            workspace = self.derive_workspace()
+            context['workspace'] = workspace
             return context

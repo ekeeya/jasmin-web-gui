@@ -133,37 +133,53 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 AUTH_USER_MODEL = "workspace.User"
 
-APP_LOG_FILE = f"{BASE_DIR}/logs/app.log"
+APP_LOG_FILE = os.path.join(BASE_DIR, 'logs', 'app.log')
+
+os.makedirs(os.path.dirname(APP_LOG_FILE), exist_ok=True)
 
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
-
     'formatters': {
-        'main_formatter': {
+        'verbose': {
             'format': '{asctime} {levelname} {module} {process:d} {thread:d} {message}',
             'style': '{',
             'datefmt': '%Y-%m-%d %H:%M:%S'
         },
+        'simple': {
+            'format': '{levelname} {message}',
+            'style': '{',
+        },
     },
     'handlers': {
-        'console_normal': {
-            'class': "logging.StreamHandler",
-            'formatter': 'main_formatter'
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose'
         },
-        'file_normal': {
-            'class': 'logging.FileHandler',
+        'file': {
+            'class': 'logging.handlers.RotatingFileHandler',
             'filename': APP_LOG_FILE,
-            'formatter': 'main_formatter',
-        }
+            'formatter': 'verbose',
+            'maxBytes': 1024*1024*5,  # 5 MB
+            'backupCount': 5,
+        },
     },
     'loggers': {
-        'main': {
-            'handlers': ['console_normal', 'file_normal'],
-            'propagate': True,
-            'level': "DEBUG"
-        }
-    }
+        '': {  # root logger
+            'handlers': ['console', 'file'],
+            'level': 'INFO',
+        },
+        'django': {
+            'handlers': ['console', 'file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'your_app_name': {  # Replace with your actual app name
+            'handlers': ['console', 'file'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+    },
 }
 
 JASMIN_PERSIST = True
@@ -191,7 +207,7 @@ PERMISSIONS = {
         "delete",
         "list",),
     "jasmin.jasmingroup": ("activate", "deactivate"),
-    "jasmin.jasminuser":("activate", "deactivate"),
+    "jasmin.jasminuser": ("activate", "deactivate"),
     "jasmin.jasminsmppconnector": ("start", "stop", "configure"),
 }
 
@@ -219,6 +235,14 @@ GROUP_PERMISSIONS = {
         "jasmin.jasminsmppconnector_stop",
         "jasmin.jasminsmppconnector_delete",
         "jasmin.jasminsmppconnector_list",
+        "jasmin.jasminfilter_create",
+        "jasmin.jasminfilter_update" ,
+        "jasmin.jasminfilter_list",
+        "jasmin.jasminfilter_delete",
+        "jasmin.jasminmtroute_create",
+        "jasmin.jasminmtroute_update",
+        "jasmin.jasminmtroute_list",
+        "jasmin.jasminmtroute_delete",
 
     )
 }
