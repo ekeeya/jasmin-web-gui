@@ -239,10 +239,10 @@ GROUP_PERMISSIONS = {
         "jasmin.jasminfilter_update" ,
         "jasmin.jasminfilter_list",
         "jasmin.jasminfilter_delete",
-        "jasmin.jasminmtroute_create",
-        "jasmin.jasminmtroute_update",
-        "jasmin.jasminmtroute_list",
-        "jasmin.jasminmtroute_delete",
+        "jasmin.jasminroute_create",
+        "jasmin.jasminroute_update",
+        "jasmin.jasminroute_list",
+        "jasmin.jasminroute_delete",
 
     )
 }

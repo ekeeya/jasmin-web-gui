@@ -23,7 +23,8 @@ from time import sleep
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from jasmin.protocols.cli.smppccm import JCliSMPPClientConfig
-from jasmin.routing.Routes import DefaultRoute, StaticMTRoute, RandomRoundrobinMTRoute, FailoverMTRoute
+from jasmin.routing.Routes import DefaultRoute, StaticMTRoute, RandomRoundrobinMTRoute, FailoverMTRoute, \
+    RandomRoundrobinMORoute, StaticMORoute, FailoverMORoute
 from jasmin.routing.jasminApi import Connector, SmppClientConnector
 from smartmin.models import SmartModel
 from smpp.pdu.constants import *
@@ -32,7 +33,7 @@ from smpp.pdu.pdu_types import RegisteredDelivery
 from quark.jasmin.utils import PRIORITY_VALUES, TON_VALUES, NPI_VALUES, REGISTERED_DELIVERY_VALUES, \
     REPLACE_IF_PRESENT_VALUES
 from quark.jasmin.utils.filters import JasminBaseFilter, MO, MoFilters, MTFilters, MT, AllFilters
-from quark.jasmin.utils.routers import JasminBaseRouter, MTRouterChoices, MTRouter
+from quark.jasmin.utils.routers import JasminBaseRouter, MTRouterChoices, MTRouter, MORouter
 from quark.utils.jasmin.extras import BaseJasminModel
 from quark.utils.utils import logger
 
@@ -718,7 +719,7 @@ class JasminFilter(JasminBaseFilter, SmartModel):
         db_table = 'jasmin_filter'
 
 
-class JasminMtRoute(BaseJasminModel, JasminBaseRouter, SmartModel):
+class JasminRoute(BaseJasminModel, JasminBaseRouter, SmartModel):
     router_type = models.CharField(
         max_length=25,
         choices=MTRouterChoices,
@@ -729,35 +730,56 @@ class JasminMtRoute(BaseJasminModel, JasminBaseRouter, SmartModel):
 
     def to_jasmin_route(self):
 
-        JasminMTRoute = MTRouter.jasmin_router_class(self.router_type)
-        filters = [f.to_jasmin_filter() for f in self.filters.all()]
-        connectors = [c.to_route_connector() for c in self.connectors.all()]
-        self.rate = float(self.rate)
-        if len(connectors) == 0:
-            raise Exception("Could not proceed saving MT router because No connectors found")
-        connector = connectors[0]
+        if self.nature == "MT":
+            JasminMTRoute = MTRouter.jasmin_router_class(self.router_type)
+            filters = [f.to_jasmin_filter() for f in self.filters.all()]
+            connectors = [c.to_route_connector() for c in self.connectors.all()]
+            self.rate = float(self.rate)
+            if len(connectors) == 0:
+                raise Exception("Could not proceed saving MT router because No connectors found")
+            connector = connectors[0]
 
-        if JasminMTRoute == DefaultRoute:
-            route = DefaultRoute(connector=connector, rate=self.rate)
-        elif JasminMTRoute == StaticMTRoute:
-            route = StaticMTRoute(connector=connector, filters=filters, rate=self.rate)
-        elif JasminMTRoute == RandomRoundrobinMTRoute:
-            # multiple filters and multiple connectors
-            route = RandomRoundrobinMTRoute(filters=filters, connectors=connectors, rate=self.rate)
+            if JasminMTRoute == DefaultRoute:
+                route = DefaultRoute(connector=connector, rate=self.rate)
+            elif JasminMTRoute == StaticMTRoute:
+                route = StaticMTRoute(connector=connector, filters=filters, rate=self.rate)
+            elif JasminMTRoute == RandomRoundrobinMTRoute:
+                # multiple filters and multiple connectors
+                route = RandomRoundrobinMTRoute(filters=filters, connectors=connectors, rate=self.rate)
+            else:
+                route = FailoverMTRoute(filters=filters, connectors=connectors, rate=self.rate)
+            return route
         else:
-            route = FailoverMTRoute(filters=filters, connectors=connectors, rate=self.rate)
-        return route
+            JasminMORoute = MORouter.jasmin_router_class(self.router_type)
+            filters = [f.to_jasmin_filter() for f in self.filters.all()]
+            connectors = [c.to_route_connector() for c in self.connectors.all()]
+
+            if len(connectors) == 0:
+                raise Exception("Could not proceed saving MT router because No connectors found")
+            connector = connectors[0]
+            if JasminMORoute is DefaultRoute:
+                route = DefaultRoute(connector=connector, rate=self.rate)
+            elif JasminMORoute is StaticMORoute:
+                route = StaticMORoute(connector=connector, filters=filters)
+            elif JasminMORoute is RandomRoundrobinMORoute:
+                # multiple filters and multiple connectors
+                route = RandomRoundrobinMORoute(filters=filters, connectors=connectors)
+            else:
+                route = FailoverMORoute(filters=filters, connectors=connectors)
+            return route
 
     def save(self, *args, **kwargs):
         run_on_reactor = kwargs.pop('run_on_reactor', True)
         super().save(*args, **kwargs)
         if run_on_reactor:
-            self.jasmin_add_mt_route()
+            self.jasmin_add_route()
 
     def delete(self, *args, **kwargs):
         run_on_reactor = kwargs.pop('run_on_reactor', True)
-
-        super().delete(*args, **kwargs)
+        if run_on_reactor:
+            self.jasmin_remove_route()
+        else:
+            super().delete(*args, **kwargs)
 
     class Meta:
-        db_table = 'jasmin_mt_route'
+        db_table = 'jasmin_route'

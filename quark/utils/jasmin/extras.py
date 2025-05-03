@@ -53,8 +53,8 @@ class BaseJasminModel(models.Model):
         REMOVE_USER = 'remove_user'
         USER_ENABLE = 'user_enable'
         USER_DISABLE = 'user_disable'
-        ADD_MT_ROUTE = 'add_mt_route'
-        REMOVE_MT_ROUTE = 'remove_mt_route'
+        ADD_ROUTE = 'add_route'
+        REMOVE_ROUTE = 'remove_route'
 
         # SMPP PB Stuff
 
@@ -80,7 +80,7 @@ class BaseJasminModel(models.Model):
                 self.ReactorOperation.ADD_GROUP,
                 self.ReactorOperation.ADD_USER,
                 self.ReactorOperation.ADD_SMPP_CONNECTOR,
-                self.ReactorOperation.ADD_MT_ROUTE,
+                self.ReactorOperation.ADD_ROUTE
             ]:
                 deferred.addCallbacks(
                     self.handle_write_result,
@@ -239,13 +239,23 @@ class BaseJasminModel(models.Model):
                 settings.JASMIN_PERSIST
             )
 
-    def jasmin_add_mt_route(self):
+    def jasmin_add_route(self):
         route = self.to_jasmin_route()
         self._execute_reactor_operation(
-            self.ReactorOperation.ADD_MT_ROUTE,
+            self.ReactorOperation.ADD_ROUTE,
             PBType.RouterPB,
             route,
                 self.order,
+                self.nature,
+            settings.JASMIN_PERSIST
+        )
+
+    def jasmin_remove_route(self):
+        self._execute_reactor_operation(
+            self.ReactorOperation.REMOVE_ROUTE,
+            PBType.RouterPB,
+                self.order,
+                self.nature,
             settings.JASMIN_PERSIST
         )
 

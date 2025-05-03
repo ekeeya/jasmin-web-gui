@@ -18,7 +18,15 @@
 from enum import Enum
 
 from django.db import models
-from jasmin.routing.Routes import DefaultRoute, StaticMTRoute, Route, MTRoute, RandomRoundrobinMTRoute, FailoverMTRoute
+from jasmin.routing.Routes import (
+    DefaultRoute,
+    StaticMTRoute,
+    StaticMORoute,
+    RandomRoundrobinMORoute,
+    RandomRoundrobinMTRoute,
+    FailoverMTRoute,
+    FailoverMORoute,
+)
 
 MO = "MO"
 MT = "MT"
@@ -39,6 +47,21 @@ class MTRouter(Enum):
         return cls[field].value[0]
 
 
+class MORouter(Enum):
+    DefaultRoute = DefaultRoute, ("A route without a filter, this one can only set with the lowest order to be a "
+                                  "default/fallback route")
+    StaticMORoute = StaticMORoute, "A basic route with Filters and one Connector"
+    RandomRoundrobinMORoute = RandomRoundrobinMORoute, ("A route with Filters and many Connectors, will return a "
+                                                        "random Connector if its Filters are matching, can be used "
+                                                        "as a load balancer route")
+    FailoverMORoute = FailoverMORoute, ("A route with Filters and many Connectors, will return an available ("
+                                        "connected) Connector if its Filters are matched")
+
+    @classmethod
+    def jasmin_router_class(cls, field):
+        return cls[field].value[0]
+
+
 class MTRouterChoices(models.TextChoices):
     DefaultRoute = "DefaultRoute", "Default route"
     StaticMTRoute = "StaticMTRoute", "Static MTRoute"
@@ -46,10 +69,24 @@ class MTRouterChoices(models.TextChoices):
     FailoverMTRoute = "FailoverMTRoute", "Failover MTRoute"
 
 
+class MORouterChoices(models.TextChoices):
+    DefaultRoute = "DefaultRoute", "Default route"
+    StaticMORoute = "StaticMORoute", "Static MORoute"
+    RandomRoundrobinMORoute = "RandomRoundrobinMORoute", "Random Roundrobin MORoute"
+    FailoverMORoute = "FailoverMORoute", "Failover MORoute"
+
+
 class JasminBaseRouter(models.Model):
     rate = models.DecimalField(
         max_digits=10,
         decimal_places=2,
+        null=True,
+        blank=True,
+    )
+
+    nature = models.CharField(
+        max_length=2,
+        choices=[("MO", "MO"), ("MT", "MT")]
     )
     workspace = models.ForeignKey("workspace.WorkSpace", on_delete=models.CASCADE)
 

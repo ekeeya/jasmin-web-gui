@@ -101,20 +101,26 @@ class RouterPBInterface(RouterPBProxy):
             self.disconnect()
 
     @defer.inlineCallbacks
-    def add_mt_route(self,  route: Route, order, persist=True):
+    def add_route(self, route: Route, order, nature, persist=True):
         try:
             yield self.pb_connect()
-            yield self.mtroute_add(route, order)
+            if nature == "MT":
+                yield self.mtroute_add(route, order)
+            else:
+                yield self.moroute_add(route, order)
             if persist:
                 yield self.persist()
         except Exception as e:
             logger.error("Error adding MT router to Jasmin PB: %s", e)
 
     @defer.inlineCallbacks
-    def remove_mt_route(self, order, persist=True):
+    def remove_route(self, order, nature, persist=True):
         try:
             yield self.pb_connect()
-            yield self.moroute_remove(order)
+            if nature == "MT":
+                yield self.mtroute_remove(order)
+            else:
+                yield self.moroute_remove(order)
             if persist:
                 yield self.persist()
         except Exception as e:

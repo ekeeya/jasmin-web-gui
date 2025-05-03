@@ -17,13 +17,12 @@
 #
 from django.core.paginator import Paginator
 from django.http import HttpResponseRedirect
-from rest_framework.pagination import LimitOffsetPagination
 from smartmin.mixins import NonAtomicMixin
 from smartmin.views import SmartCRUDL, SmartCreateView, SmartListView, SmartUpdateView, SmartDeleteView
 
-from quark.jasmin.models import JasminGroup, JasminUser, JasminSMPPConnector, JasminFilter, JasminMtRoute
+from quark.jasmin.models import JasminGroup, JasminUser, JasminSMPPConnector, JasminFilter, JasminRoute
 from quark.jasmin.views.forms import JasminGroupForm, UpdateJasminGroupForm, JasminUserForm, JasminSPPConnectorForm, \
-    JasminFilterForm, JasminMTRouteForm
+    JasminFilterForm, JasminRouteForm
 from quark.workspace.views.base import BaseListView
 from quark.workspace.views.mixins import WorkspacePermsMixin
 
@@ -193,15 +192,15 @@ class JasminFilterCRUDL(SmartCRUDL):
             return context
 
 
-class JasminMTRouteCRUDL(SmartCRUDL):
+class JasminRouteCRUDL(SmartCRUDL):
     actions = ("create", "list", "update", "delete",)
-    model = JasminMtRoute
+    model = JasminRoute
 
     class Create(WorkspacePermsMixin, NonAtomicMixin, SmartCreateView):
         title = "Create MT Route"
-        permission = "jasmin.jasminmtroute_create"
-        form_class = JasminMTRouteForm
-        success_url = "@jasmin.jasminmtroute_list"
+        permission = "jasmin.jasminroute_create"
+        form_class = JasminRouteForm
+        success_url = "@jasmin.jasminroute_list"
 
         def get_form_kwargs(self):
             kwargs = super().get_form_kwargs()
@@ -209,8 +208,9 @@ class JasminMTRouteCRUDL(SmartCRUDL):
             return kwargs
 
         def save(self, obj):
-            route = JasminMtRoute(
+            route = JasminRoute(
                 router_type=self.form.cleaned_data["router_type"],
+                nature=self.form.cleaned_data["nature"],
                 workspace=self.derive_workspace(),
                 order=self.form.cleaned_data["order"],
                 rate=self.form.cleaned_data["rate"],
@@ -227,7 +227,7 @@ class JasminMTRouteCRUDL(SmartCRUDL):
 
     class List(BaseListView):
         title = "MT Routes"
-        permission = "jasmin.jasminmtroute_list"
+        permission = "jasmin.jasminroute_list"
         paginator_class = Paginator
         paginate_by = 10
 

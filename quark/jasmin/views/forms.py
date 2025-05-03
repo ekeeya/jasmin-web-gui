@@ -21,8 +21,7 @@ from django import forms
 from django.forms import HiddenInput
 from django.utils.text import slugify
 
-from quark.jasmin.models import JasminGroup, JasminUser, JasminSMPPConnector, JasminFilter, \
-    JasminMtRoute
+from quark.jasmin.models import JasminGroup, JasminUser, JasminSMPPConnector, JasminFilter, JasminRoute
 from quark.jasmin.views.sub_forms import MessagingAuthorizationsForm, MessagingValueFiltersForm, MessagingDefaultsForm, \
     MessagingQuotasForm, SMPPAuthorizationsForm, SMPPQuotasForm
 from quark.workspace.views.forms import BaseWorkspaceForm
@@ -257,13 +256,13 @@ class JasminFilterForm(BaseWorkspaceForm):
 
     class Meta:
         model = JasminFilter
-        exclude = ("workspace", )
+        exclude = ("workspace",)
         widgets = {
             'param': HiddenInput(),  # Hide the original JSON field
         }
 
 
-class JasminMTRouteForm(BaseWorkspaceForm):
+class JasminRouteForm(BaseWorkspaceForm):
 
     def save(self, commit=True):
         instance = super().save(commit=False)
@@ -276,5 +275,5 @@ class JasminMTRouteForm(BaseWorkspaceForm):
         return instance
 
     class Meta:
-        model = JasminMtRoute
-        fields = ("router_type", "order", "filters", "connectors", "rate")
+        model = JasminRoute
+        fields = ("nature", "router_type", "order", "filters", "connectors", "rate")
