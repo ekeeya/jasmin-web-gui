@@ -243,6 +243,10 @@ GROUP_PERMISSIONS = {
         "jasmin.jasminroute_update",
         "jasmin.jasminroute_list",
         "jasmin.jasminroute_delete",
+        "jasmin.jasmininterceptor_create",
+        "jasmin.jasmininterceptor_update",
+        "jasmin.jasmininterceptor_delete",
+        "jasmin.jasmininterceptor_list",
 
     )
 }

@@ -2,6 +2,7 @@ import logging
 import pickle
 
 from django.conf import settings
+from jasmin.routing.Interceptors import Interceptor
 from jasmin.routing.Routes import DefaultRoute, StaticMTRoute, RandomRoundrobinMTRoute, FailoverMTRoute, Route
 from jasmin.routing.jasminApi import User, Group
 from jasmin.routing.proxies import RouterPBProxy
@@ -125,6 +126,32 @@ class RouterPBInterface(RouterPBProxy):
                 yield self.persist()
         except Exception as e:
             logger.error("Error removing MT router to Jasmin PB: %s", e)
+
+    @defer.inlineCallbacks
+    def add_interceptor(self, interceptor: Interceptor, order, nature, persist=True):
+        try:
+            yield self.pb_connect()
+            if nature == "MT":
+                yield self.mtinterceptor_add(interceptor, order)
+            else:
+                yield self.mointerceptor_add(interceptor, order)
+            if persist:
+                yield self.persist()
+        except Exception as e:
+            logger.error("Error adding router from Jasmin PB: %s", e)
+
+    @defer.inlineCallbacks
+    def remove_interceptor(self, order, nature, persist=True):
+        try:
+            yield self.pb_connect()
+            if nature == "MT":
+                yield self.mtinterceptor_remove(order)
+            else:
+                yield self.mointerceptor_remove(order)
+            if persist:
+                yield self.persist()
+        except Exception as e:
+            logger.error("Error removing interceptor from Jasmin PB: %s", e)
 
     def execute(self):
         def run():

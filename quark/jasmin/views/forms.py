@@ -21,7 +21,8 @@ from django import forms
 from django.forms import HiddenInput
 from django.utils.text import slugify
 
-from quark.jasmin.models import JasminGroup, JasminUser, JasminSMPPConnector, JasminFilter, JasminRoute
+from quark.jasmin.models import JasminGroup, JasminUser, JasminSMPPConnector, JasminFilter, JasminRoute, \
+    JasminInterceptor
 from quark.jasmin.views.sub_forms import MessagingAuthorizationsForm, MessagingValueFiltersForm, MessagingDefaultsForm, \
     MessagingQuotasForm, SMPPAuthorizationsForm, SMPPQuotasForm
 from quark.workspace.views.forms import BaseWorkspaceForm
@@ -264,9 +265,14 @@ class JasminFilterForm(BaseWorkspaceForm):
 
 class JasminRouteForm(BaseWorkspaceForm):
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Must conform to our workspace.
+        self.fields['filters'].queryset = JasminFilter.objects.filter(workspace=self.workspace)
+
     def save(self, commit=True):
         instance = super().save(commit=False)
-
         # add workspace to instance
         instance.workspace = self.cleaned_data['workspace']
 
@@ -277,3 +283,25 @@ class JasminRouteForm(BaseWorkspaceForm):
     class Meta:
         model = JasminRoute
         fields = ("nature", "router_type", "order", "filters", "connectors", "rate")
+
+
+class JasminInterceptorForm(BaseWorkspaceForm):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Must conform to our workspace.
+        self.fields['filters'].queryset = JasminFilter.objects.filter(workspace=self.workspace)
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        # add workspace to instance
+        instance.workspace = self.cleaned_data['workspace']
+
+        if commit:
+            instance.save()
+        return instance
+
+    class Meta:
+        model = JasminInterceptor
+        fields = ("nature", "interceptor_type", "order", "filters", "script")

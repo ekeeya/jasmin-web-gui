@@ -20,9 +20,10 @@ from django.http import HttpResponseRedirect
 from smartmin.mixins import NonAtomicMixin
 from smartmin.views import SmartCRUDL, SmartCreateView, SmartListView, SmartUpdateView, SmartDeleteView
 
-from quark.jasmin.models import JasminGroup, JasminUser, JasminSMPPConnector, JasminFilter, JasminRoute
+from quark.jasmin.models import JasminGroup, JasminUser, JasminSMPPConnector, JasminFilter, JasminRoute, \
+    JasminInterceptor
 from quark.jasmin.views.forms import JasminGroupForm, UpdateJasminGroupForm, JasminUserForm, JasminSPPConnectorForm, \
-    JasminFilterForm, JasminRouteForm
+    JasminFilterForm, JasminRouteForm, JasminInterceptorForm
 from quark.workspace.views.base import BaseListView
 from quark.workspace.views.mixins import WorkspacePermsMixin
 
@@ -197,7 +198,7 @@ class JasminRouteCRUDL(SmartCRUDL):
     model = JasminRoute
 
     class Create(WorkspacePermsMixin, NonAtomicMixin, SmartCreateView):
-        title = "Create MT Route"
+        title = "Create Route"
         permission = "jasmin.jasminroute_create"
         form_class = JasminRouteForm
         success_url = "@jasmin.jasminroute_list"
@@ -226,13 +227,46 @@ class JasminRouteCRUDL(SmartCRUDL):
             return route
 
     class List(BaseListView):
-        title = "MT Routes"
+        title = "Routers"
         permission = "jasmin.jasminroute_list"
         paginator_class = Paginator
         paginate_by = 10
 
-        def get_context_data(self, **kwargs):
-            context = super().get_context_data(**kwargs)
-            workspace = self.derive_workspace()
-            context['workspace'] = workspace
-            return context
+
+class JasminInterceptorCRUDL(SmartCRUDL):
+    actions = ("create", "list", "update", "delete",)
+    model = JasminInterceptor
+
+    class Create(WorkspacePermsMixin, NonAtomicMixin, SmartCreateView):
+        title = "Create Interceptor"
+        permission = "jasmin.jasmininterceptor_create"
+        form_class = JasminInterceptorForm
+        success_url = "@jasmin.jasmininterceptor_list"
+
+        def get_form_kwargs(self):
+            kwargs = super().get_form_kwargs()
+            kwargs["workspace"] = self.derive_workspace()
+            return kwargs
+
+        def save(self, obj):
+            interceptor = JasminInterceptor(
+                interceptor_type=self.form.cleaned_data["interceptor_type"],
+                nature=self.form.cleaned_data["nature"],
+                workspace=self.derive_workspace(),
+                order=self.form.cleaned_data["order"],
+                script=self.form.cleaned_data["script"],
+                created_by=self.request.user,
+                modified_by=self.request.user,
+            )
+            interceptor.save(run_on_reactor=False)  # save it but do not run reactor yet
+
+            interceptor.filters.set(self.form.cleaned_data["filters"])
+            interceptor.save()  # now run on reactor
+
+            return obj
+
+    class List(BaseListView):
+        title = "MT Interceptors"
+        permission = "jasmin.jasmininterceptor_list"
+        paginator_class = Paginator
+        paginate_by = 10

@@ -62,15 +62,11 @@ class MORouter(Enum):
         return cls[field].value[0]
 
 
-class MTRouterChoices(models.TextChoices):
+class RouterChoices(models.TextChoices):
     DefaultRoute = "DefaultRoute", "Default route"
     StaticMTRoute = "StaticMTRoute", "Static MTRoute"
     RandomRoundrobinMTRoute = "RandomRoundrobinMTRoute", "Random Roundrobin MTRoute"
     FailoverMTRoute = "FailoverMTRoute", "Failover MTRoute"
-
-
-class MORouterChoices(models.TextChoices):
-    DefaultRoute = "DefaultRoute", "Default route"
     StaticMORoute = "StaticMORoute", "Static MORoute"
     RandomRoundrobinMORoute = "RandomRoundrobinMORoute", "Random Roundrobin MORoute"
     FailoverMORoute = "FailoverMORoute", "Failover MORoute"

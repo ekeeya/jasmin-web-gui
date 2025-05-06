@@ -55,6 +55,8 @@ class BaseJasminModel(models.Model):
         USER_DISABLE = 'user_disable'
         ADD_ROUTE = 'add_route'
         REMOVE_ROUTE = 'remove_route'
+        ADD_INTERCEPTOR = 'add_interceptor'
+        REMOVE_INTERCEPTOR = 'remove_interceptor'
 
         # SMPP PB Stuff
 
@@ -80,7 +82,8 @@ class BaseJasminModel(models.Model):
                 self.ReactorOperation.ADD_GROUP,
                 self.ReactorOperation.ADD_USER,
                 self.ReactorOperation.ADD_SMPP_CONNECTOR,
-                self.ReactorOperation.ADD_ROUTE
+                self.ReactorOperation.ADD_ROUTE,
+                self.ReactorOperation.ADD_INTERCEPTOR
             ]:
                 deferred.addCallbacks(
                     self.handle_write_result,
@@ -245,17 +248,38 @@ class BaseJasminModel(models.Model):
             self.ReactorOperation.ADD_ROUTE,
             PBType.RouterPB,
             route,
-                self.order,
-                self.nature,
+            self.order,
+            self.nature,
             settings.JASMIN_PERSIST
         )
 
     def jasmin_remove_route(self):
-        self._execute_reactor_operation(
-            self.ReactorOperation.REMOVE_ROUTE,
-            PBType.RouterPB,
+        if hasattr(self, "order") and hasattr(self, "nature"):
+            self._execute_reactor_operation(
+                self.ReactorOperation.REMOVE_ROUTE,
+                PBType.RouterPB,
                 self.order,
                 self.nature,
+                settings.JASMIN_PERSIST
+            )
+
+    def jasmin_add_interceptor(self):
+        interceptor = self.to_jasmin_interceptor()
+        self._execute_reactor_operation(
+            self.ReactorOperation.ADD_INTERCEPTOR,
+            PBType.RouterPB,
+            interceptor,
+            self.order,
+            self.nature,
+            settings.JASMIN_PERSIST
+        )
+
+    def jasmin_remove_interceptor(self):
+        self._execute_reactor_operation(
+            self.ReactorOperation.REMOVE_INTERCEPTOR,
+            PBType.RouterPB,
+            self.order,
+            self.nature,
             settings.JASMIN_PERSIST
         )
 

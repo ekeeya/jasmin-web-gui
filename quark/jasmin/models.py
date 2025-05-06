@@ -19,13 +19,18 @@
 import logging
 import uuid
 from time import sleep
+from typing import List
 
+from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from jasmin.protocols.cli.smppccm import JCliSMPPClientConfig
+from jasmin.routing.Interceptors import MTInterceptor, DefaultInterceptor, StaticMTInterceptor, MOInterceptor, \
+    StaticMOInterceptor, Interceptor
 from jasmin.routing.Routes import DefaultRoute, StaticMTRoute, RandomRoundrobinMTRoute, FailoverMTRoute, \
-    RandomRoundrobinMORoute, StaticMORoute, FailoverMORoute
-from jasmin.routing.jasminApi import Connector, SmppClientConnector
+    RandomRoundrobinMORoute, StaticMORoute, FailoverMORoute, MTRoute, MORoute, Route
+from jasmin.routing.jasminApi import Connector, SmppClientConnector, InterceptorScript
 from smartmin.models import SmartModel
 from smpp.pdu.constants import *
 from smpp.pdu.pdu_types import RegisteredDelivery
@@ -33,7 +38,8 @@ from smpp.pdu.pdu_types import RegisteredDelivery
 from quark.jasmin.utils import PRIORITY_VALUES, TON_VALUES, NPI_VALUES, REGISTERED_DELIVERY_VALUES, \
     REPLACE_IF_PRESENT_VALUES
 from quark.jasmin.utils.filters import JasminBaseFilter, MO, MoFilters, MTFilters, MT, AllFilters
-from quark.jasmin.utils.routers import JasminBaseRouter, MTRouterChoices, MTRouter, MORouter
+from quark.jasmin.utils.interceptors import JasminBaseInterceptor
+from quark.jasmin.utils.routers import JasminBaseRouter, MTRouter, MORouter, RouterChoices
 from quark.utils.jasmin.extras import BaseJasminModel
 from quark.utils.utils import logger
 
@@ -715,58 +721,86 @@ class JasminFilter(JasminBaseFilter, SmartModel):
 
         return jasmin_filter()
 
+    def __str__(self):
+        return f"FID:{self.fid} TYPE: {self.filter_type} - {self.nature}"
     class Meta:
         db_table = 'jasmin_filter'
 
 
 class JasminRoute(BaseJasminModel, JasminBaseRouter, SmartModel):
+    """Model representing a Jasmin route for MT or MO routing."""
+
     router_type = models.CharField(
         max_length=25,
-        choices=MTRouterChoices,
-        default=MTRouterChoices.DefaultRoute)
+        choices=RouterChoices,
+        default=RouterChoices.DefaultRoute,
+        help_text="Type of router for message routing."
+    )
+    filters = models.ManyToManyField(JasminFilter, help_text="Filters applied to the route.")
+    connectors = models.ManyToManyField(JasminSMPPConnector, help_text="Connectors for the route.")
 
-    filters = models.ManyToManyField(JasminFilter, related_name="mt_routers")
-    connectors = models.ManyToManyField(JasminSMPPConnector, related_name="routers")
+    def to_jasmin_route(self) -> Route:
+        """
+        Converts the model instance to a Jasmin route object based on its nature (MT or MO).
 
-    def to_jasmin_route(self):
+        Returns:
+            A Jasmin route object (e.g., DefaultRoute, StaticMTRoute, etc.).
+
+        Raises:
+            ValidationError: If no connectors are found for the route.
+        """
+        filters = [f.to_jasmin_filter() for f in self.filters.all()]
+        connectors = [c.to_route_connector() for c in self.connectors.all()]
+
+        if not connectors:
+            raise ValidationError("Cannot save route: No connectors found.")
 
         if self.nature == "MT":
-            JasminMTRoute = MTRouter.jasmin_router_class(self.router_type)
-            filters = [f.to_jasmin_filter() for f in self.filters.all()]
-            connectors = [c.to_route_connector() for c in self.connectors.all()]
-            self.rate = float(self.rate)
-            if len(connectors) == 0:
-                raise Exception("Could not proceed saving MT router because No connectors found")
-            connector = connectors[0]
+            return self._create_mt_route(filters, connectors)
+        return self._create_mo_route(filters, connectors)
 
-            if JasminMTRoute == DefaultRoute:
-                route = DefaultRoute(connector=connector, rate=self.rate)
-            elif JasminMTRoute == StaticMTRoute:
-                route = StaticMTRoute(connector=connector, filters=filters, rate=self.rate)
-            elif JasminMTRoute == RandomRoundrobinMTRoute:
-                # multiple filters and multiple connectors
-                route = RandomRoundrobinMTRoute(filters=filters, connectors=connectors, rate=self.rate)
-            else:
-                route = FailoverMTRoute(filters=filters, connectors=connectors, rate=self.rate)
-            return route
-        else:
-            JasminMORoute = MORouter.jasmin_router_class(self.router_type)
-            filters = [f.to_jasmin_filter() for f in self.filters.all()]
-            connectors = [c.to_route_connector() for c in self.connectors.all()]
+    def _create_mt_route(self, filters: List, connectors: List) -> MTRoute:
+        """Creates an MT route based on the router type."""
+        jasmin_mt_route = MTRouter.jasmin_router_class(self.router_type)
+        rate = float(self.rate)
+        connector = connectors[0]  # Default to first connector for the default route
+        route_configs = {
+            DefaultRoute: lambda: DefaultRoute(connector=connector, rate=rate),
+            StaticMTRoute: lambda: StaticMTRoute(connector=connector, filters=filters, rate=rate),
+            RandomRoundrobinMTRoute: lambda: RandomRoundrobinMTRoute(
+                filters=filters, connectors=connectors, rate=rate
+            ),
+            FailoverMTRoute: lambda: FailoverMTRoute(
+                filters=filters, connectors=connectors, rate=rate
+            ),
+        }
 
-            if len(connectors) == 0:
-                raise Exception("Could not proceed saving MT router because No connectors found")
-            connector = connectors[0]
-            if JasminMORoute is DefaultRoute:
-                route = DefaultRoute(connector=connector, rate=self.rate)
-            elif JasminMORoute is StaticMORoute:
-                route = StaticMORoute(connector=connector, filters=filters)
-            elif JasminMORoute is RandomRoundrobinMORoute:
-                # multiple filters and multiple connectors
-                route = RandomRoundrobinMORoute(filters=filters, connectors=connectors)
-            else:
-                route = FailoverMORoute(filters=filters, connectors=connectors)
-            return route
+        route_factory = route_configs.get(jasmin_mt_route)
+        if not route_factory:
+            raise ValueError(f"Unsupported MT route type: {self.router_type}")
+
+        return route_factory()
+
+    def _create_mo_route(self, filters: List, connectors: List) -> MORoute:
+        """Creates an MO route based on the router type."""
+        jasmin_mo_route = MORouter.jasmin_router_class(self.router_type)
+        connector = connectors[0]  # Default to first connector for the default route
+        route_configs = {
+            DefaultRoute: lambda: DefaultRoute(connector=connector, rate=self.rate),
+            StaticMORoute: lambda: StaticMORoute(connector=connector, filters=filters),
+            RandomRoundrobinMORoute: lambda: RandomRoundrobinMORoute(
+                filters=filters, connectors=connectors
+            ),
+            FailoverMORoute: lambda: FailoverMORoute(
+                filters=filters, connectors=connectors
+            ),
+        }
+
+        route_factory = route_configs.get(jasmin_mo_route)
+        if not route_factory:
+            raise ValueError(f"Unsupported MO route type: {self.router_type}")
+
+        return route_factory()
 
     def save(self, *args, **kwargs):
         run_on_reactor = kwargs.pop('run_on_reactor', True)
@@ -783,3 +817,71 @@ class JasminRoute(BaseJasminModel, JasminBaseRouter, SmartModel):
 
     class Meta:
         db_table = 'jasmin_route'
+
+
+class JasminInterceptor(BaseJasminModel, JasminBaseInterceptor):
+    filters = models.ManyToManyField(JasminFilter)
+    script = models.FilePathField(
+        path=settings.MEDIA_ROOT+"/jasmin/scripts/interceptors",
+        help_text="Path the python script"
+    )
+
+    def _create_mt_interceptor(self, filters: List) -> MTInterceptor:
+        """Creates an MT interceptor based on the interceptor type."""
+        self.script = InterceptorScript(self.script)
+        configs = {
+            "DefaultInterceptor": lambda: DefaultInterceptor(script=self.script),
+            "StaticMTInterceptor": lambda: StaticMTInterceptor(filters=filters, script=self.script),
+        }
+
+        interceptor_factory = configs.get(self.interceptor_type)
+        if not interceptor_factory:
+            raise ValueError(f"Unsupported MT interceptor type: {self.interceptor_type}")
+
+        return interceptor_factory()
+
+    def _create_mo_interceptor(self, filters: List) -> MOInterceptor:
+        """Creates an MO interceptor based on the interceptor type."""
+        self.script = InterceptorScript(self.script)
+        configs = {
+            "DefaultInterceptor": lambda: DefaultInterceptor(script=self.script),
+            "StaticMOInterceptor": lambda: StaticMOInterceptor(filters=filters, script=self.script),
+        }
+
+        interceptor_factory = configs.get(self.interceptor_type)
+        if not interceptor_factory:
+            raise ValueError(f"Unsupported MO interceptor type: {self.interceptor_type}")
+
+        return interceptor_factory()
+
+    def to_jasmin_interceptor(self) -> Interceptor:
+        """
+        Converts the model instance to a Jasmin interceptor object based on its nature (MT or MO).
+
+        Returns:
+            A Jasmin route object (e.g., DefaultInterceptor, StaticMOInterceptor, StaticMTInterceptor.).
+
+        Raises:
+            ValidationError: If no connectors are found for the route.
+        """
+        filters = [f.to_jasmin_filter() for f in self.filters.all()]
+
+        if self.nature == "MT":
+            return self._create_mt_interceptor(filters)
+        return self._create_mo_interceptor(filters)
+
+    def save(self, *args, **kwargs):
+        run_on_reactor = kwargs.pop('run_on_reactor', True)
+        super().save(*args, **kwargs)
+        if run_on_reactor:
+            self.jasmin_add_interceptor()
+
+    def delete(self, *args, **kwargs):
+        run_on_reactor = kwargs.pop('run_on_reactor', True)
+        if run_on_reactor:
+            self.jasmin_remove_interceptor()
+        else:
+            super().delete(*args, **kwargs)
+
+    class Meta:
+        db_table = 'jasmin_interceptor'

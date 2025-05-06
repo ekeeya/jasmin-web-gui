@@ -21,7 +21,8 @@ from .views import (
     JasminUserCRUDL,
     JasminSMPPConnectorCRUDL,
     JasminFilterCRUDL,
-    JasminRouteCRUDL
+    JasminRouteCRUDL,
+    JasminInterceptorCRUDL
 )
 
 urlpatterns = JasminGroupCRUDL().as_urlpatterns()
@@ -29,3 +30,4 @@ urlpatterns += JasminUserCRUDL().as_urlpatterns()
 urlpatterns += JasminSMPPConnectorCRUDL().as_urlpatterns()
 urlpatterns += JasminFilterCRUDL().as_urlpatterns()
 urlpatterns += JasminRouteCRUDL().as_urlpatterns()
+urlpatterns += JasminInterceptorCRUDL().as_urlpatterns()
