@@ -187,7 +187,7 @@ JASMIN_PERSIST = True
 CELERY_BROKER_URL = 'redis://localhost:6379/0'
 CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
 
-SMARTMIN_DEFAULT_MESSAGES = False
+SMARTMIN_DEFAULT_MESSAGES = True
 
 # Smartmin settings
 # https://smartmin.readthedocs.io/en/latest/perms.html#defining-permissions

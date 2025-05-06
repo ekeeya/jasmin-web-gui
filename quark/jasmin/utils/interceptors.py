@@ -56,5 +56,7 @@ class JasminBaseInterceptor(models.Model):
     )
     order = models.IntegerField(unique=True)
 
+    workspace = models.ForeignKey("workspace.WorkSpace", on_delete=models.CASCADE)
+
     class Meta:
         abstract = True

@@ -89,7 +89,7 @@ class LoginView(AuthLoginView):
     def form_valid(self, form):
         user = form.get_user()
 
-        user.record_auth()
+        # user.record_auth()
 
         # clean up any failed logins for this username
         FailedLogin.objects.filter(username__iexact=self.get_username(form)).delete()

@@ -819,11 +819,11 @@ class JasminRoute(BaseJasminModel, JasminBaseRouter, SmartModel):
         db_table = 'jasmin_route'
 
 
-class JasminInterceptor(BaseJasminModel, JasminBaseInterceptor):
+class JasminInterceptor(BaseJasminModel, JasminBaseInterceptor, SmartModel):
     filters = models.ManyToManyField(JasminFilter)
-    script = models.FilePathField(
-        path=settings.MEDIA_ROOT+"/jasmin/scripts/interceptors",
-        help_text="Path the python script"
+    script = models.FileField(
+        upload_to="jasmin/scripts/interceptors",
+        help_text="Upload a Python script (.py files only)"
     )
 
     def _create_mt_interceptor(self, filters: List) -> MTInterceptor:
