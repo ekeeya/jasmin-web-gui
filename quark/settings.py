@@ -99,20 +99,20 @@ USER_TIME_ZONE = "Africa/Kampala"
 # https://docs.djangoproject.com/en/5.0/howto/static-files/
 
 PROJECT_DIR = os.path.join(os.path.abspath(os.path.dirname(__file__)))
-STATICFILES_DIRS = (
-    os.path.join(PROJECT_DIR, "../static"),
-    os.path.join(PROJECT_DIR, "../media"),
-)
-STATIC_ROOT = os.path.join(PROJECT_DIR, "../sitestatic")
-STATIC_URL = "/sitestatic/"
-MEDIA_ROOT = os.path.join(PROJECT_DIR, "../media")
+
+STATICFILES_DIRS = [BASE_DIR / "static"]
+STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / "sitestatic"
+
+MEDIA_ROOT = BASE_DIR / "media"
+
 MEDIA_URL = "/media/"
 
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
         "DIRS": [
-            os.path.join(PROJECT_DIR, "../templates"),
+            BASE_DIR / "templates",
         ],
         'APP_DIRS': True,
         'OPTIONS': {
@@ -160,7 +160,7 @@ LOGGING = {
             'class': 'logging.handlers.RotatingFileHandler',
             'filename': APP_LOG_FILE,
             'formatter': 'verbose',
-            'maxBytes': 1024*1024*5,  # 5 MB
+            'maxBytes': 1024 * 1024 * 5,  # 5 MB
             'backupCount': 5,
         },
     },
@@ -236,7 +236,7 @@ GROUP_PERMISSIONS = {
         "jasmin.jasminsmppconnector_delete",
         "jasmin.jasminsmppconnector_list",
         "jasmin.jasminfilter_create",
-        "jasmin.jasminfilter_update" ,
+        "jasmin.jasminfilter_update",
         "jasmin.jasminfilter_list",
         "jasmin.jasminfilter_delete",
         "jasmin.jasminroute_create",

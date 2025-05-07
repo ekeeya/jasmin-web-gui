@@ -1,0 +1,96 @@
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* Hide scrollbar but keep functionality */
+.no-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+
+.no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+/* Submenu animation */
+.submenu {
+    position: relative;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.submenu.open {
+    max-height: 200px;
+}
+
+/* Submenu tree structure */
+.submenu li {
+    position: relative;
+    padding-left: 2.75rem;
+    padding-top: 0.375rem;
+    padding-bottom: 0.375rem;
+}
+
+.submenu li::before {
+    content: '';
+    position: absolute;
+    left: 1.5rem;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background-color: #e2e8f0;
+}
+
+.submenu li::after {
+    content: '';
+    position: absolute;
+    left: 1.5rem;
+    top: 50%;
+    width: 0.75rem;
+    height: 1px;
+    background-color: #e2e8f0;
+}
+
+.submenu li:last-child::before {
+    height: 50%;
+    top: 0;
+}
+
+/* Active menu indicator */
+.menu-item.active {
+    background-color: #f0f7ff;
+}
+
+.menu-item.active::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background-color: #3b82f6;
+    border-radius: 0 4px 4px 0;
+}
+
+/* Smooth transitions */
+.transition-smooth {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Custom colors */
+.bg-primary {
+    background-color: #1e3a8a;
+}
+
+.bg-primary-light {
+    background-color: #3b82f6;
+}
+
+.text-primary {
+    color: #1e3a8a;
+}
+
+.text-primary-light {
+    color: #3b82f6;
+}

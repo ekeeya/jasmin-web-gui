@@ -1,19 +1,7 @@
-<html>
-
-<body>
-    
-<div>
-    <b>Workspace:</b>  {{ workspace.name }}
-    <br>
-    <b>User:</b>  {{ user.name }}
-    <ul>
-        <li><a href="/jasmingroup/create">Create Jasmin Group</a></li>
-        <li><a href="/jasminuser/create">Create Jasmin User</a></li>
-        <li><a href="jasminsmppconnector/configure/">Configure SMPP Connector</a></li>
-        <li><a href="jasminfilter/create/">Add Msg Filter</a></li>
-        <li><a href="jasminroute/create/">Add Route</a></li>
-        <li><a href="jasmininterceptor/create/">Add Interceptor</a></li>
-    </ul>
-</div>
-</body>
-</html>
+{% extends 'base/base.html' %}
+{% block content %}
+ <div class="p-6">
+            <h1 class="text-2xl font-bold">Dashboard</h1>
+            <p class="mt-2">Welcome to the Dashboard page!</p>
+        </div>
+{% endblock %}
