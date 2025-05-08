@@ -24,11 +24,15 @@ submenuToggles.forEach(toggle => {
 
 // Active menu item highlighting
 const menuItems = document.querySelectorAll('.menu-item');
-const currentPage = window.location.pathname.split('/').pop().replace('.html', '');
 
+const paths = window.location.pathname.split('/')
+const currentPage = paths[1];
+console.log(`Page ${currentPage}`)
 menuItems.forEach(item => {
     const page = item.getAttribute('data-page');
+    console.log(page)
     if (page === currentPage) {
+        console.log(`Matched page ${page}`)
         item.classList.add('active');
         item.querySelector('svg').classList.add('text-blue-500');
         item.querySelector('span').classList.add('text-blue-600');

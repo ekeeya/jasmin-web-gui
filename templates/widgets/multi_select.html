@@ -1,0 +1,35 @@
+<div class="mb-4">
+    {% if widget.attrs.label %}
+        <label for="{{ widget.attrs.id }}" class="block text-sm font-medium text-gray-700 mb-1">
+            {{ widget.attrs.label }}
+            {% if widget.attrs.required %}<span class="text-red-500">*</span>{% endif %}
+        </label>
+    {% endif %}
+    <select
+        name="{{ widget.name }}"
+        id="{{ widget.attrs.id }}"
+        multiple
+        class="w-full px-4 py-2 bg-white rounded-lg shadow-sm focus:outline-none"
+        style="border: 1px solid #4856da; {% if form.errors.name %}border: 1px solid #ef4444;{% endif %}"
+        onfocus="this.style.borderColor='#4856da'; this.style.boxShadow='0 0 0 2px rgba(72, 86, 218, 0.2)'"
+        onblur="this.style.borderColor='{% if form.errors.name %}#ef4444{% else %}#4856da{% endif %}'; this.style.boxShadow='none'"
+        {% if widget.attrs.required %}required{% endif %}
+        {% for attr_name, attr_value in widget.attrs.items %}
+            {% if attr_name != 'id' and attr_name != 'label' and attr_name != 'required' %}
+                {{ attr_name }}="{{ attr_value }}"
+            {% endif %}
+        {% endfor %}
+    >
+        {% for value, label in widget.choices %}
+            <option value="{{ value }}" {% if value in widget.value %}selected{% endif %}>
+                {{ label }}
+            </option>
+        {% endfor %}
+    </select>
+
+    {% if form.errors %}
+        {% for error in form.errors.name %}
+            <p class="mt-1 text-sm text-red-500">{{ error }}</p>
+        {% endfor %}
+    {% endif %}
+</div>

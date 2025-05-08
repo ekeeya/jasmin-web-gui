@@ -25,6 +25,7 @@ from quark.jasmin.models import JasminGroup, JasminUser, JasminSMPPConnector, Ja
     JasminInterceptor
 from quark.jasmin.views.sub_forms import MessagingAuthorizationsForm, MessagingValueFiltersForm, MessagingDefaultsForm, \
     MessagingQuotasForm, SMPPAuthorizationsForm, SMPPQuotasForm
+from quark.utils.fields import InputTextWidget
 from quark.workspace.views.forms import BaseWorkspaceForm
 
 

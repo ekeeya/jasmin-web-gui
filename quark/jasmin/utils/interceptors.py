@@ -36,11 +36,9 @@ class InterceptorType(Enum):
 
 
 class InterceptorChoice(models.TextChoices):
-    DefaultInterceptor = "DefaultInterceptor", (
-        "An interceptor without a filter, this one can only set with the lowest "
-        "order to be a default/fallback interceptor")
-    StaticMOInterceptor = "StaticMOInterceptor", "A basic interceptor with Filters and one Script"
-    StaticMTInterceptor = "StaticMTInterceptor", "A basic interceptor with Filters and one Script"
+    DefaultInterceptor = "DefaultInterceptor", "Default Interceptor",
+    StaticMOInterceptor = "StaticMOInterceptor", "Static MO Interceptor",
+    StaticMTInterceptor = "StaticMTInterceptor", "Static MT Interceptor",
 
 
 class JasminBaseInterceptor(models.Model):
@@ -51,7 +49,7 @@ class JasminBaseInterceptor(models.Model):
 
     interceptor_type = models.CharField(
         max_length=30,
-        choices=InterceptorChoice,
+        choices=InterceptorChoice.choices,
         default=InterceptorChoice.DefaultInterceptor,
     )
     order = models.IntegerField(unique=True)

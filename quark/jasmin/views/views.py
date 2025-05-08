@@ -24,6 +24,7 @@ from quark.jasmin.models import JasminGroup, JasminUser, JasminSMPPConnector, Ja
     JasminInterceptor
 from quark.jasmin.views.forms import JasminGroupForm, UpdateJasminGroupForm, JasminUserForm, JasminSPPConnectorForm, \
     JasminFilterForm, JasminRouteForm, JasminInterceptorForm
+from quark.utils.views.mixins import FormMixin
 from quark.workspace.views.base import BaseListView
 from quark.workspace.views.mixins import WorkspacePermsMixin
 
@@ -32,7 +33,7 @@ class JasminGroupCRUDL(SmartCRUDL):
     model = JasminGroup
     actions = ("create", "list", "update", "delete",)
 
-    class Create(WorkspacePermsMixin, NonAtomicMixin, SmartCreateView):
+    class Create(FormMixin, WorkspacePermsMixin, NonAtomicMixin, SmartCreateView):
         title = "New Jasmin Group"
         form_class = JasminGroupForm
         permission = "jasmin.jasmingroup_create"
@@ -76,7 +77,7 @@ class JasminGroupCRUDL(SmartCRUDL):
 
             return context
 
-    class Update(WorkspacePermsMixin, SmartUpdateView):
+    class Update(FormMixin, WorkspacePermsMixin, SmartUpdateView):
         title = "Update Jasmin Group"
         form_class = UpdateJasminGroupForm
         permission = "jasmin.jasmingroup_update"
@@ -101,7 +102,7 @@ class JasminUserCRUDL(SmartCRUDL):
     actions = ("create", "list", "update", "delete",)
     model = JasminUser
 
-    class Create(WorkspacePermsMixin, NonAtomicMixin, SmartCreateView):
+    class Create(FormMixin, WorkspacePermsMixin, NonAtomicMixin, SmartCreateView):
         permission = "jasmin.jasminuser_create"
         form_class = JasminUserForm
         template_name = "jasmin/user_create.html"
@@ -111,7 +112,7 @@ class JasminUserCRUDL(SmartCRUDL):
             kwargs["workspace"] = self.derive_workspace()
             return kwargs
 
-    class Update(WorkspacePermsMixin, NonAtomicMixin, SmartUpdateView):
+    class Update(FormMixin, WorkspacePermsMixin, NonAtomicMixin, SmartUpdateView):
         permission = "jasmin.jasminuser_update"
         template_name = "jasmin/user_create.html"
         form_class = JasminUserForm
@@ -138,7 +139,7 @@ class JasminSMPPConnectorCRUDL(SmartCRUDL):
     actions = ("configure", "list", "update", "delete",)
     model = JasminSMPPConnector
 
-    class Configure(WorkspacePermsMixin, NonAtomicMixin, SmartCreateView):
+    class Configure(FormMixin, WorkspacePermsMixin, NonAtomicMixin, SmartCreateView):
         title = "Configure SMPP Connector"
         permission = "jasmin.jasminsmppconnector_configure"
         form_class = JasminSPPConnectorForm
@@ -168,7 +169,7 @@ class JasminFilterCRUDL(SmartCRUDL):
     actions = ("create", "list", "update", "delete",)
     model = JasminFilter
 
-    class Create(WorkspacePermsMixin, NonAtomicMixin, SmartCreateView):
+    class Create(FormMixin, WorkspacePermsMixin, NonAtomicMixin, SmartCreateView):
         title = "Create Message Filter"
         permission = "jasmin.jasminfilter_create"
         form_class = JasminFilterForm
@@ -197,7 +198,7 @@ class JasminRouteCRUDL(SmartCRUDL):
     actions = ("create", "list", "update", "delete",)
     model = JasminRoute
 
-    class Create(WorkspacePermsMixin, NonAtomicMixin, SmartCreateView):
+    class Create(FormMixin, WorkspacePermsMixin, NonAtomicMixin, SmartCreateView):
         title = "Create Route"
         permission = "jasmin.jasminroute_create"
         form_class = JasminRouteForm
@@ -237,7 +238,8 @@ class JasminInterceptorCRUDL(SmartCRUDL):
     actions = ("create", "list", "update", "delete",)
     model = JasminInterceptor
 
-    class Create(WorkspacePermsMixin, NonAtomicMixin, SmartCreateView):
+    class Create(FormMixin, WorkspacePermsMixin, NonAtomicMixin, SmartCreateView):
+        template_name = "jasmin/interceptor.html"
         title = "Create Interceptor"
         permission = "jasmin.jasmininterceptor_create"
         form_class = JasminInterceptorForm

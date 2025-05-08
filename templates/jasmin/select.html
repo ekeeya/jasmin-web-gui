@@ -1,0 +1,20 @@
+<div class="mb-4">
+    <label for="{{ widget.attrs.id }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+        {{ widget.label }}
+    </label>
+    <select name="{{ widget.name }}" id="{{ widget.attrs.id }}"
+            class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+            {% include "django/forms/widgets/attrs.html" %}>
+        {% for option in widget.options %}
+        <option value="{{ option.value }}" {% if option.selected %}selected{% endif %}>
+            {{ option.label }}
+        </option>
+        {% endfor %}
+    </select>
+    {% if widget.help_text %}
+    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ widget.help_text }}</p>
+    {% endif %}
+    {% if widget.errors %}
+    <div class="mt-1 text-sm text-red-600 dark:text-red-400">{{ widget.errors }}</div>
+    {% endif %}
+</div>

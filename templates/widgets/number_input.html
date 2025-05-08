@@ -1,0 +1,14 @@
+<div class="mb-4">
+    <label for="{{ widget.attrs.id }}" class="form-label block text-sm font-medium">{{ widget.name }}</label>
+    <input
+        type="number"
+        name="{{ widget.name }}"
+        value="{{ widget.value|default_if_none:'' }}"
+        {% for attr, value in widget.attrs.items %}
+            {{ attr }}="{{ value }}"
+        {% endfor %}
+    >
+    {% if widget.errors %}
+        <p class="form-error text-sm mt-1">{{ widget.errors.0 }}</p>
+    {% endif %}
+</div>
