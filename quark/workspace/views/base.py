@@ -29,3 +29,5 @@ class BaseListView(WorkspacePermsMixin, SmartListView):
     def derive_queryset(self, **kwargs):
         return super().derive_queryset(**kwargs).filter(workspace=self.request.workspace)
 
+    def build_actions(self):
+        pass

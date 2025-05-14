@@ -17,6 +17,7 @@
 #
 
 from django import forms
+from django.urls import reverse
 
 from quark.utils.fields import (
     InputTextWidget, CheckboxInputWidget, SelectWidget, MultiSelectWidget, FilePickerWidget, TextareaWidget
@@ -84,6 +85,16 @@ class InjectModalFormMixin(FormMixin):
     Mixin to inject a form in a list's context
     """
     modal_form = None
+    post_url = None
+    display_field = "id"
+    name = None
+    actions = ["edit", "delete"]
+
+    def update_form_use_tailwind(self, form):
+        for name, field in form.fields.items():
+            field = self.customize_form_field(name, field)
+            form.fields[name] = field
+        return form
 
     class Modal:
         """Will represent a modal """
@@ -108,6 +119,32 @@ class InjectModalFormMixin(FormMixin):
                 form=self.form
             )
 
+    def build_update(self):
+        pass
+
+    def set_update_form_params(self, **kwargs):
+        for key, value in kwargs.items():
+            if key in ['post_url', 'display_field', 'name']:
+                setattr(self, key, value)
+
+    def build_update_forms(self, workspace, items):
+        self.build_update()
+        update_forms = []
+        if self.update_form:
+
+            for item in items:
+                form = self.update_form(instance=item, workspace=workspace)
+                # convert to tailwind widgets
+                form = self.update_form_use_tailwind(form)
+                update_url = reverse(self.post_url, args=[item.id])
+                data = dict(
+                    id=item.id,
+                    form=form,
+                    post_url=update_url,
+                    title=f"Update {self.name} {getattr(item, self.display_field)}")
+                update_forms.append(data)
+        return update_forms
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         workspace = self.derive_workspace()
@@ -115,6 +152,9 @@ class InjectModalFormMixin(FormMixin):
         context['workspace'] = workspace  # inject the workspace too as added bonus
         # init it no going back at this level
         context['modal'] = self._get_context_modal()
+        # add update forms to our list page
+        context['update_forms'] = self.build_update_forms(workspace, context['object_list'])
+        context["actions"] = self.actions
         return context
 
     def _get_context_modal(self):

@@ -17,9 +17,25 @@
 
 .menu-item.active,
 .submenu a.active {
-    background-color: #EFF6FF;
-    color: #2563EB;
+    background-color: #f3f4f6; /* Kept #f3f4f6 (gray-100) to match hover:bg-gray-100 */
+    color: #000000; /* Text color set to black for active items */
     font-weight: 600;
+}
+
+.menu-item.active span[class*="icon-"],
+.submenu a.active span[class*="icon-"] {
+    color: #000000; /* Icon color set to black for active items */
+}
+
+/* Ensure non-active menu items and their icons use text-gray-500 */
+.menu-item,
+.submenu a {
+    color: #6b7280; /* Tailwind text-gray-500 */
+}
+
+.menu-item span[class*="icon-"],
+.submenu a span[class*="icon-"] {
+    color: #6b7280; /* Tailwind text-gray-500 for icons in non-active items */
 }
 
 .no-scrollbar::-webkit-scrollbar {
@@ -58,7 +74,7 @@
     top: 0;
     bottom: 0;
     width: 1px;
-    background-color: #e2e8f0;
+    background-color: #d1d5db;
 }
 
 .submenu li::after {
@@ -68,7 +84,7 @@
     top: 50%;
     width: 0.75rem;
     height: 1px;
-    background-color: #e2e8f0;
+    background-color: #d1d5db;
 }
 
 .submenu li:last-child::before {

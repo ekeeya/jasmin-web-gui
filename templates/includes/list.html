@@ -54,4 +54,7 @@
         
     {% endblock manager %}
     {% include 'includes/modal.html' with modal=modal %}
+    {% for item in update_forms %}
+        {% include 'includes/update_modal.html' with item=item %}
+    {% endfor %}
 {% endblock content %}

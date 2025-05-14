@@ -4,7 +4,7 @@ from django.db import transaction
 from django import forms
 from django.http import HttpResponse, JsonResponse, HttpResponseRedirect
 
-from quark.utils.fields import CheckboxInputWidget
+from quark.utils.fields import *
 
 logger = logging.getLogger(__name__)
 
@@ -73,7 +73,7 @@ class FormMixin:
             field.widget = InputTextWidget(attrs=attrs)
         elif isinstance(field.widget, (forms.widgets.Select,)):
             if isinstance(field, (forms.models.ModelMultipleChoiceWidget,)):
-                field.widget = MultiSelectWidget(attrs)  # pragma: needs cover
+                field.widget = MultiSelectWidget(attrs)
             else:
                 field.widget = SelectWidget(attrs)
 
@@ -84,10 +84,20 @@ class FormMixin:
         return field
 
 
+class UpdateModalMixin:
+    """
+        We shall use this to return json for modal update
+    """
+
+
 class ModalFormMixin:
     """
         Handles invalid form submissions and returns a JSON response on form_invalid for modal(ajax) creates
     """
+
+    def get(self, request, *args, **kwargs):
+        # disable redirect GETS to list view, which will always be set as success_url for modal views
+        return HttpResponseRedirect(self.get_success_url())
 
     def form_invalid(self, form):
         errors = form.errors
@@ -97,6 +107,8 @@ class ModalFormMixin:
 
     def form_valid(self, form):
         message = "Action executed successfully"
+        if form.instance is not None:
+            form.save()  # lets manual save updates
         if "HTTP_X_AJAX_MODAL" in self.request.META:
             response = dict(success=True, message=message, redirect_to=self.get_success_url())
             return JsonResponse(response, safe=False)

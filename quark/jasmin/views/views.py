@@ -39,13 +39,9 @@ class JasminGroupCRUDL(SmartCRUDL):
         title = "New Jasmin Group"
         form_class = JasminGroupForm
         permission = "jasmin.jasmingroup_create"
-
         template_name = None
         # template_name = "jasmin/group_create.html"
         success_url = "@jasmin.jasmingroup_list"
-
-        def get(self, request, *args, **kwargs):
-            return HttpResponseRedirect(reverse("jasmin.jasmingroup_list"))
 
         def get_form_kwargs(self):
             kwargs = super().get_form_kwargs()
@@ -76,6 +72,13 @@ class JasminGroupCRUDL(SmartCRUDL):
         fields = ("gid", "created_on", "description",)
         search_fields = ("gid",)
         modal_form = JasminGroupForm
+        update_form = UpdateJasminGroupForm
+
+        def build_update(self):
+            self.set_update_form_params(
+                post_url="jasmin.jasmingroup_update",
+                name="Jasmin Group",
+                display_field="gid")
 
         def build_modal(self, modal):
             modal.register_modal(
@@ -84,12 +87,13 @@ class JasminGroupCRUDL(SmartCRUDL):
                 post_url=reverse("jasmin.jasmingroup_create")
             )
 
-    class Update(FormMixin, WorkspacePermsMixin, SmartUpdateView):
+    class Update(FormMixin, ModalFormMixin, WorkspacePermsMixin, SmartUpdateView):
         title = "Update Jasmin Group"
         form_class = UpdateJasminGroupForm
         permission = "jasmin.jasmingroup_update"
-
         exclude = ("gid", "created_by", "modified_by",)
+
+        success_url = "@jasmin.jasmingroup_list"
 
         def get_form_kwargs(self):
             kwargs = super().get_form_kwargs()

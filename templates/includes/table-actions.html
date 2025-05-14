@@ -1,0 +1,20 @@
+<td class="px-3 py-2 border-r border-gray-200 text-center">
+    <div class="flex justify-center items-center gap-2">
+        {% for action in actions %}
+            {% if action == 'edit' %}
+                <div class="tooltip" data-tip="Edit this item">
+                    <a data-update-trigger-{{ obj.id }} href="javascript:void(0)" class="group btn btn-xs btn-square btn-outline btn-primary">
+                        <span class="icon-edit text-blue-600 group-hover:text-white"></span>
+                    </a>
+                </div>
+            {% else %}
+                <div class="tooltip" data-tip="Delete this item">
+                    <a href="javascript:void(0)" class="group btn btn-xs btn-square btn-outline btn-error">
+                        <span class="icon-trash text-red-600 group-hover:text-white"></span>
+                    </a>
+                </div>
+            {% endif %}
+        {% endfor %}
+
+    </div>
+</td>
