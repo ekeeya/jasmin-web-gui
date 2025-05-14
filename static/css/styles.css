@@ -1,0 +1,16 @@
+input[type="checkbox"] {
+    appearance: none;
+    background: white;
+    border: 1px solid #000000;
+    border-radius: 4px;
+    position: relative;
+}
+input[type="checkbox"]:checked::before {
+    content: '✔';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #000000;
+    font-size: 12px;
+}

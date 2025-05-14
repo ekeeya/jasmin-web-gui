@@ -1,0 +1,158 @@
+<div id="backdrop" class="fixed inset-0 bg-white/60 bg-opacity-30 z-40 backdrop-transition opacity-0 pointer-events-none"></div>
+
+<div id="modal" class="fixed top-0 right-0 h-full w-full max-w-md modal-transition modal-hidden z-50 p-4">
+    <div class="bg-white h-auto border rounded shadow-2xl flex shadow-lg flex-col overflow-hidden mt-4">
+      <!-- Header -->
+      <div class="bg-black px-4 py-2 border-b border-gray-200 flex justify-between items-center">
+        <h2 class="text-xl font-semibold text-white">
+            {{ modal.title }}
+        </h2>
+        <button id="closeModal" class="text-gray-500 hover:text-gray-700 focus:outline-none">
+          <span class="icon-cross text-2xl text-white"></span>
+        </button>
+      </div>
+        
+        <form method="POST" action="{{ modal.post_url }}" id="form-{{ modal.modal_id }}">
+            {% csrf_token %}
+            
+            <div class="flex-1 p-6 overflow-y-auto space-y-4">
+                {% for field in modal.form %}
+                    <div class="form-group mb-4">
+                        <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
+                            {{ field.label }}
+                            {% if field.field.required %}<span class="text-red-500">*</span>{% endif %}
+                        </label>
+                        
+                        {{ field }}
+                        
+                        {% if field.help_text %}
+                            <p class="mt-1 text-sm text-gray-500">{{ field.help_text }}</p>
+                        {% endif %}
+                        
+                        <div style="font-size: 8pt !important;" id="{{ field.name }}" class="hidden mt-1 text-red-600"> </div>
+                    </div>
+                {% endfor %}
+            </div>
+            
+            {% if modal.form.non_field_errors %}
+                <div class="alert alert-error form-errors px-6">
+                    {{ modal.form.non_field_errors }}
+                </div>
+            {% endif %}
+            
+            <div class="bg-gray-50 px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
+                <a href="javascript:void(0)" type="reset" class="px-4 py-2 text-gray-700 hover:text-gray-900 font-medium transition-colors">
+                    Reset
+                </a>
+                <a href="javascript:void(0)" id="btn-submit-{{ modal.modal_id }}" class="px-4 py-2 bg-black hover:bg-black-500 text-white font-medium shadow-sm transition-colors">
+                    Submit
+                </a>
+            </div>
+        </form>
+    </div>
+  </div>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    $(document).ready(function(){
+        const url = "{{ modal.post_url }}";
+        const form_id = "form-{{ modal.modal_id }}";
+        const btnSubmit = "btn-submit-{{ modal.modal_id }}";
+        const form = $(`#${form_id}`);
+        
+        function validateForm() {
+            let isValid = true;
+            
+            $('.text-red-600').addClass('hidden').empty();
+            $('.form-group').removeClass('has-error');
+            $('.form-errors').empty();
+            
+            // Check each required field
+            form.find('[required]').each(function() {
+                const field = $(this);
+                const fieldName = field.attr('name');
+                const errorDiv = $(`#${fieldName}`);
+                const formGroup = field.closest('.form-group');
+                
+                if (!field.val().trim()) {
+                    isValid = false;
+                    formGroup.addClass('has-error');
+                    errorDiv.removeClass('hidden').append($('<p></p>').text('This field is required'));
+                }
+            });
+            
+            return isValid;
+        }
+        form.on('submit', function(e){
+            e.preventDefault();
+            
+            if (!validateForm()) {
+                return false;
+            }
+            
+            $('.form-errors').empty();
+            $('.text-red-600').addClass('hidden').empty();
+            $('.form-group').removeClass('has-error');
+            $(`#${btnSubmit}`).prop('disabled', true).html('<span class="spinner-border spinner-border-sm mr-2" role="status" aria-hidden="true"></span>Processing...');
+            
+            const formData = new FormData(this);
+            $.ajax({
+                url: url,
+                type: 'POST',
+                data: formData,
+                headers: {"X-AJAX-MODAL": "JOYCE-AJAX"},
+                processData: false,
+                contentType: false,
+                success: function(data, textStatus, xhr) {
+                    window.location.href = data.redirect_to;
+                },
+                error: function(xhr, status, error) {
+                    try {
+                        const response = JSON.parse(xhr.responseText);
+                        if (response.errors) {
+                            handleFormErrors(response);
+                        } else {
+                            showGenericError();
+                        }
+                    } catch (e) {
+                        showGenericError();
+                    }
+                },
+                complete: function() {
+                    $(`#${btnSubmit}`).prop('disabled', false).html('Submit');
+                }
+            });
+        });
+        
+        function handleFormErrors(response) {
+            if (response.errors) {
+                $.each(response.errors, function(fieldName, errors) {
+                    const errorDiv = $(`#${fieldName}`);
+                    const field = $(`[name="${fieldName}"]`);
+                    const formGroup = field.closest('.form-group');
+                    formGroup.addClass('has-error');
+                    errorDiv.removeClass('hidden').empty();
+                    $.each(errors, function(_, error) {
+                        errorDiv.append($('<p></p>').text(error));
+                    });
+                });
+            }
+            
+            if (response.message && (!response.errors || Object.keys(response.errors).length === 0)) {
+                const errorContainer = $('<div class="alert alert-error form-errors px-6 text-sm text-red-600"></div>');
+                form.find('.flex-1').prepend(errorContainer);
+                errorContainer.text(response.message);
+            }
+        }
+        
+        function showGenericError() {
+            const errorContainer = $('<div class="alert alert-error form-errors px-6 text-sm text-red-600"></div>');
+            form.find('.flex-1').prepend(errorContainer);
+            errorContainer.text('An error occurred while submitting the form. Please try again.');
+        }
+        
+        $(`#${btnSubmit}`).click(function(e) {
+            e.preventDefault();
+            form.submit();
+        });
+    });
+</script>

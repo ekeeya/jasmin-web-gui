@@ -1,1 +1,61 @@
-{% extends "jasmin/base/list.html" %}
+{% extends 'includes/list.html' %}
+
+{% load smartmin i18n %}
+
+{% block pre-table %}
+{% endblock pre-table %}
+
+{% block table %}
+<div class="overflow-x-auto">
+    <table class="w-full text-sm text-left border border-gray-200 rounded-lg">
+        <thead class="text-xs font-semibold uppercase bg-gray-800 text-gray-100">
+            <tr>
+                {% for field in fields %}
+                    <th class="px-3 py-2 border-b border-r border-gray-200 last:border-r-0 {% if view|field_orderable:field %}cursor-pointer hover:bg-gray-700{% endif %}"
+                        scope="col"
+                        {% if view|field_orderable:field %}onclick="orderBy('{{ field }}')"{% endif %}>
+                        <div class="flex items-center gap-2">
+                            {% get_label field %}
+                        </div>
+                    </th>
+                {% endfor %}
+                <th class="px-3 py-2 border-b border-gray-200 text-center">
+                    {% trans "Actions" %}
+                </th>
+            </tr>
+        </thead>
+        <tbody class="bg-white">
+            {% for obj in object_list %}
+                <tr class="border-b border-gray-200 hover:bg-gray-50 {% cycle 'bg-gray-50' 'bg-white' %} {% if not obj.is_active and obj|is_smartobject %}opacity-60{% endif %}">
+                    {% for field in fields %}
+                        <td class="px-3 py-2 border-r border-gray-200 last:border-r-0 text-gray-900 {% if field in link_fields %}hover:underline cursor-pointer{% endif %}"
+                            {% if field in link_fields %}onclick="window.location='{% get_field_link field obj %}'"{% endif %}>
+                            {% get_value obj field %}
+                        </td>
+                    {% endfor %}
+                    <td class="px-3 py-2 border-r border-gray-200 text-center">
+                        <div class="flex justify-center items-center gap-2">
+                            <div class="tooltip" data-tip="{% trans 'Edit this item' %}">
+                                <a href="javascript:void(0)" class="group btn btn-xs btn-square btn-outline btn-primary">
+                                    <span class="icon-edit text-blue-600 group-hover:text-white"></span>
+                                </a>
+                            </div>
+                            <div class="tooltip" data-tip="{% trans 'Delete this item' %}">
+                                <a href="javascript:void(0)" class="group btn btn-xs btn-square btn-outline btn-error">
+                                    <span class="icon-trash text-red-600 group-hover:text-white"></span>
+                                </a>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="{{ fields|length|add:1 }}" class="text-center py-4 text-gray-500 border-b border-gray-200">
+                        {% trans "No results found" %}
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

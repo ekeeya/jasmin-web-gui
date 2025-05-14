@@ -28,6 +28,6 @@ from .views import (
 urlpatterns = WorkspaceCRUDL().as_urlpatterns()
 
 urlpatterns += [
-    re_path(r"^users/login/$", LoginView.as_view(), name="workspace.login"),
+    re_path(r"^login/$", LoginView.as_view(), name="workspace.login"),
     re_path(r"^users/logout/$", LogoutView.as_view(), name="users.user_logout"),
 ]

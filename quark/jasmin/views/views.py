@@ -17,6 +17,7 @@
 #
 from django.core.paginator import Paginator
 from django.http import HttpResponseRedirect
+from django.urls import reverse
 from smartmin.mixins import NonAtomicMixin
 from smartmin.views import SmartCRUDL, SmartCreateView, SmartListView, SmartUpdateView, SmartDeleteView
 
@@ -24,7 +25,8 @@ from quark.jasmin.models import JasminGroup, JasminUser, JasminSMPPConnector, Ja
     JasminInterceptor
 from quark.jasmin.views.forms import JasminGroupForm, UpdateJasminGroupForm, JasminUserForm, JasminSPPConnectorForm, \
     JasminFilterForm, JasminRouteForm, JasminInterceptorForm
-from quark.utils.views.mixins import FormMixin
+from quark.utils.mixins.mixins import ModalFormMixin
+from quark.utils.views.mixins import FormMixin, InjectModalFormMixin
 from quark.workspace.views.base import BaseListView
 from quark.workspace.views.mixins import WorkspacePermsMixin
 
@@ -33,12 +35,17 @@ class JasminGroupCRUDL(SmartCRUDL):
     model = JasminGroup
     actions = ("create", "list", "update", "delete",)
 
-    class Create(FormMixin, WorkspacePermsMixin, NonAtomicMixin, SmartCreateView):
+    class Create(FormMixin, ModalFormMixin, WorkspacePermsMixin, NonAtomicMixin, SmartCreateView):
         title = "New Jasmin Group"
         form_class = JasminGroupForm
         permission = "jasmin.jasmingroup_create"
-        template_name = "jasmin/group_create.html"
+
+        template_name = None
+        # template_name = "jasmin/group_create.html"
         success_url = "@jasmin.jasmingroup_list"
+
+        def get(self, request, *args, **kwargs):
+            return HttpResponseRedirect(reverse("jasmin.jasmingroup_list"))
 
         def get_form_kwargs(self):
             kwargs = super().get_form_kwargs()
@@ -58,10 +65,9 @@ class JasminGroupCRUDL(SmartCRUDL):
                 form.cleaned_data["workspace"],
                 form.cleaned_data["description"],
             )
+            return super().form_valid(form)
 
-            return HttpResponseRedirect(self.get_success_url())
-
-    class List(BaseListView):
+    class List(InjectModalFormMixin, BaseListView):
         title = "Jasmin Groups"
         ordering = ("-created_on",)
         permission = "jasmin.jasmingroup_list"
@@ -69,13 +75,14 @@ class JasminGroupCRUDL(SmartCRUDL):
         template_name = "jasmin/group_list.html"
         fields = ("gid", "created_on", "description",)
         search_fields = ("gid",)
+        modal_form = JasminGroupForm
 
-        def get_context_data(self, **kwargs):
-            context = super().get_context_data(**kwargs)
-            workspace = self.derive_workspace()
-            context['workspace'] = workspace
-
-            return context
+        def build_modal(self, modal):
+            modal.register_modal(
+                title="Create a Jasmin Group",
+                modal_id="jasmin_modal",
+                post_url=reverse("jasmin.jasmingroup_create")
+            )
 
     class Update(FormMixin, WorkspacePermsMixin, SmartUpdateView):
         title = "Update Jasmin Group"

@@ -1,0 +1,15 @@
+.modal-transition {
+    transition: transform 0.3s ease-in-out;
+}
+
+.modal-hidden {
+    transform: translateX(100%);
+}
+
+.modal-visible {
+    transform: translateX(0);
+}
+
+.backdrop-transition {
+    transition: opacity 0.3s ease-in-out;
+}

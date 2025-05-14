@@ -1,0 +1,57 @@
+{% extends "base/base.html" %}
+
+{% load i18n %}
+
+{% block content %}
+    {% block pre-table %}
+    {% endblock pre-table %}
+
+    {% block manager %}
+        <div class="flex flex-row justify-between items-center mb-4 bg-white shadow-mb p-2">
+            {% if view.search_fields %}
+                {% block search-form %}
+                    <form method="get" action="{{ request.path }}" id="search-form">
+                        <div class="join">
+                            <div>
+                                <label class="input validator search-item">
+                                    <input  type="text" name="search"  value="{{ search }}"  placeholder="Search" required/>
+                                </label>
+                                <div class="validator-hint hidden text-xxs">Can't be empty</div>
+                            </div>
+                            <button type="submit" class="btn bg-[#0E3B43] btn-neutral search-item"> <span class="icon-search text-xl text-white"></span></button>
+                        </div>
+                    </form>
+                {% endblock search-form %}
+                {% if search_error %}
+                    <div role="alert" class="alert alert-error">
+                        <span>{{ search_error }}</span>
+                    </div>
+
+                {% endif %}
+            {% endif %}
+            <div class="join">
+              <button id="openModal"  class="btn btn-sm text-white bg-black join-item">
+                  <span class="icon-add-to-list"></span>
+                  Add
+              </button>
+                {%  if show_export %}
+                  <button class="btn btn-sm btn-outline btn-success join-item">
+                      <span class="icon-file-excel"></span>
+                      Export
+                  </button>
+                {% endif %}
+            </div>
+        </div>
+        {% if view.paginate_by %}
+        {% endif %}
+        <div class="flex-grow overflow-y-auto bg-white shadow-md">
+            {% block table %}
+            {% endblock table %}
+        {% block pagination %}
+                {% include 'includes/pagination.html' %}
+            {% endblock pagination %}
+        </div>
+        
+    {% endblock manager %}
+    {% include 'includes/modal.html' with modal=modal %}
+{% endblock content %}

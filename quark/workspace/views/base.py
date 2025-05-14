@@ -24,6 +24,8 @@ class BaseListView(WorkspacePermsMixin, SmartListView):
     """
         Filter list records that belong to a given workspace
     """
+    add_button = True
 
     def derive_queryset(self, **kwargs):
         return super().derive_queryset(**kwargs).filter(workspace=self.request.workspace)
+

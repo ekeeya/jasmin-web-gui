@@ -1,0 +1,109 @@
+<nav class="navbar bg-base-100 shadow-lg fixed top-0 z-40 md:ml-64 w-full md:w-[calc(100%-16rem)]">
+  <!-- Navbar Start -->
+  <div class="flex-none md:hidden">
+      <button id="menu-toggle" class="md:hidden p-4">
+            <span class="icon-menu text-2xl"></span>
+        </button>
+  </div>
+  <div class="flex-1">
+    <div class="breadcrumbs text-sm">
+  <ul>
+    <li><a>Dashboard</a></li>
+  </ul>
+</div>
+  </div>
+
+  <!-- Navbar End -->
+  <div class="flex-none gap-3">
+    <!-- Notification Bell -->
+    <div class="dropdown dropdown-end">
+      <div tabindex="0" role="button" class="btn btn-ghost btn-circle border-gray-200 hover:border-primary  hover:bg-base-200 transition-all">
+        <div class="indicator">
+          <span class="icon-bell text-2xl"></span>
+          <span class="badge badge-sm badge-primary indicator-item rounded-full">3</span>
+        </div>
+      </div>
+      <div tabindex="0" class="dropdown-content z-[1] card card-compact w-80 bg-base-100 shadow-xl mt-4 rounded-box">
+        <div class="card-body">
+          <h3 class="font-bold text-lg text-base-content">Notifications</h3>
+          <div class="divider my-1"></div>
+          <!-- Notification Items -->
+          <div class="space-y-2">
+            <div class="flex gap-3 items-start p-3 hover:bg-base-200 rounded-lg transition-all cursor-pointer">
+              <div class="avatar">
+                <div class="w-10 rounded-full bg-secondary/20 text-secondary flex items-center justify-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+              </div>
+              <div class="flex-1">
+                <p class="font-semibold text-sm">Meeting Reminder</p>
+                <p class="text-xs text-base-content/70">Team sync in 15 minutes</p>
+                <p class="text-xs text-base-content/50 mt-1">10 min ago</p>
+              </div>
+            </div>
+            <div class="flex gap-3 items-start p-3 hover:bg-base-200 rounded-lg transition-all cursor-pointer">
+              <div class="avatar">
+                <div class="w-10 rounded-full bg-success/20 text-success flex items-center justify-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+              </div>
+              <div class="flex-1">
+                <p class="font-semibold text-sm">Payment Received</p>
+                <p class="text-xs text-base-content/70">$2,500 from Client A</p>
+                <p class="text-xs text-base-content/50 mt-1">2 hours ago</p>
+              </div>
+            </div>
+            <div class="flex gap-3 items-start p-3 hover:bg-base-200 rounded-lg transition-all cursor-pointer">
+              <div class="avatar">
+                <div class="w-10 rounded-full bg-warning/20 text-warning flex items-center justify-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
+              </div>
+              <div class="flex-1">
+                <p class="font-semibold text-sm">Server Alert</p>
+                <p class="text-xs text-base-content/70">High CPU usage detected</p>
+                <p class="text-xs text-base-content/50 mt-1">5 hours ago</p>
+              </div>
+            </div>
+          </div>
+          <div class="card-actions mt-4">
+            <button class="btn btn-sm btn-primary w-full rounded-lg">View All Notifications</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- User Avatar -->
+    <div class="dropdown dropdown-end">
+      <div tabindex="0" role="button" class="btn btn-ghost btn-circle hover:bg-base-200 transition-all">
+        <div class="avatar">
+          <img src="https://avatar.iran.liara.run/public/1" alt="User avatar" class="w-9 h-9 rounded-full object-cover" />
+        </div>
+      </div>
+      <ul tabindex="0" class="menu dropdown-content z-[1] mt-4 p-2 shadow-xl bg-base-100 rounded-box w-56">
+        <li class="menu-title">
+          <span class="text-base font-semibold text-base-content">Hello, User!</span>
+        </li>
+        <li>
+          <a class="justify-between hover:bg-base-200 rounded-lg text-sm">
+            Profile
+            <span class="badge badge-primary badge-sm">New</span>
+          </a>
+        </li>
+        <li><a class="hover:bg-base-200 rounded-lg text-sm">Dashboard</a></li>
+        <li><a class="hover:bg-base-200 rounded-lg text-sm">Settings</a></li>
+        <li class="menu-title mt-2">
+          <span class="text-sm font-semibold">Account</span>
+        </li>
+        <li><a class="hover:bg-base-200 rounded-lg text-sm">Upgrade</a></li>
+        <li><a class="text-error hover:bg-error/10 hover:text-error rounded-lg text-sm">Logout</a></li>
+      </ul>
+    </div>
+  </div>
+</nav>

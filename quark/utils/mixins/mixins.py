@@ -2,7 +2,9 @@ import logging
 
 from django.db import transaction
 from django import forms
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse, HttpResponseRedirect
+
+from quark.utils.fields import CheckboxInputWidget
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +29,7 @@ class PostOnlyMixin:
 class RequireAuthMixin:
     """Mixin to redirect the user to login page if they haven't authenticated."""
 
-    recent_auth_seconds = 10*60
+    recent_auth_seconds = 10 * 60
     recent_auth_includes_formax = False
 
     def pre_process(self, request, *args, **kwargs):
@@ -52,9 +54,9 @@ class FormMixin:
 
         # don't replace the widget if it is already one of us
         if isinstance(
-            field.widget,
-            (forms.widgets.HiddenInput, CheckboxInputWidget,RadioSelectWidget, InputTextWidget, SelectWidget,
-             MultiSelectWidget),
+                field.widget,
+                (forms.widgets.HiddenInput, CheckboxInputWidget, RadioSelectWidget, InputTextWidget, SelectWidget,
+                 MultiSelectWidget),
         ):
             return field
 
@@ -65,8 +67,8 @@ class FormMixin:
             attrs["password"] = True
             field.widget = InputTextWidget(attrs=attrs)
         elif isinstance(
-            field.widget,
-            (forms.widgets.TextInput, forms.widgets.EmailInput, forms.widgets.URLInput),
+                field.widget,
+                (forms.widgets.TextInput, forms.widgets.EmailInput, forms.widgets.URLInput),
         ):
             field.widget = InputTextWidget(attrs=attrs)
         elif isinstance(field.widget, (forms.widgets.Select,)):
@@ -80,3 +82,22 @@ class FormMixin:
             field.widget = CheckboxInputWidget(attrs)
 
         return field
+
+
+class ModalFormMixin:
+    """
+        Handles invalid form submissions and returns a JSON response on form_invalid for modal(ajax) creates
+    """
+
+    def form_invalid(self, form):
+        errors = form.errors
+        message = "Form submission failed, see errors for details"
+        response = dict(errors=errors, success=False, message=message)
+        return JsonResponse(response, status=400, safe=False)
+
+    def form_valid(self, form):
+        message = "Action executed successfully"
+        if "HTTP_X_AJAX_MODAL" in self.request.META:
+            response = dict(success=True, message=message, redirect_to=self.get_success_url())
+            return JsonResponse(response, safe=False)
+        return HttpResponseRedirect(self.get_success_url())

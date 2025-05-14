@@ -6,50 +6,97 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Joyce for Jasmin</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="{% static 'css/daisyui.css' %}" rel="stylesheet" type="text/css"/>
     <link href="{% static 'css/base.css' %}" rel="stylesheet">
+    <link href="{% static 'css/modal.css' %}" rel="stylesheet">
+    <link href="{% static 'css/styles.css' %}" rel="stylesheet">
+    <link href="{% static 'css/pagination.css' %}" rel="stylesheet">
     <link href="{% static 'css/nav.css' %}" rel="stylesheet">
-    {% block styles %}
+    <link rel="stylesheet" href="{% static 'icons/style.css' %}">
+</head>
+{% block styles %}
 
-    {% endblock %}
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<style>
-        
-        .form-container {
-            background-color: #f9fafb;
-        }
-        .form-label {
-            color: #1f2937;
-        }
-        .form-input {
-            border-color: #e5e7eb;
-            focus:ring-2 focus:ring-indigo-500;
-        }
-        .form-error {
-            color: #dc2626;
-        }
-        .form-button {
-            background-color: #4f46e5;
-        }
-        .form-button:hover {
-            background-color: #4338ca;
-        }
-    </style>
+{% endblock %}
 </head>
 <body class="bg-gray-100 font-['Inter']">
+{% include 'includes/topbar.html' %}
 <div class="flex h-screen">
     {% include 'includes/sidebar.html' %}
-    <div class="flex-1 md:ml-64">
-        <button id="menu-toggle" class="md:hidden p-4">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
-            </svg>
-        </button>
-        {% block content %}{% endblock %}
+    <div class="flex-1 px-5 py-24 md:py-8  md:ml-64">
+
+        {% block content %}
+
+        {% endblock %}
     </div>
 </div>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="{% static 'js/modal.js' %}"></script>
+{% block scripts %}
 
-{% block scripts %}{% endblock %}
+{% endblock %}
+<script>
+    $(document).ready(function() {
+        const currentPath = window.location.pathname + window.location.search;
 
-<script src="{% static 'js/nav.js' %}"></script>
+        function setActiveMenu() {
+            let activeFound = false;
+
+            $('.menu-item').each(function() {
+                const page = $(this).data('page');
+                const href = $(this).attr('href');
+
+                if (href === currentPath || (page && currentPath.includes(page))) {
+                    $(this).addClass('active');
+                    activeFound = true;
+                } else {
+                    $(this).removeClass('active');
+                }
+            });
+
+            $('.submenu a').each(function() {
+                const href = $(this).attr('href');
+                if (href === currentPath) {
+                    $(this).addClass('active');
+                    // Auto-open parent submenu
+                    const $submenu = $(this).closest('.submenu');
+                    $submenu.addClass('open');
+                    $submenu.prev('.submenu-toggle').addClass('active');
+                    activeFound = true;
+                } else {
+                    $(this).removeClass('active');
+                }
+            });
+
+            $('.submenu').each(function() {
+                if (!$(this).find('a.active').length && !$($(this).prev('.submenu-toggle')).hasClass('active')) {
+                    $(this).removeClass('open');
+                }
+            });
+            if (!activeFound && currentPath === '/') {
+                $('a[href="/"]').addClass('active');
+            }
+        }
+
+        // Initial call to set active menu
+        setActiveMenu();
+
+        $('.submenu-toggle').off('click').on('click', function(e) {
+            e.preventDefault(); 
+            const $submenu = $(this).next('.submenu');
+            const isOpen = $submenu.hasClass('open');
+
+            // Toggle submenu
+            if (isOpen) {
+                $submenu.removeClass('open');
+                $(this).removeClass('active');
+            } else {
+                $('.submenu').removeClass('open');
+                $('.submenu-toggle').removeClass('active');
+                $submenu.addClass('open');
+                $(this).addClass('active');
+            }
+        });
+    });
+</script>
 </body>
 </html>

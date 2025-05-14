@@ -1,43 +1,115 @@
 {% load humanize i18n %}
 
-<div class="paging flex flex-row items-center h-10">
-  {% if actions|length and paginator.count %}
-    <div style="padding-left: 1em;margin-bottom:-0.4em" class="check">
-      <input  type="checkbox" onclick="void(0)" class="select-all"/>
-    </div>
-  {% endif %}
-  
-  <div class="paging-range mr-4">
-    {% blocktrans trimmed with start=page_obj.start_index|intcomma end=page_obj.end_index|intcomma total=paginator.count|intcomma %}
-      {{ start }} - {{ end }} of {{ total }}
-    {% endblocktrans %}
-  </div>
-  <div style="margin-top:2px;" class="paging-controls flex flex-row mr-2">
-    <div class="paging-previous mr-2">
-      {% if page_obj.has_previous %}
-        <div onclick="goto(event, this)"
-             href="{{ request.path }}{{ url_params|safe }}page={{ page_obj.previous_page_number }}"
-             class="linked">
-          >
-        </div>
-      {% else %}
-        <div class="disabled">
-          <
-        </div>
-      {% endif %}
-    </div>
-    <div class="paging-next">
-      {% if page_obj.has_next %}
-        <div onclick="goto(event, this)"
-             href="{{ request.path }}{{ url_params|safe }}page={{ page_obj.next_page_number }}"
-             class="linked">
-          >
-        </div>
-      {% else %}
-        <div class="disabled">
-          <
-        </div>
-      {% endif %}
-    </div>
-  </div>
+<div class="flex flex-row justify-between border-t border-gray-200 items-center gap-4 p-5">
+    <span class="text-sm text-gray-700 font-medium">
+        {% trans "Showing page" %}
+        <span id="current-page-range" class="font-semibold text-blue-600"></span> {% trans "of" %}
+        <span id="total-items" class="font-semibold text-blue-600">{{ paginator.count|intcomma }}</span>
+    </span>
+
+    <nav aria-label="Pagination" class="flex items-center gap-2">
+        <button id="prev-page"
+                class="px-3 py-2 flex text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md
+                       hover:bg-blue-50 hover:text-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500
+                       disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 items-center"
+                disabled>
+            <span class="icon-chevron-left text-lg mr-2"></span>
+            {% trans "Previous" %}
+        </button>
+        <div id="page-numbers" class="flex items-center gap-1"> </div>
+
+        <button id="next-page"
+                class="flex px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md
+                       hover:bg-blue-50 hover:text-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500
+                       disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400
+                       transition-all duration-200 items-center">
+            {% trans "Next" %}
+            <span class="icon-chevron-right text-lg ml-2"></span>
+        </button>
+    </nav>
 </div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    $(document).ready(function() {
+        const totalItems = parseInt("{{ paginator.count }}");
+        const itemsPerPage = parseInt("{{ paginator.per_page }}");
+        const totalPages = Math.ceil(totalItems / itemsPerPage);
+        let currentPage = 1;
+        const urlParams = new URLSearchParams(window.location.search);
+        const pageParam = parseInt(urlParams.get('page')) || 1;
+        if (pageParam >= 1 && pageParam <= totalPages) {
+            currentPage = pageParam;
+        }
+        function updatePagination() {
+            const startIndex = (currentPage - 1) * itemsPerPage + 1;
+            const endIndex = Math.min(currentPage * itemsPerPage, totalItems);
+            const startFormatted = startIndex.toLocaleString();
+            const endFormatted = endIndex.toLocaleString();
+            const totalFormatted = totalItems.toLocaleString();
+
+            $('#current-page-range').text(`${startFormatted} - ${endFormatted}`);
+            $('#total-items').text(totalFormatted);
+            $('#prev-page').prop('disabled', currentPage === 1);
+            $('#next-page').prop('disabled', currentPage === totalPages);
+
+            $('#page-numbers').empty();
+            const maxButtons = 5;
+            let startPage = Math.max(1, currentPage - Math.floor(maxButtons / 2));
+            let endPage = Math.min(totalPages, startPage + maxButtons - 1);
+
+            if (endPage - startPage + 1 < maxButtons) {
+                startPage = Math.max(1, endPage - maxButtons + 1);
+            }
+
+            for (let i = startPage; i <= endPage; i++) {
+                const isActive = i === currentPage;
+                const button = $('<button>', {
+                    text: i,
+                    class: `px-3 py-2 text-sm font-medium border border-gray-300 rounded-md
+                            transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500
+                            ${isActive ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 hover:bg-blue-50 hover:text-blue-600'}`,
+                    'aria-label': `Page ${i}`
+                }).on('click', function() {
+                    setPage(i);
+                    $(this).addClass('animate-pulse-custom').delay(300).queue(function() {
+                        $(this).removeClass('animate-pulse-custom').dequeue();
+                    });
+                });
+                $('#page-numbers').append(button);
+            }
+        }
+        function setPage(page) {
+            if (page >= 1 && page <= totalPages) {
+                currentPage = page;
+                const newUrl = new URL(window.location);
+                newUrl.searchParams.set('page', page);
+                window.location = newUrl.toString();
+            }
+        }
+
+        $('#prev-page').on('click', function() {
+            setPage(currentPage - 1);
+            $(this).addClass('animate-pulse-custom').delay(300).queue(function() {
+                $(this).removeClass('animate-pulse-custom').dequeue();
+            });
+        });
+
+        $('#next-page').on('click', function() {
+            setPage(currentPage + 1);
+            $(this).addClass('animate-pulse-custom').delay(300).queue(function() {
+                $(this).removeClass('animate-pulse-custom').dequeue();
+            });
+        });
+        $(window).on('popstate', function() {
+            const newPage = parseInt(new URLSearchParams(window.location.search).get('page')) || 1;
+            if (newPage >= 1 && newPage <= totalPages) {
+                currentPage = newPage;
+                updatePagination();
+            }
+        });
+
+        // Initial render
+        updatePagination();
+    });
+</script>

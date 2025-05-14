@@ -6,12 +6,12 @@
         value="{{ widget.value }}"
         {% if widget.attrs.checked %}checked{% endif %}
         class="h-4 w-4"
-        style="border: 1px solid #4856da; accent-color: #4856da;"
-        onfocus="this.style.borderColor='#4856da'; this.style.boxShadow='0 0 0 2px rgba(72, 86, 218, 0.2)'"
-        onblur="this.style.borderColor='#4856da'; this.style.boxShadow='none'"
+        style="border: 1px solid #000000; accent-color: #000000;"
+        onfocus="this.style.borderColor='#000000'; this.style.boxShadow='0 0 0 2px rgba(0, 0, 0, 0.2)'"
+        onblur="this.style.borderColor='#000000'; this.style.boxShadow='none'"
         {% if widget.attrs.required %}required{% endif %}
     >
-    <label for="{{ widget.attrs.id }}" class="ml-2 text-sm text-gray-700">
+    <label for="{{ widget.attrs.id }}" class="ml-2 text-sm text-gray-900">
         {{ widget.label }}
     </label>
 </div>

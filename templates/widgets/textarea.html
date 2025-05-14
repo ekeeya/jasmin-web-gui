@@ -9,9 +9,9 @@
         <textarea
             name="{{ widget.name }}"
             id="{{ widget.attrs.id }}"
-            class="w-full px-4 py-2 bg-white rounded-lg shadow-sm focus:outline-none"
-            style="border: 1px solid #4856da; {% if form.errors.name %}border: 1px solid #ef4444;{% endif %}"
-            onfocus="this.style.borderColor='#4856da'; this.style.boxShadow='0 0 0 2px rgba(72, 86, 218, 0.2)'"
+            class="w-full px-4 py-2 bg-white shadow-sm focus:outline-none"
+            style="border: 1px solid #000000; {% if form.errors.name %}border: 1px solid #ef4444;{% endif %}"
+            onfocus="this.style.borderColor='#000000'; this.style.boxShadow='0 0 0 2px rgba(72, 86, 218, 0.2)'"
             onblur="this.style.borderColor='{% if form.errors.name %}#ef4444{% else %}#4856da{% endif %}'; this.style.boxShadow='none'"
             {% if widget.attrs.placeholder %}placeholder="{{ widget.attrs.placeholder }}"{% endif %}
             {% if widget.attrs.required %}required{% endif %}

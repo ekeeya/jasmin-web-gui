@@ -25,13 +25,12 @@ from quark.jasmin.models import JasminGroup, JasminUser, JasminSMPPConnector, Ja
     JasminInterceptor
 from quark.jasmin.views.sub_forms import MessagingAuthorizationsForm, MessagingValueFiltersForm, MessagingDefaultsForm, \
     MessagingQuotasForm, SMPPAuthorizationsForm, SMPPQuotasForm
-from quark.utils.fields import InputTextWidget
 from quark.workspace.views.forms import BaseWorkspaceForm
 
 
 class JasminGroupForm(BaseWorkspaceForm):
     gid = forms.CharField(
-        label="Group ID*",
+        label="UID*",
         max_length=JasminGroup._meta.get_field("gid").max_length,
         help_text=JasminGroup._meta.get_field("gid").help_text,
         widget=forms.TextInput(attrs={

@@ -13,7 +13,7 @@
         </div>
     </div>
 
-    <div class="flex-1 p-4 overflow-y-auto no-scrollbar">
+    <div class="flex-1 p-4 overflow-y-auto no-scrollbar" style="max-height: calc(100vh - 180px);">
         <div class="mb-6">
             <nav>
                 <ul class="space-y-1">
@@ -21,10 +21,7 @@
                         <a href="/"
                            class="relative flex items-center space-x-3 p-3 rounded-lg hover:bg-blue-50 text-gray-700 menu-item transition-smooth"
                            data-page="">
-                            <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                      d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
-                            </svg>
+                            <span class="icon-home text-xl"></span>
                             <span class="font-medium text-gray-800">Dashboard</span>
                         </a>
                     </li>
@@ -40,23 +37,15 @@
                         <a href="/jasminuser"
                            class="relative flex items-center space-x-3 p-3 rounded-lg hover:bg-blue-50 text-gray-700 menu-item transition-smooth"
                            data-page="jasminuser">
-                            <svg class="w-5 h-5 text-gray-500 group-hover:text-blue-600" fill="none"
-                                 stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                      d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
-                            </svg>
+                            <span class="icon-users text-xl"></span>
                             <span class="font-medium text-gray-800">Users</span>
                         </a>
                     </li>
                     <li>
                         <a href="/jasmingroup"
                            data-page="jasmingroup"
-                           class="group relative flex items-center space-x-3 p-3 rounded-lg hover:bg-blue-50 text-gray-700 transition-smooth">
-                            <svg class="w-5 h-5 text-gray-500 group-hover:text-blue-600" fill="none"
-                                 stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                      d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
-                            </svg>
+                           class="group relative flex items-center space-x-3 p-3 rounded-lg hover:bg-blue-50 text-gray-700 menu-item transition-smooth">
+                            <span class="icon-layers text-xl"></span>
                             <span class="font-medium text-gray-800">Groups</span>
                         </a>
                     </li>
@@ -72,17 +61,14 @@
                         <a href="/jasminsmppconnector"
                            class="relative flex items-center space-x-3 p-3 rounded-lg hover:bg-blue-50 text-gray-700 menu-item transition-smooth"
                            data-page="jasminsmppconnector">
-                            <svg class="w-5 h-5 text-gray-500 group-hover:text-blue-600" fill="none"
-                                 stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                      d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/>
-                            </svg>
+                            <span class="icon-power-plug text-xl"></span>
                             <span class="font-medium text-gray-800">Connectors</span>
                         </a>
                     </li>
                 </ul>
             </nav>
         </div>
+
         <div class="mb-6">
             <div class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 pl-3">Router PB</div>
             <nav>
@@ -91,11 +77,7 @@
                         <a href="/jasminfilter"
                            class="relative flex items-center space-x-3 p-3 rounded-lg hover:bg-blue-50 text-gray-700 menu-item transition-smooth"
                            data-page="jasminfilter">
-                            <svg class="w-5 h-5 text-gray-500 group-hover:text-blue-600" fill="none"
-                                 stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                      d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/>
-                            </svg>
+                            <span class="icon-funnel text-xl"></span>
                             <span class="font-medium text-gray-800">Filters</span>
                         </a>
                     </li>
@@ -103,18 +85,10 @@
                     <li>
                         <button class="group relative flex items-center justify-between w-full p-3 rounded-lg hover:bg-blue-50 text-gray-700 submenu-toggle transition-smooth">
                             <div class="flex items-center space-x-3">
-                                <svg class="w-5 h-5 text-gray-500 group-hover:text-blue-600" fill="none"
-                                     stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                          d="M9 19l-7-7 7-7m8 14l-7-7 7-7"/>
-                                </svg>
+                                <span class="icon-flow-tree text-xl"></span>
                                 <span class="font-medium text-gray-800">Routers</span>
                             </div>
-                            <svg class="w-4 h-4 text-gray-400 group-hover:text-blue-600 transform transition-transform duration-300"
-                                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                      d="M19 9l-7 7-7-7"/>
-                            </svg>
+                            <span class="icon-chevron-thin-down"></span>
                         </button>
                         <ul class="submenu">
                             <li><a href="/jasminroute?nature=mt"
@@ -128,12 +102,8 @@
                     <li>
                         <a href="/jasmininterceptor"
                            data-page="jasmininterceptor"
-                           class="group relative flex items-center space-x-3 p-3 rounded-lg hover:bg-blue-50 text-gray-700 transition-smooth">
-                            <svg class="w-5 h-5 text-gray-500 group-hover:text-blue-600" fill="none"
-                                 stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-                            </svg>
+                           class="group relative flex items-center space-x-3 p-3 rounded-lg hover:bg-blue-50 text-gray-700 menu-item transition-smooth">
+                            <span class="icon-align-horizontal-middle text-xl"></span>
                             <span class="font-medium text-gray-800">Interceptors</span>
                             <span class="ml-auto bg-blue-600 text-white text-xs font-semibold rounded-full px-2 py-1">12</span>
                         </a>
@@ -142,30 +112,21 @@
             </nav>
         </div>
 
-        <!-- Tools Section -->
         <div class="mb-6">
             <div class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 pl-3">Misc.</div>
             <nav>
                 <ul class="space-y-1">
                     <li>
                         <a href="#"
-                           class="group relative flex items-center space-x-3 p-3 rounded-lg hover:bg-blue-50 text-gray-700 transition-smooth">
-                            <svg class="w-5 h-5 text-gray-500 group-hover:text-blue-600" fill="none"
-                                 stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                      d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
-                            </svg>
+                           class="group relative flex items-center space-x-3 p-3 rounded-lg hover:bg-blue-50 text-gray-700 menu-item transition-smooth">
+                            <span class="icon-cog text-xl"></span>
                             <span class="font-medium text-gray-800">Setting</span>
                         </a>
                     </li>
                     <li>
                         <a href="#"
-                           class="group relative flex items-center space-x-3 p-3 rounded-lg hover:bg-blue-50 text-gray-700 transition-smooth">
-                            <svg class="w-5 h-5 text-gray-500 group-hover:text-blue-600" fill="none"
-                                 stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                      d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z"/>
-                            </svg>
+                           class="group relative flex items-center space-x-3 p-3 rounded-lg hover:bg-blue-50 text-gray-700 menu-item transition-smooth">
+                            <span class="icon-help-with-circle text-xl"></span>
                             <span class="font-medium text-gray-800">Help Center</span>
                         </a>
                     </li>
@@ -174,7 +135,6 @@
         </div>
     </div>
 
-    <!-- Upgrade Banner (Fixed at Bottom) -->
     <div class="p-4 border-t border-gray-100">
         <div class="bg-gradient-to-r from-blue-700 to-blue-600 text-white p-4 rounded-xl shadow-md">
             <div class="flex items-center space-x-3 mb-2">
@@ -184,12 +144,15 @@
                               d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/>
                     </svg>
                 </div>
-                <span class="text-sm font-semibold tracking-tight">Try Joyce Pro</span>
+                <span class="text-sm font-semibold tracking-tight">GitHub</span>
             </div>
-            <p class="text-xs text-blue-100 mb-3 leading-relaxed">Unlock the full potential of Joyce with our Pro subscription! Gain access to advanced features, seamless billing, and detailed quota tracking to elevate your experience.</p>
-            <button class="w-full bg-white text-blue-700 py-2 rounded-lg text-sm font-semibold hover:bg-blue-50 transition-smooth shadow-sm">
-                Upgrade to Pro today!
-            </button>
+            <p class="text-xs text-blue-100 mb-3 leading-relaxed">Give us a star if you like this project to enable it grow.</p>
+            <a href="https://github.com/ekeeya/jasmin-web-gui" target="_blank" class="w-full btn bg-black text-white border-black flex items-center justify-center space-x-2 py-2 rounded-lg">
+                <svg aria-label="GitHub logo" width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                    <path fill="white" d="M12 2a10 10 0 0 0-10 10c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.87 1.52 2.29 1.08 2.85.83.09-.65.35-1.08.63-1.33-2.22-.25-4.55-1.11-4.55-4.94 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.65 0 0 .84-.27 2.75 1.02A9.56 9.56 0 0 1 12 6.84c.85.01 1.71.11 2.51.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.38.2 2.4.1 2.65.64.7 1.03 1.59 1.03 2.68 0 3.84-2.34 4.69-4.57 4.94.36.31.67.94.67 1.9v2.81c0 .27.16.58.67.5A10 10 0 0 0 22 12a10 10 0 0 0-10-10z"/>
+                </svg>
+                <span>Find us on GitHub</span>
+            </a>
         </div>
     </div>
 </div>

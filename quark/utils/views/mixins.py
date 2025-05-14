@@ -33,33 +33,35 @@ class FormMixin:
 
         # Don't replace the widget if it is already one of our custom widgets
         if isinstance(
-            field.widget,
-            (
-                forms.widgets.HiddenInput,
-                CheckboxInputWidget,
-                InputTextWidget,
-                SelectWidget,
-                MultiSelectWidget,
-                FilePickerWidget,
-                TextareaWidget,  # Added TextareaWidget to the check
-            ),
+                field.widget,
+                (
+                        forms.widgets.HiddenInput,
+                        CheckboxInputWidget,
+                        InputTextWidget,
+                        SelectWidget,
+                        MultiSelectWidget,
+                        FilePickerWidget,
+                        TextareaWidget,  # Added TextareaWidget to the check
+                ),
         ):
             return field
 
         # Replace standard widgets with our custom widgets
         if isinstance(field.widget, (forms.widgets.Textarea,)):
+            default_attrs = {"cols": "5", "rows": "2"}
+            attrs.update(default_attrs)
             field.widget = TextareaWidget(attrs=attrs)
         elif isinstance(field.widget, (forms.widgets.PasswordInput,)):
             attrs["password"] = True
             field.widget = InputTextWidget(attrs=attrs)
         elif isinstance(
-            field.widget,
-            (
-                forms.widgets.TextInput,
-                forms.widgets.EmailInput,
-                forms.widgets.URLInput,
-                forms.widgets.NumberInput,
-            ),
+                field.widget,
+                (
+                        forms.widgets.TextInput,
+                        forms.widgets.EmailInput,
+                        forms.widgets.URLInput,
+                        forms.widgets.NumberInput,
+                ),
         ):
             field.widget = InputTextWidget(attrs=attrs)
         elif isinstance(field.widget, (forms.widgets.Select,)):
@@ -75,3 +77,50 @@ class FormMixin:
             field.widget = FilePickerWidget(attrs=attrs)
 
         return field
+
+
+class InjectModalFormMixin(FormMixin):
+    """
+    Mixin to inject a form in a list's context
+    """
+    modal_form = None
+
+    class Modal:
+        """Will represent a modal """
+
+        def __init__(self, form, customize_form_field):
+            self.modal = dict()
+            self.form = form
+            self.customize_form_field = customize_form_field
+
+        def to_tailwind(self):
+            # apply our tailwind widget from FormMixin
+            for name, field in self.form.fields.items():
+                field = self.customize_form_field(name, field)
+                self.form.fields[name] = field
+
+        def register_modal(self, title: str, modal_id: str, post_url: str):
+            self.to_tailwind()
+            self.modal = dict(
+                title=title,
+                modal_id=modal_id,
+                post_url=post_url,
+                form=self.form
+            )
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        workspace = self.derive_workspace()
+        self.modal_form = self.modal_form(workspace=workspace)
+        context['workspace'] = workspace  # inject the workspace too as added bonus
+        # init it no going back at this level
+        context['modal'] = self._get_context_modal()
+        return context
+
+    def _get_context_modal(self):
+        modal = self.Modal(self.modal_form, self.customize_form_field)
+        self.build_modal(modal)
+        return modal.modal
+
+    def build_modal(self, modal: Modal):
+        pass
