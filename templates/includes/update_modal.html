@@ -1,6 +1,6 @@
 <div data-id="update-backdrop-{{ item.id }}" class="fixed inset-0 bg-white/60 bg-opacity-30 z-40 backdrop-transition opacity-0 pointer-events-none"></div>
 
-<div data-modal="update-modal-{{ item.id }}" class="fixed top-0 right-0 h-full w-full max-w-md modal-transition modal-hidden z-50 p-4">
+<div data-modal-update="update-modal-{{ item.id }}" class="fixed top-0 right-0 h-auto w-full max-w-lg  modal-transition modal-hidden z-50 p-4">
     <div class="bg-white h-auto border rounded shadow-2xl flex shadow-lg flex-col overflow-hidden mt-4">
       <!-- Header -->
       <div class="bg-black px-4 py-2 border-b border-gray-200 flex justify-between items-center">
@@ -14,8 +14,11 @@
         
         <form method="POST" action="{{ item.post_url }}" id="form-update-{{ item.id }}">
             {% csrf_token %}
-            
-            <div class="flex-1 p-6 overflow-y-auto space-y-4">
+
+            <div class="flex-1 error-update-after p-2 overflow-y-auto space-y-2">
+            {% if modal.modal_id == 'jasmin_user' %}
+            {% include 'jasmin/user_create.html' with form=item.form %}
+            {% else %}
                 {% for field in item.form %}
                     <div class="form-group mb-4">
                         <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1">
@@ -32,13 +35,10 @@
                         <div style="font-size: 8pt !important;" id="{{ field.name }}" class="hidden mt-1 text-red-600"> </div>
                     </div>
                 {% endfor %}
+                {% endif %}
             </div>
             
-            {% if modal.form.non_field_errors %}
-                <div class="alert alert-error form-errors px-6">
-                    {{ modal.form.non_field_errors }}
-                </div>
-            {% endif %}
+            
             
             <div class="bg-gray-50 px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
                 <a href="javascript:void(0)" type="reset" class="px-4 py-2 text-gray-700 hover:text-gray-900 font-medium transition-colors">
@@ -51,7 +51,6 @@
         </form>
     </div>
   </div>
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
    $(document).ready(function(){
     const url = "{{ item.post_url }}";
@@ -62,7 +61,7 @@
     // Modal trigger logic
     $('[data-update-trigger-{{ item.id }}]').on('click', function() {
         const id = parseInt("{{ item.id }}")
-        const $modal = $(`[data-modal="update-modal-${id}"]`);
+        const $modal = $(`[data-modal-update="update-modal-${id}"]`);
         const $backdrop = $(`[data-id="update-backdrop-${id}"]`);
         
         // Show modal and backdrop
@@ -73,7 +72,7 @@
     // Close modal logic (generic for all modals)
     $('[data-update-close], [data-id^=update-backdrop-]').on('click', function() {
         const id = $(this).attr('data-id')?.replace('update-backdrop-', '') || '{{ item.id }}';
-        const $modal = $(`[data-modal="update-modal-${id}"]`);
+        const $modal = $(`[data-modal-update="update-modal-${id}"]`);
         const $backdrop = $(`[data-id="update-backdrop-${id}"]`);
         
         // Hide modal and backdrop
@@ -82,7 +81,7 @@
     });
     
     // Prevent backdrop click from closing modal if clicking inside modal content
-    $('[data-modal^=update-modal-]').on('click', function(e) {
+    $('[data-modal-update^=update-modal-]').on('click', function(e) {
         e.stopPropagation();
     });
     
@@ -174,7 +173,7 @@
     
     function showGenericError() {
         const errorContainer = $('<div class="alert alert-error form-errors px-6 text-sm text-red-600"></div>');
-        form.find('.flex-1').prepend(errorContainer);
+        form.find('.error-update-after').prepend(errorContainer);
         errorContainer.text('An error occurred while submitting the form. Please try again.');
     }
     

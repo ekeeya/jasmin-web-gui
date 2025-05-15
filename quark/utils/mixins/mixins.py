@@ -84,12 +84,6 @@ class FormMixin:
         return field
 
 
-class UpdateModalMixin:
-    """
-        We shall use this to return json for modal update
-    """
-
-
 class ModalFormMixin:
     """
         Handles invalid form submissions and returns a JSON response on form_invalid for modal(ajax) creates

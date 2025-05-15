@@ -17,6 +17,7 @@
 #
 from smartmin.views import SmartListView
 
+from quark.jasmin.models import JasminUser
 from quark.workspace.views.mixins import WorkspacePermsMixin
 
 
@@ -27,6 +28,9 @@ class BaseListView(WorkspacePermsMixin, SmartListView):
     add_button = True
 
     def derive_queryset(self, **kwargs):
+        # for jasmin users workspace is got from group
+        if self.model == JasminUser:
+            return super().derive_queryset(**kwargs).filter(group__workspace=self.request.workspace)
         return super().derive_queryset(**kwargs).filter(workspace=self.request.workspace)
 
     def build_actions(self):

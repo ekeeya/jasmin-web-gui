@@ -1,0 +1,52 @@
+{% load static %}
+<script type="text/javascript" src="{% static 'js/jquery-confirm.min.js' %}"></script>
+<script>
+    $(document).ready(function() {
+    $('[data-delete]').on('click', function(e) {
+        const url = "{% url delete_url "0" %}"
+        const id = $(this).data('delete');
+        const dataAttrKey = 'row-' + id;
+        const item = $(this).closest('tr').data(dataAttrKey)
+        const uri = url.replaceAll("0", id)
+        const csrfToken = "{{ csrf_token }}"
+
+        $.confirm({
+            title: `Are you sure to delete item <b>${item}</b>?`,
+            content: 'This action cannot be undone!',
+            type: 'red',
+            typeAnimated: true,
+            boxWidth: '30%',
+            useBootstrap: false,
+            buttons: {
+                tryAgain: {
+                    text: 'DELETE',
+                    btnClass: 'btn-red',
+                    action: function(){
+                        deleteItem(uri, csrfToken)
+                    }
+                },
+                close: function () {
+                }
+            }
+        });
+    });
+
+    function deleteItem(uri, csrfToken){
+        $.ajax({
+            url: uri,
+            type: 'POST',
+            headers: {
+                'X-CSRFToken': csrfToken
+            },
+            success: function(response) {
+                location.reload()
+            },
+            error: function(xhr) {
+                console.error('Delete failed:', xhr.status, xhr.responseText);
+                alert('Error deleting item');
+            }
+        });
+    }
+});
+
+</script>

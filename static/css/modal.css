@@ -13,3 +13,75 @@
 .backdrop-transition {
     transition: opacity 0.3s ease-in-out;
 }
+
+[data-modal] {
+    max-height: 100vh;
+    overflow: hidden;
+}
+
+[data-modal] > div {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+[data-modal] .overflow-y-auto {
+    max-height: 75vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+[data-modal] .sticky {
+    position: sticky;
+    bottom: 0;
+    background: inherit;
+    z-index: 10;
+}
+
+@supports (max-height: 75dvh) {
+    [data-modal] .overflow-y-auto {
+        max-height: 75dvh;
+    }
+}
+
+[data-modal] .overflow-y-auto {
+    min-height: 200px;
+}
+
+/**
+control the update modal too
+*/
+
+[data-modal-update] {
+    max-height: 100vh;
+    overflow: hidden;
+}
+
+[data-modal-update] > div {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+[data-modal-update] .overflow-y-auto {
+    max-height: 75vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+[data-modal-update] .sticky {
+    position: sticky;
+    bottom: 0;
+    background: inherit;
+    z-index: 10;
+}
+
+@supports (max-height: 75dvh) {
+    [data-modal-update] .overflow-y-auto {
+        max-height: 75dvh;
+    }
+}
+
+[data-modal-update] .overflow-y-auto {
+    min-height: 200px;
+}

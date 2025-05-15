@@ -13,6 +13,8 @@
     <link href="{% static 'css/pagination.css' %}" rel="stylesheet">
     <link href="{% static 'css/nav.css' %}" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'icons/style.css' %}">
+    <script src="{% static 'js/jquery-3.6.0.js' %}"></script>
+    <link rel="stylesheet"  type="text/css"  href="{% static 'css/jquery-confirm.min.css' %}"/>
 </head>
 {% block styles %}
 
@@ -29,19 +31,17 @@
         {% endblock %}
     </div>
 </div>
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="{% static 'js/modal.js' %}"></script>
 {% block scripts %}
 
 {% endblock %}
 <script>
-    $(document).ready(function() {
+    $(document).ready(function () {
         const currentPath = window.location.pathname + window.location.search;
 
         function setActiveMenu() {
             let activeFound = false;
 
-            $('.menu-item').each(function() {
+            $('.menu-item').each(function () {
                 const page = $(this).data('page');
                 const href = $(this).attr('href');
 
@@ -53,7 +53,7 @@
                 }
             });
 
-            $('.submenu a').each(function() {
+            $('.submenu a').each(function () {
                 const href = $(this).attr('href');
                 if (href === currentPath) {
                     $(this).addClass('active');
@@ -67,7 +67,7 @@
                 }
             });
 
-            $('.submenu').each(function() {
+            $('.submenu').each(function () {
                 if (!$(this).find('a.active').length && !$($(this).prev('.submenu-toggle')).hasClass('active')) {
                     $(this).removeClass('open');
                 }
@@ -80,8 +80,8 @@
         // Initial call to set active menu
         setActiveMenu();
 
-        $('.submenu-toggle').off('click').on('click', function(e) {
-            e.preventDefault(); 
+        $('.submenu-toggle').off('click').on('click', function (e) {
+            e.preventDefault();
             const $submenu = $(this).next('.submenu');
             const isOpen = $submenu.hasClass('open');
 

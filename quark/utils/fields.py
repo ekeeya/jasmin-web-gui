@@ -61,6 +61,7 @@ class InputTextWidget(JoyceWidgetMixin, widgets.Input):
 
 class NumberInputTextWidget(InputTextWidget):
     input_type = 'number'
+    template_name = 'widgets/number_input.html'
 
 
 class FilePickerWidget(JoyceWidgetMixin, widgets.ClearableFileInput):
@@ -80,7 +81,7 @@ class RadioSelectWidget(widgets.RadioSelect):
 class SelectWidget(widgets.Select):
     template_name = 'widgets/select.html'
     is_annotated = True
-    option_inherits_attrs = False
+    # option_inherits_attrs = False
 
 
 class MultiSelectWidget(widgets.SelectMultiple):

@@ -79,7 +79,6 @@ class JasminUserForm(BaseWorkspaceForm):
 
         # Must conform to our workspace.
         self.fields['group'].queryset = self.workspace.jasmin_groups
-
         # Get the data for subforms
         mt_data = self.instance.mt_credential if self.instance.pk else {}
         smpps_data = self.instance.smpps_credential if self.instance.pk else {}
@@ -150,7 +149,6 @@ class JasminUserForm(BaseWorkspaceForm):
 
     def save(self, commit=True):
         instance = super().save(commit=False)
-
         # Construct mt_credential
         instance.mt_credential = {
             'authorizations': self.mt_auth_form.cleaned_data,

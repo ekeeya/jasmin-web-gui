@@ -16,7 +16,6 @@
 #  If not, see <http://www.gnu.org/licenses/>.
 #
 from django.core.paginator import Paginator
-from django.http import HttpResponseRedirect
 from django.urls import reverse
 from smartmin.mixins import NonAtomicMixin
 from smartmin.views import SmartCRUDL, SmartCreateView, SmartListView, SmartUpdateView, SmartDeleteView
@@ -39,8 +38,6 @@ class JasminGroupCRUDL(SmartCRUDL):
         title = "New Jasmin Group"
         form_class = JasminGroupForm
         permission = "jasmin.jasmingroup_create"
-        template_name = None
-        # template_name = "jasmin/group_create.html"
         success_url = "@jasmin.jasmingroup_list"
 
         def get_form_kwargs(self):
@@ -87,6 +84,12 @@ class JasminGroupCRUDL(SmartCRUDL):
                 post_url=reverse("jasmin.jasmingroup_create")
             )
 
+        def get_context_data(self, **kwargs):
+            context = super().get_context_data(**kwargs)
+            # set delete url
+            context["delete_url"] = "jasmin.jasmingroup_delete"
+            return context
+
     class Update(FormMixin, ModalFormMixin, WorkspacePermsMixin, SmartUpdateView):
         title = "Update Jasmin Group"
         form_class = UpdateJasminGroupForm
@@ -104,28 +107,31 @@ class JasminGroupCRUDL(SmartCRUDL):
             return super().save(obj)
 
     class Delete(WorkspacePermsMixin, NonAtomicMixin, SmartDeleteView):
-        title = "Delete Jasmin Group"
         permission = "jasmin.jasmingroup_delete"
-        success_url = "@jasmin.jasmingroup_list"
+        redirect_url = "@jasmin.jasmingroup_list"
+        cancel_url = "@jasmin.jasmingroup_list"
 
 
 class JasminUserCRUDL(SmartCRUDL):
     actions = ("create", "list", "update", "delete",)
     model = JasminUser
 
-    class Create(FormMixin, WorkspacePermsMixin, NonAtomicMixin, SmartCreateView):
+    class Create(FormMixin, ModalFormMixin, WorkspacePermsMixin, NonAtomicMixin, SmartCreateView):
         permission = "jasmin.jasminuser_create"
         form_class = JasminUserForm
-        template_name = "jasmin/user_create.html"
 
         def get_form_kwargs(self):
             kwargs = super().get_form_kwargs()
             kwargs["workspace"] = self.derive_workspace()
             return kwargs
 
-    class Update(FormMixin, WorkspacePermsMixin, NonAtomicMixin, SmartUpdateView):
+        def form_valid(self, form):
+            form.instance.modified_by = self.request.user
+            form.instance.created_by = self.request.user
+            return super().form_valid(form)
+
+    class Update(FormMixin, ModalFormMixin, WorkspacePermsMixin, NonAtomicMixin, SmartUpdateView):
         permission = "jasmin.jasminuser_update"
-        template_name = "jasmin/user_create.html"
         form_class = JasminUserForm
 
         def get_form_kwargs(self):
@@ -133,17 +139,41 @@ class JasminUserCRUDL(SmartCRUDL):
             kwargs["workspace"] = self.derive_workspace()
             return kwargs
 
-    class List(WorkspacePermsMixin, NonAtomicMixin, SmartListView):
+    class List(InjectModalFormMixin, BaseListView):
         permission = "jasmin.jasminuser_list"
-        fields = ("username", "groups", 'enabled', 'mt_credential', 'smpps_credential')
+        fields = ("username", "group", 'enabled', 'created_on')
+        template_name = "jasmin/user_list.html"
 
-        def derive_queryset(self, **kwargs):
-            # only users whose group belongs to our workspace
-            return super().derive_queryset(**kwargs).filter(group__workspace=self.request.workspace)
+        title = "Jasmin Groups"
+        ordering = ("-created_on",)
+        paginate_by = 10
+        search_fields = ("gid",)
+        modal_form = JasminUserForm
+        update_form = JasminUserForm
+
+        def build_update(self):
+            self.set_update_form_params(
+                post_url="jasmin.jasminuser_update",
+                name="Jasmin User",
+                display_field="username")
+
+        def build_modal(self, modal):
+            modal.register_modal(
+                title="Create a Jasmin User",
+                modal_id="jasmin_user",
+                post_url=reverse("jasmin.jasminuser_create")
+            )
+
+        def get_context_data(self, **kwargs):
+            context = super().get_context_data(**kwargs)
+            # set delete url
+            context["delete_url"] = "jasmin.jasminuser_delete"
+            return context
 
     class Delete(WorkspacePermsMixin, NonAtomicMixin, SmartDeleteView):
         permission = "jasmin.jasminuser_delete"
         redirect_url = "@jasmin.jasminuser_list"
+        cancel_url = "@jasmin.jasminuser_list"
 
 
 class JasminSMPPConnectorCRUDL(SmartCRUDL):

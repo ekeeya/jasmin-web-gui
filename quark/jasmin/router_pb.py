@@ -84,6 +84,18 @@ class RouterPBInterface(RouterPBProxy):
             self.disconnect()
 
     @defer.inlineCallbacks
+    def remove_user(self, uid: str, persist: bool = True):
+        try:
+            yield self.pb_connect()
+            yield self.user_remove(uid)
+            if persist:
+                yield self.persist()
+        except Exception as e:
+            logger.error("Error removing user to Jasmin PB: %s", e)
+        finally:
+            self.disconnect()
+
+    @defer.inlineCallbacks
     def get_all_users(self):
         try:
             yield self.pb_connect()

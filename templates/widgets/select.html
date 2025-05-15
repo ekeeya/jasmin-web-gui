@@ -5,6 +5,7 @@
             {% if widget.attrs.required %}<span class="text-red-500">*</span>{% endif %}
         </label>
     {% endif %}
+
     <select
         name="{{ widget.name }}"
         id="{{ widget.attrs.id }}"
@@ -19,10 +20,18 @@
             {% endif %}
         {% endfor %}
     >
-        {% for value, label in widget.choices %}
-            <option value="{{ value }}" {% if value == widget.value %}selected{% endif %}>
-                {{ label }}
-            </option>
+        {% for group_label, group_options, group_index in widget.optgroups %}
+            {% if group_label %}
+                <optgroup label="{{ group_label }}">
+            {% endif %}
+            {% for option in group_options %}
+                <option value="{{ option.value|stringformat:'s' }}" {% if option.selected %}selected{% endif %}>
+                    {{ option.label }}
+                </option>
+            {% endfor %}
+            {% if group_label %}
+                </optgroup>
+            {% endif %}
         {% endfor %}
     </select>
 

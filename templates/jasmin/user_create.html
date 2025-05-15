@@ -1,76 +1,161 @@
-{% extends 'base/base.html' %}
+<div class="p-2 overflow-y-auto space-y-2">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="space-y-1">
+            <label for="{{ form.username.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                {{ form.username.label }}
+                {% if form.username.field.required %}<span class="text-red-500">*</span>{% endif %}
+            </label>
+            {{ form.username }}
+            {% if form.username.help_text %}
+                <span style="font-size: 6pt !important;" class="text-gray-500">{{ form.username.help_text }}</span>
+            {% endif %}
 
-{% block content %}
-    <div class="container shadow-md m-10 p-6 bg-white w-1/2">
-        <form method="post">
-            {% csrf_token %}
-            <div class="mb-3">
-                {{ form.username.label_tag }}
-                {{ form.username }}
-                {{ form.username.errors }}
-            </div>
-            <div class="mb-3">
-                {{ form.password.label_tag }}
-                {{ form.password }}
-                {{ form.password.errors }}
-            </div>
-            <div class="mb-3">
-                {{ form.password_confirm.label_tag }}
-                {{ form.password_confirm }}
-                {{ form.password_confirm.errors }}
-            </div>
-            <div class="mb-3">
-                {{ form.group.label_tag }}
-                {{ form.group }}
-                {{ form.group.errors }}
-            </div>
-            <div class="mb-3">
-                {{ form.enabled.label_tag }}
+            <div style="font-size: 6pt !important;" data-modal-error="{{ form.username.name }}"
+                 class="hidden text-red-600"></div>
+        </div>
+
+        <div class="space-y-1">
+            <label for="{{ form.password.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                {{ form.password.label }}
+                {% if form.password.field.required %}<span class="text-red-500">*</span>{% endif %}
+            </label>
+            {{ form.password }}
+            {% if form.password.help_text %}
+                <span style="font-size: 6pt !important;" class="text-gray-500">{{ form.password.help_text }}</span>
+            {% endif %}
+
+            <div style="font-size: 6pt !important;" data-modal-error="{{ form.password.name }}"
+                 class="hidden text-red-600"></div>
+        </div>
+        <div class="space-y-1 md:col-span-2">
+            <label for="{{ form.group.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                {{ form.group.label }}
+                {% if form.group.field.required %}<span class="text-red-500">*</span>{% endif %}
+            </label>
+            {{ form.group }}
+            {% if form.group.help_text %}
+                <span style="font-size: 6pt !important;" class="text-gray-500">{{ form.group.help_text }}</span>
+            {% endif %}
+            <div style="font-size: 6pt !important;" data-modal-error="{{ form.group.name }}"
+                 class="hidden text-red-600"></div>
+        </div>
+        <div class="space-y-1">
+            <label for="{{ form.enabled.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                {{ form.enabled.label }}
+                {% if form.enabled.field.required %}<span class="text-red-500">*</span>{% endif %}
+            </label>
+            <div class="mt-1">
                 {{ form.enabled }}
-                {{ form.enabled.errors }}
             </div>
-            <h3>Messaging Authorizations</h3>
-            {% for field in form.mt_auth_form %}
-                <div class="mb-3 form-check">
-                    {{ field }} {{ field.label_tag }}
-                    {{ field.errors }}
-                </div>
-            {% endfor %}
-            <h3>Messaging Value Filters</h3>
-            {% for field in form.mt_filter_form %}
-                <div class="mb-3">
-                    {{ field.label_tag }}
-                    {{ field }}
-                    {{ field.errors }}
-                </div>
-            {% endfor %}
-            <h3>Messaging Quotas</h3>
-            {% for field in form.mt_quota_form %}
-                <div class="mb-3">
-                    {{ field.label_tag }}
-                    {{ field }}
-                    {{ field.errors }}
-                </div>
-            {% endfor %}
-            <h3>SMPP Authorizations</h3>
-            {% for field in form.smpps_auth_form %}
-                <div class="mb-3 form-check">
-                    {{ field }} {{ field.label_tag }}
-                    {{ field.errors }}
-                </div>
-            {% endfor %}
-            <h3>SMPP Quotas</h3>
-            {% for field in form.smpps_quota_form %}
-                <div class="mb-3">
-                    {{ field.label_tag }}
-                    {{ field }}
-                    {{ field.errors }}
-                </div>
-            {% endfor %}
-            <button type="submit" class="btn btn-primary">Save</button>
-        </form>
-        <div>
-            {{ form.errors }}
+            {% if form.enabled.help_text %}
+                <span style="font-size: 6pt !important;" class="text-gray-500">{{ form.enabled.help_text }}</span>
+            {% endif %}
+            <div style="font-size: 6pt !important;" data-modal-error="{{ form.enabled.name }}"
+                 class="hidden text-red-600"></div>
+
         </div>
     </div>
-{% endblock %}
+
+    <!-- Messaging Authorizations -->
+    <div class="space-y-4">
+        <h3 class="text-lg font-medium text-gray-900">Messaging Authorizations</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {% for field in form.mt_auth_form %}
+                <div class="flex items-center space-x-2">
+                    {{ field }}
+                    <label for="{{ field.id_for_label }}" class="text-sm font-medium text-gray-700">
+                        {{ field.label }}
+                    </label>
+                    {% if field.help_text %}
+                        <span class="mt-1 text-sm text-gray-500">{{ field.help_text }}</span>
+                    {% endif %}
+                    <div style="font-size: 6pt !important;" data-modal-error="{{ field.name }}"
+                         class="hidden mt-1 text-red-600"></div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Messaging Value Filters -->
+    <div class="space-y-2">
+        <h3 class="text-lg font-medium text-gray-900">Messaging Value Filters</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {% for field in form.mt_filter_form %}
+                <div class="space-y-1">
+                    <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                        {{ field.label }}
+                        {% if field.field.required %}<span class="text-red-500">*</span>{% endif %}
+                    </label>
+                    {{ field }}
+                    {% if field.help_text %}
+                        <span class="mt-1 text-sm text-gray-500">{{ field.help_text }}</span>
+                    {% endif %}
+                    <div style="font-size: 6pt !important;" data-modal-error="{{ field.name }}"
+                         class="hidden mt-1 text-red-600"></div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Messaging Quotas -->
+    <div class="space-y-2">
+        <h3 class="text-lg font-medium text-gray-900">Messaging Quotas</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {% for field in form.mt_quota_form %}
+                <div class="space-y-1">
+                    <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                        {{ field.label }}
+                        {% if field.field.required %}<span class="text-red-500">*</span>{% endif %}
+                    </label>
+                    {{ field }}
+                    {% if field.help_text %}
+                        <span class="mt-1 text-sm text-gray-500">{{ field.help_text }}</span>
+                    {% endif %}
+                    <div style="font-size: 6pt !important;" data-modal-error="{{ field.name }}"
+                         class="hidden mt-1 text-red-600"></div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- SMPP Authorizations -->
+    <div class="space-y-2">
+        <h3 class="text-lg font-medium text-gray-900">SMPP Authorizations</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {% for field in form.smpps_auth_form %}
+                <div class="flex items-center space-x-2">
+                    {{ field }}
+                    <label for="{{ field.id_for_label }}" class="text-sm font-medium text-gray-700">
+                        {{ field.label }}
+                    </label>
+                    {% if field.help_text %}
+                        <span class="mt-1 text-sm text-gray-500">{{ field.help_text }}</span>
+                    {% endif %}
+                    <div style="font-size: 6pt !important;" data-modal-error="{{ field.name }}"
+                         class="hidden mt-1 text-red-600"></div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- SMPP Quotas -->
+    <div class="space-y-2">
+        <h3 class="text-lg font-medium text-gray-900">SMPP Quotas</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {% for field in form.smpps_quota_form %}
+                <div class="space-y-1">
+                    <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                        {{ field.label }}
+                        {% if field.field.required %}<span class="text-red-500">*</span>{% endif %}
+                    </label>
+                    {{ field }}
+                    {% if field.help_text %}
+                        <span class="mt-1 text-sm text-gray-500">{{ field.help_text }}</span>
+                    {% endif %}
+                    <div style="font-size: 6pt !important;" data-modal-error="{{ field.name }}"
+                         class="hidden mt-1 text-red-600"></div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>

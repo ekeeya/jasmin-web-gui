@@ -1,5 +1,5 @@
 {% extends "base/base.html" %}
-
+{% load static %}
 {% load i18n %}
 
 {% block content %}
@@ -30,7 +30,7 @@
                 {% endif %}
             {% endif %}
             <div class="join">
-              <button id="openModal"  class="btn btn-sm text-white bg-black join-item">
+              <button data-modal-open  class="btn btn-sm text-white bg-black join-item">
                   <span class="icon-add-to-list"></span>
                   Add
               </button>
@@ -57,4 +57,9 @@
     {% for item in update_forms %}
         {% include 'includes/update_modal.html' with item=item %}
     {% endfor %}
+
 {% endblock content %}
+
+{% block scripts %}
+    {% include 'includes/delete.html' %}
+{% endblock %}

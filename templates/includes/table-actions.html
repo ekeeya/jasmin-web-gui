@@ -9,7 +9,7 @@
                 </div>
             {% else %}
                 <div class="tooltip" data-tip="Delete this item">
-                    <a href="javascript:void(0)" class="group btn btn-xs btn-square btn-outline btn-error">
+                    <a data-delete="{{ obj.id }}" href="javascript:void(0)" class="group btn btn-xs btn-square btn-outline btn-error">
                         <span class="icon-trash text-red-600 group-hover:text-white"></span>
                     </a>
                 </div>

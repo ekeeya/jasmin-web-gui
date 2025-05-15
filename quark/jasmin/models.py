@@ -186,6 +186,7 @@ class JasminUser(SmartModel, BaseJasminModel):
     smpps_credential = models.JSONField(default=dict, blank=True)
 
     def save(self, *args, **kwargs):
+
         if self.mt_credential is None or self.mt_credential == {}:
             self.mt_credential = {
                 'authorizations': MESSAGING_AUTHORIZATIONS,

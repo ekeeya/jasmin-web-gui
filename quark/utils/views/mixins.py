@@ -124,7 +124,7 @@ class InjectModalFormMixin(FormMixin):
 
     def set_update_form_params(self, **kwargs):
         for key, value in kwargs.items():
-            if key in ['post_url', 'display_field', 'name']:
+            if key in ['post_url', 'display_field', 'name','modal_id']:
                 setattr(self, key, value)
 
     def build_update_forms(self, workspace, items):
