@@ -16,8 +16,8 @@
             {% csrf_token %}
 
             <div class="flex-1 error-update-after p-2 overflow-y-auto space-y-2">
-            {% if modal.modal_id == 'jasmin_user' %}
-            {% include 'jasmin/user_create.html' with form=item.form %}
+            {% if modal.custom_form %}
+            {% include modal.custom_form with form=item.form %}
             {% else %}
                 {% for field in item.form %}
                     <div class="form-group mb-4">

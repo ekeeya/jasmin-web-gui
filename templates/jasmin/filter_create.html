@@ -1,0 +1,151 @@
+<div class="p-2 overflow-y-auto space-y-2">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="space-y-1">
+            <label for="{{ form.fid.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                {{ form.fid.label }}
+                {% if form.fid.field.required %}<span class="text-red-500">*</span>{% endif %}
+            </label>
+            {{ form.fid }}
+            {% if form.username.help_text %}
+                <span style="font-size: 6pt !important;" class="text-gray-500">{{ form.fid.help_text }}</span>
+            {% endif %}
+
+            <div style="font-size: 6pt !important;" data-modal-error="{{ form.fid.name }}"
+                 class="hidden text-red-600"></div>
+        </div>
+
+        <div class="space-y-1">
+            <label for="{{ form.nature.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                {{ form.nature.label }}
+                {% if form.nature.field.required %}<span class="text-red-500">*</span>{% endif %}
+            </label>
+            {{ form.nature }}
+            {% if form.nature.help_text %}
+                <span style="font-size: 6pt !important;" class="text-gray-500">{{ form.nature.help_text }}</span>
+            {% endif %}
+
+            <div style="font-size: 6pt !important;" data-modal-error="{{ form.nature.name }}"
+                 class="hidden text-red-600"></div>
+        </div>
+    </div>
+    <div class="space-y-1">
+        <label for="{{ form.filter_type.id_for_label }}" class="block text-sm font-medium text-gray-700">
+            {{ form.filter_type.label }}
+            {% if form.filter_type.field.required %}<span class="text-red-500">*</span>{% endif %}
+        </label>
+        {{ form.filter_type }}
+        {% if form.filter_type.help_text %}
+            <span style="font-size: 6pt !important;" class="text-gray-500">{{ form.filter_type.help_text }}</span>
+        {% endif %}
+        <div style="font-size: 6pt !important;" data-modal-error="{{ form.filter_type.name }}"
+             class="hidden text-red-600"></div>
+    </div>
+    <div class="grid grid-cols-1 hidden" id="show-args">
+        <fieldset class="space-y-4">
+            <legend class="text-lg font-medium text-gray-900">Filter Arguments</legend>
+            <div role="alert" class="alert alert-dash alert-warning text-xs flex flex-row">
+                If a filter type requires argument specify the key and value below or leave these empty
+                <a class="text-blue-500 underline"
+                   href="https://docs.jasminsms.com/en/latest/management/jcli/modules.html#filter-manager"
+                   target="_blank">Docs</a>
+            </div>
+            <div class="space-y-1">
+                <label for="{{ form.param_key.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                    {{ form.param_key.label }}
+                    {% if form.param_key.field.required %}<span class="text-red-500">*</span>{% endif %}
+                </label>
+                {{ form.param_key }}
+                {% if form.param_key.help_text %}
+                    <span style="font-size: 6pt !important;" class="text-gray-500">{{ form.param_key.help_text }}</span>
+                {% endif %}
+
+                <div style="font-size: 6pt !important;" data-modal-error="{{ form.param_key.name }}"
+                     class="hidden text-red-600"></div>
+            </div>
+            <div class="space-y-1 md:col-span-2">
+                <label for="{{ form.param_value.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                    {{ form.param_value.label }}
+                    {% if form.param_value.field.required %}<span class="text-red-500">*</span>{% endif %}
+                </label>
+                {{ form.param_value }}
+                {% if form.param_value.help_text %}
+                    <span style="font-size: 6pt !important;"
+                          class="text-gray-500">{{ form.param_value.help_text }}</span>
+                {% endif %}
+                <div style="font-size: 6pt !important;" data-modal-error="{{ form.param_value.name }}"
+                     class="hidden text-red-600"></div>
+            </div>
+        </fieldset>
+    </div>
+    <div id="filter-info" class="alert-info alert-dash alert-outline m-2 hidden alert text-xs"></div>
+</div>
+<script>
+    $(document).ready(function () {
+        const allFilters = [
+            ["TransparentFilter", null, "This filter will always match any message criteria"],
+            ["SourceAddrFilter", {source_addr: "^20d+"}, "Will match the source address of a MO message. arg source_addr: is a regular expression to match source address"],
+            ["DestinationAddrFilter", {destination_addr: "^85111$"}, "Will match the destination address of a MT message. destination_addr: is a regular expression to match destination address"],
+            ["ShortMessageFilter", {short_message: "^hello.*$"}, "Will match the content of a message. short_message: is a regular expression to match message content"],
+            ["DateIntervalFilter", {dateInterval: "2025-05-01;2025-05-16"}, "Will match the date of a message. dateInterval: are Two dates separated by ; (date format is YYYY-MM-DD)"],
+            ["TimeIntervalFilter", {timeInterval: "08:00:00;18:00:00"}, "Will match the time of a message. timeInterval: Two timestamps separated by ; (timestamp format is HH:MM:SS)"],
+            ["TagFilter", {tag: 32401}, "Will check if message has a defined tag. tag: numeric tag to match in message"],
+            ["EvalPyFilter", {pyCode: "/var/filters/thirdparty.py"}, "Will pass the message to a third party python script for user-defined filtering. pyCode:file system path to a python script,"]
+        ];
+        const moFilters = [
+            ["ConnectorFilter", {cid: "smppc_1_1"}, "Will match the source connector of a message. cid: cid of the connector to match"]
+        ]
+        const mtFilters = [
+            ["UserFilter", {uid: "user_uid"}, "Will match the owner of a MT message. uid:uid of the user to match"],
+            ["GroupFilter", {gid: "group_gid"}, "Will match the owner’s group of a MT message. gid:gid of the group to match"]
+        ]
+        let applyFilters = allFilters;
+        setFilterTypeOptions()
+        $("#id_nature").on("change", function (e) {
+            const opt = e.target.value
+            switch (opt) {
+                case "MT":
+                    applyFilters = mtFilters;
+                    break;
+                case "MO":
+                    applyFilters = moFilters;
+                    break;
+                default:
+                    applyFilters = allFilters
+                    break;
+            }
+            setFilterTypeOptions();
+        })
+        let selectedFilter = {}
+
+        $("#id_filter_type").on("change", function (e) {
+            const selectedOption = $(this).find('option:selected');
+            const index = selectedOption.data("index");
+            selectedFilter = applyFilters[index]
+            // auto populate the key, value fields
+            const attributes = selectedFilter[1]
+            let key= ""
+            let value =""
+            if (attributes) {
+                key = Object.keys(attributes)[0];
+                value = attributes[key];
+                $("#show-args").show("delay")
+            } else {
+                $("#show-args").hide("delay")
+            }
+            $("#id_param_key").val(key);
+                $("#id_param_value").val(value);
+            $("#filter-info").html(selectedFilter[2])
+            $("#filter-info").show("slow")
+        })
+
+        function setFilterTypeOptions() {
+            let options = "<option>---Select Filter---</option>"
+            applyFilters.forEach((filter, index) => {
+                options += `<option data-index="${index}"  value="${filter[0]}">${filter[0]}</option>`
+            })
+            $("#id_filter_type").html(options)
+        }
+
+
+    });
+</script>

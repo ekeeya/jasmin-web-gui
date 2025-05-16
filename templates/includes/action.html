@@ -1,0 +1,58 @@
+{% load static %}
+<script type="text/javascript" src="{% static 'js/jquery-confirm.min.js' %}"></script>
+<script>
+    $(document).ready(function() {
+    $('[data-action]').on('click', function(e) {
+        const actionType = $(this).data("action")
+        const url = $(this).data("url")
+
+        const dataAttrKey = 'pk';
+        const id = $(this).closest('tr').data(dataAttrKey)
+        const item = $(this).closest('tr').data(`row-${id}`)
+        const uri = url+`${id}/`;
+        const csrfToken = "{{ csrf_token }}"
+        $.confirm({
+            title: `Are you sure to ${actionType} <b>${item}</b>?`,
+            content: '',
+            type: 'orange',
+            typeAnimated: true,
+            boxWidth: '30%',
+            useBootstrap: false,
+            buttons: {
+                tryAgain: {
+                    text: 'CONTINUE',
+                    btnClass: 'btn-orange',
+                    action: function(){
+                        initAction(uri, actionType, csrfToken)
+                    }
+                },
+                close: function () {
+                }
+            }
+        });
+    });
+
+    function initAction(uri,action, csrfToken){
+        
+        console.log(uri)
+        
+        $.ajax({
+            url: uri,
+            type: 'POST',
+            //data: formData,
+            headers: {
+                'X-CSRFToken': csrfToken
+            },
+            processData: false,
+            contentType: false,
+            success: function(data, textStatus, xhr) {
+                 location.reload()
+            },
+            error: function(xhr) {
+                console.error('Action failed:', xhr.status, xhr.responseText);
+            }
+        });
+    }
+});
+
+</script>

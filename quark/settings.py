@@ -212,6 +212,7 @@ PERMISSIONS = {
     "jasmin.jasmingroup": ("activate", "deactivate"),
     "jasmin.jasminuser": ("activate", "deactivate"),
     "jasmin.jasminsmppconnector": ("start", "stop", "configure"),
+    "jasmin.jasminhttpconnector": ("configure", ),
 }
 
 GROUP_PERMISSIONS = {
@@ -238,8 +239,11 @@ GROUP_PERMISSIONS = {
         "jasmin.jasminsmppconnector_stop",
         "jasmin.jasminsmppconnector_delete",
         "jasmin.jasminsmppconnector_list",
+        "jasmin.jasminhttpconnector_configure",
+        "jasmin.jasminhttpconnector_update",
+        "jasmin.jasminhttpconnector_delete",
+        "jasmin.jasminhttpconnector_list",
         "jasmin.jasminfilter_create",
-        "jasmin.jasminfilter_update",
         "jasmin.jasminfilter_list",
         "jasmin.jasminfilter_delete",
         "jasmin.jasminroute_create",
@@ -255,4 +259,4 @@ GROUP_PERMISSIONS = {
 }
 
 LOGIN_REDIRECT_URL = "/"
-LOGIN_URL = "users/login/"
+LOGIN_URL = "login/"

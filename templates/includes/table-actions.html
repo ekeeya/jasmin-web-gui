@@ -3,13 +3,29 @@
         {% for action in actions %}
             {% if action == 'edit' %}
                 <div class="tooltip" data-tip="Edit this item">
-                    <a data-update-trigger-{{ obj.id }} href="javascript:void(0)" class="group btn btn-xs btn-square btn-outline btn-primary">
+                    <a data-update-trigger-{{ obj.id }} href="javascript:void(0)"
+                       class="group btn btn-xs btn-square btn-outline btn-primary">
                         <span class="icon-edit text-blue-600 group-hover:text-white"></span>
+                    </a>
+                </div>
+
+            {% elif action == 'status' %}
+                <div class="tooltip"
+                     data-tip="{% if obj.is_active %} Stop connector {% else %} Start connector {% endif %}">
+                    <a data-action="{% if obj.is_active %}stop{% else %}start{% endif %}" href="javascript:void(0)"
+                       data-url="{% if obj.is_active %}stop/ {% else %}start/{% endif %}"
+                       class="group btn btn-xs btn-square btn-outline {% if obj.is_active %}btn-error {% else %} btn-success {% endif %}">
+                        {% if obj.is_active %}
+                            <span class="icon-portable_wifi_off  text-red-600 group-hover:text-white"></span>
+                        {% else %}
+                            <span class="icon-wifi_tethering text-green-500  group-hover:text-white"></span>
+                        {% endif %}
                     </a>
                 </div>
             {% else %}
                 <div class="tooltip" data-tip="Delete this item">
-                    <a data-delete="{{ obj.id }}" href="javascript:void(0)" class="group btn btn-xs btn-square btn-outline btn-error">
+                    <a data-delete="{{ obj.id }}" href="javascript:void(0)"
+                       class="group btn btn-xs btn-square btn-outline btn-error">
                         <span class="icon-trash text-red-600 group-hover:text-white"></span>
                     </a>
                 </div>

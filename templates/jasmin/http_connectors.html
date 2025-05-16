@@ -4,17 +4,11 @@
 
 {% block pre-table %}
     <div class="bg-white w-full mb-1 p-2">
-        <label class="font-bold uppercase">Jasmin Users</label>
+        <label class="font-bold uppercase">HTTP Connectors</label>
         <div role="alertdialog" class="alert alert-info alert-outline">
             <span class="icon-info text-lg"></span>
            <span class="text-xs">
-               Every User must be a member of a Group, so before adding a new User, there must be at least one Group available.
-               A user is required for
-               <ul class="mx-2 mt-1">
-                   <li><span class="icon-chevron-right"></span>SMPP Server API authentication to send a SMS</li>
-                   <li><span class="icon-chevron-right"></span>HTTP API authentication to send a SMS</li>
-                   <li><span class="icon-chevron-right"></span>Creating a UserFilter using the filter manager</li>
-               </ul>
+               A HTTP Client connector is used in SMS-MO routing, it is called with the message parameters when it is returned by a matched MO Route
            </span>
         </div>
     </div>
@@ -29,25 +23,24 @@
                     <th class="px-3 py-2 border-b border-r border-gray-200 last:border-r-0 {% if view|field_orderable:field %}cursor-pointer hover:bg-gray-700{% endif %}"
                         scope="col"
                         {% if view|field_orderable:field %}onclick="orderBy('{{ field }}')"{% endif %}>
-                        <div class="flex items-center gap-2">
-                            {% get_label field %}
-                        </div>
+                        {% get_label field %}
                     </th>
                 {% endfor %}
                 {% if actions %}
                     <th class="px-3 py-2 border-b border-gray-200 text-center">
-                       Actions
+                        Actions
                     </th>
                 {% endif %}
             </tr>
             </thead>
             <tbody class="bg-white">
             {% for obj in object_list %}
-                <tr data-row-{{ obj.id }}="{{ obj.gid }}" class="border-b border-gray-200 hover:bg-gray-50 {% cycle 'bg-gray-50' 'bg-white' %} {% if not obj.is_active and obj|is_smartobject %}opacity-60{% endif %}">
+                <tr data-pk="{{ obj.id }}" data-row-{{ obj.id }}="{{ obj.cid }}"
+                    class="border-b border-gray-200 hover:bg-gray-50 {% cycle 'bg-gray-50' 'bg-white' %} {% if not obj.is_active and obj|is_smartobject %}opacity-60{% endif %}">
                     {% for field in fields %}
-                        <td class="px-3 py-2 border-r border-gray-200 last:border-r-0 text-gray-900 {% if field in link_fields %}hover:underline cursor-pointer{% endif %}"
-                            {% if field in link_fields %}onclick="window.location='{% get_field_link field obj %}'"{% endif %}>
-                            {% get_value obj field %}
+                        <td class="px-3 py-2 border-r border-gray-200 last:border-r-0 text-gray-900 ">
+                        {% get_value obj field as result %}
+                        {{ result|safe }}
                         </td>
                     {% endfor %}
                     {% if actions %}

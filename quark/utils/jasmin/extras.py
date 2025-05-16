@@ -64,7 +64,7 @@ class BaseJasminModel(models.Model):
         REMOVE_SMPP_CONNECTOR = "delete_connector"
         STOP_CONNECTOR = "stop_connector"
         START_CONNECTOR = "start_connector"
-        GET_STATUS = "connector_status"
+        GET_CONNECTOR_STATUS = "connector_status"
         GET_CONNECTOR = "get_connector"
 
     def _execute_reactor_operation(self, operation: ReactorOperation, pb_type: PBType, *args, **kwargs):
@@ -101,6 +101,13 @@ class BaseJasminModel(models.Model):
                     self.handle_activate_result,
                     self.handle_activate_error
                 )
+            elif operation in [
+                self.ReactorOperation.GET_CONNECTOR_STATUS
+            ]:
+                deferred.addCallbacks(
+                    self.handle_connector_status,
+                    self.handle_generic_error
+                )
             else:
                 deferred.addCallbacks(
                     self.handle_remove_result,
@@ -116,7 +123,7 @@ class BaseJasminModel(models.Model):
     # Result handlers
     def handle_write_result(self, result):
         """Default success handler for write operations"""
-        logger.info(f"Write operation succeeded: {result}")
+        logger.info(f"Write operation succeeded: {str(self)}")
 
     def handle_write_error(self, error):
         """Default error handler for write operations, if write delete django object"""
@@ -125,9 +132,15 @@ class BaseJasminModel(models.Model):
 
     def handle_activate_result(self, result):
         """Default success handler for activate operations"""
-        logger.info(f"Activate operation succeeded: {result}")
-        self.is_active = not self.is_active
+        logger.info(f"Activate operation succeeded")
 
+    def handle_generic_error(self, error):
+        logger.error(f"Generic error occurred: {error}")
+
+    def handle_connector_status(self, result):
+        """"""
+        logger.info(f"Connector status is: {result}")
+        self.is_active = result
         self.save(run_on_reactor=False)
 
     def handle_activate_error(self, error):
@@ -232,6 +245,13 @@ class BaseJasminModel(models.Model):
                 PBType.SmppPB,
                 self.cid
             )
+
+    def jasmin_connector_status(self):
+        if hasattr(self, "cid"):
+            self._execute_reactor_operation(
+                self.ReactorOperation.GET_CONNECTOR_STATUS,
+                PBType.SmppPB,
+                self.cid)
 
     def jasmin_remove_connector(self):
         if hasattr(self, "cid"):

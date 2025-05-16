@@ -18,12 +18,14 @@
 from django.core.paginator import Paginator
 from django.urls import reverse
 from smartmin.mixins import NonAtomicMixin
-from smartmin.views import SmartCRUDL, SmartCreateView, SmartListView, SmartUpdateView, SmartDeleteView
+from smartmin.views import SmartCRUDL, SmartCreateView, SmartListView, SmartUpdateView, SmartDeleteView, \
+    SmartModelActionView, SmartFormView
 
 from quark.jasmin.models import JasminGroup, JasminUser, JasminSMPPConnector, JasminFilter, JasminRoute, \
-    JasminInterceptor
+    JasminInterceptor, JasminHTTPConnector
+from django import forms
 from quark.jasmin.views.forms import JasminGroupForm, UpdateJasminGroupForm, JasminUserForm, JasminSPPConnectorForm, \
-    JasminFilterForm, JasminRouteForm, JasminInterceptorForm
+    JasminFilterForm, JasminRouteForm, JasminInterceptorForm, JasminHttpConnectorForm
 from quark.utils.mixins.mixins import ModalFormMixin
 from quark.utils.views.mixins import FormMixin, InjectModalFormMixin
 from quark.workspace.views.base import BaseListView
@@ -58,6 +60,7 @@ class JasminGroupCRUDL(SmartCRUDL):
                 form.cleaned_data["workspace"],
                 form.cleaned_data["description"],
             )
+            form.instance.pk = self.object.pk  # set it so we skip re-saving it in mixin form_valid
             return super().form_valid(form)
 
     class List(InjectModalFormMixin, BaseListView):
@@ -125,11 +128,6 @@ class JasminUserCRUDL(SmartCRUDL):
             kwargs["workspace"] = self.derive_workspace()
             return kwargs
 
-        def form_valid(self, form):
-            form.instance.modified_by = self.request.user
-            form.instance.created_by = self.request.user
-            return super().form_valid(form)
-
     class Update(FormMixin, ModalFormMixin, WorkspacePermsMixin, NonAtomicMixin, SmartUpdateView):
         permission = "jasmin.jasminuser_update"
         form_class = JasminUserForm
@@ -161,7 +159,8 @@ class JasminUserCRUDL(SmartCRUDL):
             modal.register_modal(
                 title="Create a Jasmin User",
                 modal_id="jasmin_user",
-                post_url=reverse("jasmin.jasminuser_create")
+                post_url=reverse("jasmin.jasminuser_create"),
+                custom_form="jasmin/user_create.html",
             )
 
         def get_context_data(self, **kwargs):
@@ -177,10 +176,36 @@ class JasminUserCRUDL(SmartCRUDL):
 
 
 class JasminSMPPConnectorCRUDL(SmartCRUDL):
-    actions = ("configure", "list", "update", "delete",)
+    actions = ("configure", "list", "update", "delete", "start", "stop")
     model = JasminSMPPConnector
 
-    class Configure(FormMixin, WorkspacePermsMixin, NonAtomicMixin, SmartCreateView):
+    class Start(WorkspacePermsMixin, SmartFormView, SmartModelActionView):
+        class StartForm(forms.Form):
+            pass
+
+        permission = "jasmin.jasmin_smpp_connector_start"
+        success_url = "@jasmin.jasminsmppconnector_list"
+        slug_url_kwarg = "id"
+        form_class = StartForm
+
+        def execute_action(self):
+            # start the connector on jasmin
+            self.object.start()
+
+    class Stop(WorkspacePermsMixin, SmartFormView, SmartModelActionView):
+        class StopForm(forms.Form):
+            pass
+
+        permission = "jasmin.jasmin_smpp_connector_stop"
+        success_url = "@jasmin.jasminsmppconnector_list"
+        slug_url_kwarg = "id"
+        form_class = StopForm
+
+        def execute_action(self):
+            # stop the connector on jasmin
+            self.object.stop()
+
+    class Configure(FormMixin, ModalFormMixin, WorkspacePermsMixin, NonAtomicMixin, SmartCreateView):
         title = "Configure SMPP Connector"
         permission = "jasmin.jasminsmppconnector_configure"
         form_class = JasminSPPConnectorForm
@@ -191,26 +216,120 @@ class JasminSMPPConnectorCRUDL(SmartCRUDL):
             kwargs["workspace"] = self.derive_workspace()
             return kwargs
 
-    class List(BaseListView):
-        title = "SMPP Connectors"
+    class Update(FormMixin, ModalFormMixin, WorkspacePermsMixin, NonAtomicMixin, SmartUpdateView):
+        permission = "jasmin.jasminsmppconnector_update"
+        form_class = JasminSPPConnectorForm
+
+        def get_form_kwargs(self):
+            kwargs = super().get_form_kwargs()
+            kwargs["workspace"] = self.derive_workspace()
+            return kwargs
+
+    class List(InjectModalFormMixin, BaseListView):
+        title = "SMPP SMPP Connectors"
         permission = "jasmin.jasminsmppconnector_list"
         paginator_class = Paginator
         paginate_by = 10
-        fields = ("id", "cid", "host", "port", "is_active")
+        fields = ("cid", "host", "port", 'created_on')
+        template_name = "jasmin/smpp_connectors.html"
+        ordering = ("-created_on",)
+        search_fields = ("cid",)
+        modal_form = JasminSPPConnectorForm
+        update_form = JasminSPPConnectorForm
+        actions = ['status', 'edit', 'delete']
+
+        def build_update(self):
+            self.set_update_form_params(
+                post_url="jasmin.jasminsmppconnector_update",
+                name="Connector",
+                display_field="cid")
+
+        def build_modal(self, modal):
+            modal.register_modal(
+                title="Configure Connector",
+                modal_id="jasmin_connector",
+                post_url=reverse("jasmin.jasminsmppconnector_configure")
+            )
 
         def get_context_data(self, **kwargs):
             context = super().get_context_data(**kwargs)
-            workspace = self.derive_workspace()
-            context['workspace'] = workspace
-
+            # set delete url
+            context["delete_url"] = "jasmin.jasminsmppconnector_delete"
             return context
+
+    class Delete(WorkspacePermsMixin, NonAtomicMixin, SmartDeleteView):
+        permission = "jasmin.jasminsmppconnector_delete"
+        redirect_url = "@jasmin.jasminsmppconnector_list"
+        cancel_url = "@jasmin.jasminsmppconnector_list"
+
+
+class JasminHTTPConnectorCRUDL(SmartCRUDL):
+    actions = ("configure", "list", "update", "delete",)
+    model = JasminHTTPConnector
+
+    class Configure(FormMixin, ModalFormMixin, WorkspacePermsMixin, NonAtomicMixin, SmartCreateView):
+        title = "Configure HTTP Connector"
+        permission = "jasmin.jasminhttpconnector_configure"
+        form_class = JasminHttpConnectorForm
+        success_url = "@jasmin.jasminhttpconnector_list"
+
+        def get_form_kwargs(self):
+            kwargs = super().get_form_kwargs()
+            kwargs["workspace"] = self.derive_workspace()
+            return kwargs
+
+    class Update(FormMixin, ModalFormMixin, WorkspacePermsMixin, NonAtomicMixin, SmartUpdateView):
+        permission = "jasmin.jasminhttpconnector_update"
+        form_class = JasminHttpConnectorForm
+
+        def get_form_kwargs(self):
+            kwargs = super().get_form_kwargs()
+            kwargs["workspace"] = self.derive_workspace()
+            return kwargs
+
+    class List(InjectModalFormMixin, BaseListView):
+        title = "HTTP Connectors"
+        permission = "jasmin.jasminhttpconnector_list"
+        paginator_class = Paginator
+        paginate_by = 10
+        fields = ("cid", "base_url", "method", 'created_on')
+        template_name = "jasmin/http_connectors.html"
+        ordering = ("-created_on",)
+        search_fields = ("cid",)
+        modal_form = JasminHttpConnectorForm
+        update_form = JasminHttpConnectorForm
+        actions = ['edit', 'delete']
+
+        def build_update(self):
+            self.set_update_form_params(
+                post_url="jasmin.jasminhttpconnector_update",
+                name="Connector",
+                display_field="cid")
+
+        def build_modal(self, modal):
+            modal.register_modal(
+                title="Configure HTTP Connector",
+                modal_id="jasmin_connector",
+                post_url=reverse("jasmin.jasminhttpconnector_configure")
+            )
+
+        def get_context_data(self, **kwargs):
+            context = super().get_context_data(**kwargs)
+            # set delete url
+            context["delete_url"] = "jasmin.jasminhttpconnector_delete"
+            return context
+
+    class Delete(WorkspacePermsMixin, NonAtomicMixin, SmartDeleteView):
+        permission = "jasmin.jasminhttpconnector_delete"
+        redirect_url = "@jasmin.jasminhttpconnector_list"
+        cancel_url = "@jasmin.jasminhttpconnector_list"
 
 
 class JasminFilterCRUDL(SmartCRUDL):
-    actions = ("create", "list", "update", "delete",)
+    actions = ("create", "list", "delete",)
     model = JasminFilter
 
-    class Create(FormMixin, WorkspacePermsMixin, NonAtomicMixin, SmartCreateView):
+    class Create(FormMixin, ModalFormMixin, WorkspacePermsMixin, NonAtomicMixin, SmartCreateView):
         title = "Create Message Filter"
         permission = "jasmin.jasminfilter_create"
         form_class = JasminFilterForm
@@ -221,18 +340,36 @@ class JasminFilterCRUDL(SmartCRUDL):
             kwargs["workspace"] = self.derive_workspace()
             return kwargs
 
-    class List(BaseListView):
+    class List(InjectModalFormMixin, BaseListView):
         title = "Message Filters"
         permission = "jasmin.jasminfilter_list"
         paginator_class = Paginator
         paginate_by = 10
+        fields = ("fid", "nature", "filter_type", "param", 'created_on')
+        template_name = "jasmin/filters.html"
+        ordering = ("-created_on",)
+        search_fields = ("fid",)
+        modal_form = JasminFilterForm
+        actions = ['delete']
+
+        def build_modal(self, modal):
+            modal.register_modal(
+                title="Configure a Filter",
+                modal_id="jasmin_filter",
+                post_url=reverse("jasmin.jasminfilter_create"),
+                custom_form="jasmin/filter_create.html"
+            )
 
         def get_context_data(self, **kwargs):
             context = super().get_context_data(**kwargs)
-            workspace = self.derive_workspace()
-            context['workspace'] = workspace
-
+            # set delete url
+            context["delete_url"] = "jasmin.jasminfilter_delete"
             return context
+
+    class Delete(WorkspacePermsMixin, NonAtomicMixin, SmartDeleteView):
+        permission = "jasmin.jasminfilter_delete"
+        redirect_url = "@jasmin.jasminfilter_list"
+        cancel_url = "@jasmin.jasminfilter_list"
 
 
 class JasminRouteCRUDL(SmartCRUDL):

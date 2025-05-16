@@ -88,7 +88,13 @@ class SmppPBAdapter(SMPPClientManagerPBProxy):
     def connector_status(self, cid: str):
         yield self.pb_connect()
         status = yield self.service_status(cid)
-        return pickle.loads(status)
+        return True if status == 1 else False
+
+    @defer.inlineCallbacks
+    def connector_session(self, cid: str):
+        yield self.pb_connect()
+        session = yield self.session_state(cid)
+        return session
 
     def execute(self):
         def run():

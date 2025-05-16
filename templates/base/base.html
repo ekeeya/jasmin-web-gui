@@ -1,102 +1,83 @@
 {% load static %}
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Joyce for Jasmin</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link href="{% static 'css/daisyui.css' %}" rel="stylesheet" type="text/css"/>
-    <link href="{% static 'css/base.css' %}" rel="stylesheet">
-    <link href="{% static 'css/modal.css' %}" rel="stylesheet">
-    <link href="{% static 'css/styles.css' %}" rel="stylesheet">
-    <link href="{% static 'css/pagination.css' %}" rel="stylesheet">
-    <link href="{% static 'css/nav.css' %}" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'icons/style.css' %}">
-    <script src="{% static 'js/jquery-3.6.0.js' %}"></script>
-    <link rel="stylesheet"  type="text/css"  href="{% static 'css/jquery-confirm.min.css' %}"/>
-</head>
-{% block styles %}
-
-{% endblock %}
-</head>
-<body class="bg-gray-100 font-['Inter']">
-{% include 'includes/topbar.html' %}
-<div class="flex h-screen">
-    {% include 'includes/sidebar.html' %}
-    <div class="flex-1 px-5 py-24 md:py-8  md:ml-64">
-
-        {% block content %}
-
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Joyce for Jasmin</title>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+        <link href="{% static 'css/daisyui.css' %}" rel="stylesheet" type="text/css"/>
+        <link href="{% static 'css/base.css' %}" rel="stylesheet">
+        <link href="{% static 'css/modal.css' %}" rel="stylesheet">
+        <link href="{% static 'css/styles.css' %}" rel="stylesheet">
+        <link href="{% static 'css/pagination.css' %}" rel="stylesheet">
+        <link href="{% static 'css/nav.css' %}" rel="stylesheet">
+        <link rel="stylesheet" href="{% static 'icons/style.css' %}">
+        <script src="{% static 'js/jquery-3.6.0.js' %}"></script>
+        <link rel="stylesheet" type="text/css" href="{% static 'css/jquery-confirm.min.css' %}"/>
+        {% block styles %}
         {% endblock %}
-    </div>
-</div>
-{% block scripts %}
-
-{% endblock %}
-<script>
-    $(document).ready(function () {
-        const currentPath = window.location.pathname + window.location.search;
-
-        function setActiveMenu() {
-            let activeFound = false;
-
-            $('.menu-item').each(function () {
-                const page = $(this).data('page');
-                const href = $(this).attr('href');
-
-                if (href === currentPath || (page && currentPath.includes(page))) {
-                    $(this).addClass('active');
-                    activeFound = true;
-                } else {
-                    $(this).removeClass('active');
+    </head>
+    
+    <body class="bg-gray-100 font-['Inter']">
+        {% include 'includes/topbar.html' %}
+        <div class="flex h-screen">
+            {% include 'includes/sidebar.html' %}
+            <div class="flex-1 px-5 py-24 md:py-8  md:ml-64">
+        
+                {% block content %}
+        
+                {% endblock %}
+            </div>
+        </div>
+        {% block scripts %}
+        
+        {% endblock %}
+        <script>
+            $(document).ready(function () {
+                const currentPath = window.location.pathname + window.location.search;
+        
+                function setActiveMenu() {
+                    let activeFound = false;
+                    $('.menu-item').removeClass('active');
+                    $('.submenu a').removeClass('active');
+                    $('.submenu-toggle').removeClass('active');
+                    $('.menu-item').each(function () {
+                        const page = $(this).data('page');
+                        const href = $(this).attr('href');
+        
+                        if (href === currentPath || (page && currentPath.includes(page))) {
+                            $(this).addClass('active');
+                            activeFound = true;
+                        }
+                    });
+                    $('.submenu a').each(function () {
+                        const href = $(this).attr('href');
+                        if (href === currentPath || (currentPath.startsWith(href) && href !== '/')) {
+                            $(this).addClass('active');
+                            $(this).closest('.submenu').addClass('open');
+                            $(this).closest('.submenu').prev('.submenu-toggle').addClass('active');
+                            activeFound = true;
+                        }
+                    });
+                    if (!activeFound && currentPath === '/') {
+                        $('a[href="/"]').addClass('active');
+                    }
                 }
+        
+                setActiveMenu();
+                $('.submenu-toggle').on('click', function (e) {
+                    e.preventDefault();
+                    const $submenu = $(this).next('.submenu');
+                    const isOpen = $submenu.hasClass('open');
+                    $submenu.toggleClass('open', !isOpen);
+                    $(this).toggleClass('active', !isOpen);
+                    if (!isOpen) {
+                        $('.submenu').not($submenu).removeClass('open');
+                        $('.submenu-toggle').not(this).removeClass('active');
+                    }
+                });
             });
-
-            $('.submenu a').each(function () {
-                const href = $(this).attr('href');
-                if (href === currentPath) {
-                    $(this).addClass('active');
-                    // Auto-open parent submenu
-                    const $submenu = $(this).closest('.submenu');
-                    $submenu.addClass('open');
-                    $submenu.prev('.submenu-toggle').addClass('active');
-                    activeFound = true;
-                } else {
-                    $(this).removeClass('active');
-                }
-            });
-
-            $('.submenu').each(function () {
-                if (!$(this).find('a.active').length && !$($(this).prev('.submenu-toggle')).hasClass('active')) {
-                    $(this).removeClass('open');
-                }
-            });
-            if (!activeFound && currentPath === '/') {
-                $('a[href="/"]').addClass('active');
-            }
-        }
-
-        // Initial call to set active menu
-        setActiveMenu();
-
-        $('.submenu-toggle').off('click').on('click', function (e) {
-            e.preventDefault();
-            const $submenu = $(this).next('.submenu');
-            const isOpen = $submenu.hasClass('open');
-
-            // Toggle submenu
-            if (isOpen) {
-                $submenu.removeClass('open');
-                $(this).removeClass('active');
-            } else {
-                $('.submenu').removeClass('open');
-                $('.submenu-toggle').removeClass('active');
-                $submenu.addClass('open');
-                $(this).addClass('active');
-            }
-        });
-    });
-</script>
-</body>
+        </script>
+    </body>
 </html>

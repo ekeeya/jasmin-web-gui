@@ -18,13 +18,13 @@
 import re
 
 from django import forms
-from django.forms import HiddenInput
 from django.utils.text import slugify
 
 from quark.jasmin.models import JasminGroup, JasminUser, JasminSMPPConnector, JasminFilter, JasminRoute, \
-    JasminInterceptor
+    JasminInterceptor, JasminHTTPConnector
 from quark.jasmin.views.sub_forms import MessagingAuthorizationsForm, MessagingValueFiltersForm, MessagingDefaultsForm, \
     MessagingQuotasForm, SMPPAuthorizationsForm, SMPPQuotasForm
+from quark.utils.fields import SelectWidget
 from quark.workspace.views.forms import BaseWorkspaceForm
 
 
@@ -194,7 +194,24 @@ class JasminSPPConnectorForm(BaseWorkspaceForm):
 
     class Meta:
         model = JasminSMPPConnector
-        exclude = ("cid", "workspace")
+        exclude = ("cid", "workspace", "connector_type", "created_by", 'modified_by')
+
+
+class JasminHttpConnectorForm(BaseWorkspaceForm):
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+
+        # add workspace to instance
+        instance.workspace = self.cleaned_data['workspace']
+
+        if commit:
+            instance.save()
+        return instance
+
+    class Meta:
+        model = JasminHTTPConnector
+        exclude = ("cid", "workspace", "connector_type", "created_by", 'modified_by', 'is_active')
 
 
 class JasminFilterForm(BaseWorkspaceForm):
@@ -202,10 +219,12 @@ class JasminFilterForm(BaseWorkspaceForm):
     param_key = forms.CharField(
         required=False,
         label="Parameter Key",
-        help_text="Enter the parameter key"
+        initial=None,
+        help_text="Enter the parameter key",
     )
     param_value = forms.CharField(
         required=False,
+        initial=None,
         label="Parameter Value",
         help_text="Enter the parameter value",
         widget=forms.TextInput(attrs={'class': 'param-value-input'})
@@ -255,9 +274,9 @@ class JasminFilterForm(BaseWorkspaceForm):
 
     class Meta:
         model = JasminFilter
-        exclude = ("workspace",)
+        exclude = ("workspace", "is_active", "created_by", 'modified_by', 'param')
         widgets = {
-            'param': HiddenInput(),  # Hide the original JSON field
+            'filter_type': SelectWidget(),
         }
 
 
@@ -280,7 +299,7 @@ class JasminRouteForm(BaseWorkspaceForm):
 
     class Meta:
         model = JasminRoute
-        fields = ("nature", "router_type", "order", "filters", "connectors", "rate")
+        fields = ("nature", "router_type", "order", "filters", "mo_connectors", "mt_connectors", "rate")
 
 
 class JasminInterceptorForm(BaseWorkspaceForm):

@@ -26,13 +26,11 @@
                     <div role="alert" class="alert alert-error">
                         <span>{{ search_error }}</span>
                     </div>
-
                 {% endif %}
             {% endif %}
             <div class="join">
               <button data-modal-open  class="btn btn-sm text-white bg-black join-item">
-                  <span class="icon-add-to-list"></span>
-                  Add
+                  <span class="icon-add-to-list"></span>Add
               </button>
                 {%  if show_export %}
                   <button class="btn btn-sm btn-outline btn-success join-item">
@@ -62,4 +60,5 @@
 
 {% block scripts %}
     {% include 'includes/delete.html' %}
+    {% include 'includes/action.html'%}
 {% endblock %}

@@ -3,6 +3,18 @@
 {% load smartmin i18n %}
 
 {% block pre-table %}
+    <div class="bg-white w-full mb-1 p-2">
+        <label class="font-bold uppercase">Jasmin Group</label>
+        <div role="alertdialog" class="alert alert-info alert-outline">
+            <span class="icon-info text-lg"></span>
+           <span class="text-xs">A Group object is required for:
+               <ul class="mx-2 mt-1">
+                   <li><span class="icon-chevron-right"></span>Creating a User using the user manager</li>
+                   <li><span class="icon-chevron-right"></span>Creating a GroupFilter using the filter manager </li>
+               </ul>
+           </span>
+        </div>
+    </div>
 {% endblock pre-table %}
 
 {% block table %}

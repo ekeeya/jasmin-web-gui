@@ -17,6 +17,7 @@
 #  If not, see <http://www.gnu.org/licenses/>.
 #
 import logging
+import pickle
 import uuid
 from time import sleep
 from typing import List
@@ -30,13 +31,14 @@ from jasmin.routing.Interceptors import MTInterceptor, DefaultInterceptor, Stati
     StaticMOInterceptor, Interceptor
 from jasmin.routing.Routes import DefaultRoute, StaticMTRoute, RandomRoundrobinMTRoute, FailoverMTRoute, \
     RandomRoundrobinMORoute, StaticMORoute, FailoverMORoute, MTRoute, MORoute, Route
-from jasmin.routing.jasminApi import Connector, SmppClientConnector, InterceptorScript
+from jasmin.routing.jasminApi import Connector, SmppClientConnector, InterceptorScript, HttpConnector
 from smartmin.models import SmartModel
 from smpp.pdu.constants import *
 from smpp.pdu.pdu_types import RegisteredDelivery
 
 from quark.jasmin.utils import PRIORITY_VALUES, TON_VALUES, NPI_VALUES, REGISTERED_DELIVERY_VALUES, \
     REPLACE_IF_PRESENT_VALUES
+from quark.jasmin.utils.connectors import BaseJasminConnector
 from quark.jasmin.utils.filters import JasminBaseFilter, MO, MoFilters, MTFilters, MT, AllFilters
 from quark.jasmin.utils.interceptors import JasminBaseInterceptor
 from quark.jasmin.utils.routers import JasminBaseRouter, MTRouter, MORouter, RouterChoices
@@ -220,7 +222,7 @@ class JasminUser(SmartModel, BaseJasminModel):
         db_table = 'jasmin_user'
 
 
-class JasminSMPPConnector(BaseJasminModel, SmartModel):
+class JasminSMPPConnector(BaseJasminConnector, BaseJasminModel, SmartModel):
     """
     Represents a Jasmin SMPP client connector
     """
@@ -355,7 +357,6 @@ class JasminSMPPConnector(BaseJasminModel, SmartModel):
         (DLR_MSG_ID_DEC_TO_HEX, "Decimal to Hex"),
     ]
 
-    workspace = models.ForeignKey("workspace.WorkSpace", on_delete=models.CASCADE)
     host = models.CharField(
         max_length=50,
         help_text=_("Hostname or IP address of the SMSC"),
@@ -543,33 +544,23 @@ class JasminSMPPConnector(BaseJasminModel, SmartModel):
     )
 
     def __str__(self):
-        return str(self.cid)
+        return f"SMPP_CON-{str(self.cid)}"
 
-    @property
-    def cid(self):
-        return f"smppc_{self.workspace.id}_{str(self.id)}"
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.pk:
+            # grab the status
+            self.jasmin_connector_status()
 
     def save(self, *args, **kwargs):
         # manipulate the cid, to ensure we add workspace metadata
         run_on_reactor = kwargs.pop('run_on_reactor', True)
+        if self.pk is None:
+            self.connector_type = "SMPP"
+            self.is_active = False  # it is off by default
         super().save(*args, **kwargs)
         if run_on_reactor:
             self.jasmin_add_connector()
-
-    def start(self):
-        self.is_active = True
-        self.save(run_on_reactor=False)
-        self.jasmin_start_connector()
-
-    def stop(self):
-        self.is_active = False
-        self.save(run_on_reactor=False)
-        self.jasmin_stop_connector()
-
-    def restart(self):
-        self.stop()
-        sleep(5)  # sleep a bit
-        self.start()
 
     def delete(self, *args, **kwargs):
         run_on_reactor = kwargs.pop('run_on_reactor', True)
@@ -578,12 +569,27 @@ class JasminSMPPConnector(BaseJasminModel, SmartModel):
         else:
             super().delete(*args, **kwargs)
 
-    class Meta:
-        db_table = "jasmin_smpp_connector"
+    def start(self):
+        self.is_active = True
+        self.save(run_on_reactor=False)
+        self.jasmin_start_connector()
+        self.jasmin_connector_status()
+
+    def stop(self):
+        self.is_active = False
+        self.save(run_on_reactor=False)
+
+        self.jasmin_stop_connector()
+        self.jasmin_connector_status()
+
+    def restart(self):
+        self.stop()
+        sleep(5)  # sleep a bit
+        self.start()
 
     def to_smpp_client_config(self) -> JCliSMPPClientConfig:
         """Convert Django model instance to SMPPClientConfig"""
-        connector_id = f"smppc_{self.workspace.id}_{str(self.id)}"
+        connector_id = self.make_cid()
         params = {
             'id': connector_id,
             'port': self.port,
@@ -630,9 +636,6 @@ class JasminSMPPConnector(BaseJasminModel, SmartModel):
             del params['log_file']
 
         return JCliSMPPClientConfig(**params)
-
-    def to_route_connector(self) -> Connector:
-        return SmppClientConnector(self.cid)
 
     @classmethod
     def from_smpp_client_config(cls, config_data, workspace):
@@ -682,6 +685,47 @@ class JasminSMPPConnector(BaseJasminModel, SmartModel):
         # TODO, hand over to django, let it try to pick if by cid from db then update any
         #  field that do not match or just create a new on, handle clever way to link the workspace
 
+    class Meta:
+        db_table = "jasmin_smpp_connector"
+
+
+class JasminHTTPConnector(BaseJasminConnector, BaseJasminModel, SmartModel):
+    """
+        Represents a Jasmin HTTP Connector.
+        Jasmin does not provide a PB for MO HTTP connectors, for now let's persist them in django
+        We shall figure out how to persist them to a jasmin file storage such  that httpccm can
+        pull them regardless of the active jasmin session
+    """
+    base_url = models.URLField(
+        max_length=255,
+        help_text="A valid URL e.g https://example.tech or http://192.168.1.10:8000/sms"
+    )
+    method = models.CharField(
+        max_length=4,
+        choices=(("GET", "GET"), ("POST", "POST")),
+        default="POST"
+    )
+    description = models.TextField(
+        null=True,
+        blank=True,
+        help_text="A short description of the purpose of this connector"
+    )
+
+    def save(self, *args, **kwargs):
+        super(JasminHTTPConnector, self).save(*args, **kwargs)
+        # add the cid
+        self.make_cid()
+
+    def to_connector(self) -> Connector:
+        config = dict(cid=self.cid, baseurl=self.base_url, method=self.method)
+        return HttpConnector(**config)
+
+    def __str__(self):
+        return f"HTTP_CON-{self.cid}"
+
+    class Meta:
+        db_table = "jasmin_http_connector"
+
 
 class JasminFilter(JasminBaseFilter, SmartModel):
     """
@@ -724,6 +768,7 @@ class JasminFilter(JasminBaseFilter, SmartModel):
 
     def __str__(self):
         return f"FID:{self.fid} TYPE: {self.filter_type} - {self.nature}"
+
     class Meta:
         db_table = 'jasmin_filter'
 
@@ -738,7 +783,8 @@ class JasminRoute(BaseJasminModel, JasminBaseRouter, SmartModel):
         help_text="Type of router for message routing."
     )
     filters = models.ManyToManyField(JasminFilter, help_text="Filters applied to the route.")
-    connectors = models.ManyToManyField(JasminSMPPConnector, help_text="Connectors for the route.")
+    mt_connectors = models.ManyToManyField(JasminSMPPConnector, help_text="MT Connectors for the route.")
+    mo_connectors = models.ManyToManyField(JasminHTTPConnector, help_text="MO Connectors for the route.")
 
     def to_jasmin_route(self) -> Route:
         """
@@ -751,7 +797,11 @@ class JasminRoute(BaseJasminModel, JasminBaseRouter, SmartModel):
             ValidationError: If no connectors are found for the route.
         """
         filters = [f.to_jasmin_filter() for f in self.filters.all()]
-        connectors = [c.to_route_connector() for c in self.connectors.all()]
+        connectors = []
+        if self.nature == MT:
+            connectors = [c.to_connector() for c in self.mt_connectors.all()]
+        else:
+            connectors = [c.to_connector() for c in self.mo_connectors.all()]
 
         if not connectors:
             raise ValidationError("Cannot save route: No connectors found.")

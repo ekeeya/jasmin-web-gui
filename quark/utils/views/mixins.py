@@ -89,6 +89,7 @@ class InjectModalFormMixin(FormMixin):
     display_field = "id"
     name = None
     actions = ["edit", "delete"]
+    update_form = None
 
     def update_form_use_tailwind(self, form):
         for name, field in form.fields.items():
@@ -110,7 +111,7 @@ class InjectModalFormMixin(FormMixin):
                 field = self.customize_form_field(name, field)
                 self.form.fields[name] = field
 
-        def register_modal(self, title: str, modal_id: str, post_url: str):
+        def register_modal(self, title: str, modal_id: str, post_url: str, custom_form: str = None):
             self.to_tailwind()
             self.modal = dict(
                 title=title,
@@ -118,20 +119,21 @@ class InjectModalFormMixin(FormMixin):
                 post_url=post_url,
                 form=self.form
             )
+            if custom_form:
+                self.modal["custom_form"] = custom_form
 
     def build_update(self):
         pass
 
     def set_update_form_params(self, **kwargs):
         for key, value in kwargs.items():
-            if key in ['post_url', 'display_field', 'name','modal_id']:
+            if key in ['post_url', 'display_field', 'name', 'modal_id']:
                 setattr(self, key, value)
 
     def build_update_forms(self, workspace, items):
         self.build_update()
         update_forms = []
         if self.update_form:
-
             for item in items:
                 form = self.update_form(instance=item, workspace=workspace)
                 # convert to tailwind widgets

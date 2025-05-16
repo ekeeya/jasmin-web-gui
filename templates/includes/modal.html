@@ -18,8 +18,8 @@
        
 
         <div class="flex-1 form-error-after overflow-y-auto p-2 space-y-2 max-h-[75vh]">
-          {% if modal.modal_id == 'jasmin_user' %}
-            {% include 'jasmin/user_create.html' with form=modal.form %}
+          {% if modal.custom_form %}
+            {% include modal.custom_form with form=modal.form %}
           {% else %}
             {% for field in modal.form %}
               <div class="form-group mb-4">

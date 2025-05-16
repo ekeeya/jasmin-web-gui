@@ -1,7 +1,4 @@
-.transition-smooth {
-    transition: all 0.2s ease-in-out;
-}
-
+/* Add these to your existing CSS */
 .submenu {
     max-height: 0;
     overflow: hidden;
@@ -10,84 +7,55 @@
 }
 
 .submenu.open {
-    max-height: 200px;
+    max-height: 500px; /* Increased to accommodate more items */
     opacity: 1;
-    display: block;
 }
 
 .menu-item.active,
 .submenu a.active {
-    background-color: #f3f4f6; /* Kept #f3f4f6 (gray-100) to match hover:bg-gray-100 */
-    color: #000000; /* Text color set to black for active items */
+    background-color: #f3f4f6;
+    color: #000;
+    font-weight: 600;
+    position: relative;
+}
+
+.menu-item.active::before,
+.submenu a.active::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background-color: #000;
+}
+
+.submenu a.active {
+    background-color: #e5e7eb; /* Slightly darker than parent active */
+}
+
+/* Keep parent menu items highlighted when child is active */
+.submenu.open .submenu-toggle {
+    color: #000;
     font-weight: 600;
 }
 
-.menu-item.active span[class*="icon-"],
-.submenu a.active span[class*="icon-"] {
-    color: #000000; /* Icon color set to black for active items */
+.submenu-toggle.active {
+    color: #000;
+    font-weight: 600;
 }
 
-/* Ensure non-active menu items and their icons use text-gray-500 */
-.menu-item,
-.submenu a {
-    color: #6b7280; /* Tailwind text-gray-500 */
-}
-
-.menu-item span[class*="icon-"],
-.submenu a span[class*="icon-"] {
-    color: #6b7280; /* Tailwind text-gray-500 for icons in non-active items */
-}
-
-.no-scrollbar::-webkit-scrollbar {
-    display: none;
-}
-
-.no-scrollbar {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-}
-
-/* Chevron rotation for submenu toggle */
 .submenu-toggle.active .icon-chevron-thin-down {
     transform: rotate(180deg);
-    transition: transform 0.3s ease-in-out;
+    color: #000;
 }
 
-/* Fix for mobile sidebar toggle */
-@media (max-width: 767px) {
-    #sidebar.active {
-        transform: translateX(0);
-    }
-}
-
-.submenu li {
+/* Better visual hierarchy for submenu items */
+.submenu li a {
+    padding-left: 2.75rem;
     position: relative;
-    padding-left: 2.5rem;
-    padding-top: 0.375rem;
-    padding-bottom: 0.375rem;
 }
 
-.submenu li::before {
-    content: '';
-    position: absolute;
-    left: 1.5rem;
-    top: 0;
-    bottom: 0;
-    width: 1px;
-    background-color: #d1d5db;
-}
-
-.submenu li::after {
-    content: '';
-    position: absolute;
-    left: 1.5rem;
-    top: 50%;
-    width: 0.75rem;
-    height: 1px;
-    background-color: #d1d5db;
-}
-
-.submenu li:last-child::before {
-    height: 50%;
-    top: 0;
+.submenu li a:hover {
+    background-color: #f3f4f6;
 }
