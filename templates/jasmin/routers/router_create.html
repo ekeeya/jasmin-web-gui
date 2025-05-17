@@ -1,0 +1,188 @@
+<div class="p-2 overflow-y-auto space-y-2">
+    <div class="grid grid-cols-1">
+        <div class="space-y-1">
+            <label for="{{ form.nature.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                {{ form.nature.label }}
+                {% if form.nature.field.required %}<span class="text-red-500">*</span>{% endif %}
+            </label>
+            {{ form.nature }}
+            {% if form.nature.help_text %}
+                <span style="font-size: 6pt !important;" class="text-gray-500">{{ form.nature.help_text }}</span>
+            {% endif %}
+
+            <div style="font-size: 6pt !important;" data-modal-error="{{ form.nature.name }}"
+                 class="hidden text-red-600"></div>
+
+            <div id="nature-alert" role="alert" class="hidden alert alert-dash alert-info text-xs flex flex-row"></div>
+        </div>
+
+        <div class="space-y-1">
+            <label for="{{ form.router_type.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                {{ form.router_type.label }}
+                {% if form.router_type.field.required %}<span class="text-red-500">*</span>{% endif %}
+            </label>
+            {{ form.router_type }}
+            {% if form.router_type.help_text %}
+                <span style="font-size: 6pt !important;" class="text-gray-500">{{ form.router_type.help_text }}</span>
+            {% endif %}
+
+            <div style="font-size: 6pt !important;" data-modal-error="{{ form.router_type.name }}"
+                 class="hidden text-red-600"></div>
+        <div id="router-alert" role="alert" class="hidden alert alert-dash alert-info text-xs flex flex-row"></div>
+        </div>
+    </div>
+    <div class="grid grid-cols-1 gap-4">
+        <div class="space-y-1">
+            <label for="{{ form.order.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                {{ form.order.label }}
+                {% if form.order.field.required %}<span class="text-red-500">*</span>{% endif %}
+            </label>
+            {{ form.order }}
+            {% if form.order.help_text %}
+                <span style="font-size: 6pt !important;" class="text-gray-500">{{ form.order.help_text }}</span>
+            {% endif %}
+
+            <div style="font-size: 6pt !important;" data-modal-error="{{ form.order.name }}"
+                 class="hidden text-red-600"></div>
+        </div>
+
+        <div id="div_rate" class="space-y-1">
+            <label for="{{ form.rate.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                {{ form.rate.label }}
+                {% if form.rate.field.required %}<span class="text-red-500">*</span>{% endif %}
+            </label>
+            {{ form.rate }}
+            {% if form.rate.help_text %}
+                <span style="font-size: 6pt !important;" class="text-gray-500">{{ form.rate.help_text }}</span>
+            {% endif %}
+
+            <div style="font-size: 6pt !important;" data-modal-error="{{ form.rate.name }}"
+                 class="hidden text-red-600"></div>
+        </div>
+    </div>
+
+
+    <div class="grid grid-cols-1" id="show-args">
+        <fieldset class="space-y-4">
+            <legend class="text-lg font-medium text-gray-900">Filters</legend>
+            <div class="space-y-1">
+                <label for="{{ form.filters.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                    {{ form.filters.label }}
+                    {% if form.filters.field.required %}<span class="text-red-500">*</span>{% endif %}
+                </label>
+                {{ form.filters }}
+                {% if form.filters.help_text %}
+                    <span style="font-size: 6pt !important;" class="text-gray-500">{{ form.filters.help_text }}</span>
+                {% endif %}
+
+                <div style="font-size: 6pt !important;" data-modal-error="{{ form.filters.name }}"
+                     class="hidden text-red-600"></div>
+            </div>
+        </fieldset>
+    </div>
+    <div class="grid grid-cols-1" id="show-args">
+        <fieldset class="space-y-4">
+            <legend class="text-lg font-medium text-gray-900">Connectors</legend>
+            <div class="space-y-1">
+                <label for="{{ form.smpp_connectors.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                    {{ form.smpp_connectors.label }}
+                    {% if form.smpp_connectors.field.required %}<span class="text-red-500">*</span>{% endif %}
+                </label>
+                {{ form.smpp_connectors }}
+                {% if form.smpp_connectors.help_text %}
+                    <span style="font-size: 6pt !important;"
+                          class="text-gray-500">{{ form.smpp_connectors.help_text }}</span>
+                {% endif %}
+
+                <div style="font-size: 6pt !important;" data-modal-error="{{ form.smpp_connectors.name }}"
+                     class="hidden text-red-600"></div>
+            </div>
+            <div id="div_http_connectors" class="space-y-1">
+                <label for="{{ form.http_connectors.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                    {{ form.http_connectors.label }}
+                    {% if form.http_connectors.field.required %}<span class="text-red-500">*</span>{% endif %}
+                </label>
+                {{ form.http_connectors }}
+                {% if form.http_connectors.help_text %}
+                    <span style="font-size: 6pt !important;"
+                          class="text-gray-500">{{ form.http_connectors.help_text }}</span>
+                {% endif %}
+
+                <div style="font-size: 6pt !important;" data-modal-error="{{ form.http_connectors.name }}"
+                     class="hidden text-red-600"></div>
+            </div>
+        </fieldset>
+    </div>
+</div>
+<script>
+    $(document).ready(function () {
+        const routerTypeEl = $("#id_router_type")
+        routerTypeEl.empty() // prep it for the future
+        const mtRoutes = [
+            ["DefaultRoute", "A route without a filter, this one can only set with the lowest order to be a default/fallback route"],
+            ["StaticMTRoute", "A basic route with Filters and one SMPP Connector"],
+            ["RandomRoundrobinMTRoute", "A route with Filters and many SMPP Connectors, will return a random Connector if its Filters are matched, can be used as a load balancer route."],
+            ["FailoverMTRoute", "A route with Filters and many Connectors, will return an available (connected) Connector if its Filters are matched"]
+        ]
+        const moRoutes = [
+            ["DefaultRoute", "A route without a filter, this one can only set with the lowest order to be a default/fallback route"],
+            ["StaticMORoute", "A basic route with Filters and one Connector"],
+            ["RandomRoundrobinMORoute", "A route with Filters and many Connectors, will return a random Connector if its Filters are matched, can be used as a load balancer route."],
+            ["FailoverMORoute", "A route with Filters and many Connectors, will return an available (connected) Connector if its Filters are matched"]
+        ]
+        const moAlert = "MO Route is used to route inbound messages (SMS MO) through two possible channels: http and smpps (SMPP Server)."
+        const mtAlert = "MT Route is used to route outbound messages (SMS MT) through one channel: smppc (SMPP Client)."
+        let applyRoutes = []
+        $("#id_nature").on("change", function(e){
+            const nature =  e.target.value
+            const alertDiv = $("#nature-alert")
+            const rateEl = $("#id_rate");
+            const httpConnectorDiv = $("#div_http_connectors")
+            alertDiv.show("slow");
+            switch (nature){
+                case "MO":
+                    alertDiv.html(moAlert);
+                    applyRoutes = moRoutes;
+                    // disable it so we do not send it to backend
+                    rateEl.prop("disabled", true)
+                    $("#div_rate").hide();
+                    httpConnectorDiv.show();
+                    break;
+                case "MT":
+                    alertDiv.html(mtAlert)
+                    applyRoutes = mtRoutes;
+                    rateEl.prop("disabled", false)
+                    $("#div_rate").show()
+                    httpConnectorDiv.hide(); // we do not need http client connectors for MT
+                    break;
+                default:
+                    alertDiv.html("")
+                    alertDiv.hide("slow");
+                    applyRoutes = []
+                    break;
+            }
+            setRouteOptions();
+        })
+        let selectedRoute = null
+        routerTypeEl.on("change", function (e){
+                const selectedOption = $(this).find('option:selected');
+                const index = selectedOption.data("index");
+                const routeAlert = $("#router-alert")
+                if(index > -1){
+                    selectedRoute = applyRoutes[index]
+                    routeAlert.html(selectedRoute[1])
+                    routeAlert.show("slow")
+                }else{
+                     routeAlert.hide("slow")
+                    routeAlert.html("")
+                }
+            })
+        function setRouteOptions() {
+           let options = "<option>----Select Route----</option>"
+            applyRoutes.forEach((route, index) => {
+                options += `<option data-index="${index}"value="${route[0]}">${route[0]}</option>`
+            })
+            routerTypeEl.html(options)
+        }
+    });
+</script>

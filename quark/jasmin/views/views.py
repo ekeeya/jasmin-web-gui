@@ -15,15 +15,15 @@
 #  You should have received a copy of the GNU General Public License along with this project.
 #  If not, see <http://www.gnu.org/licenses/>.
 #
+from django import forms
 from django.core.paginator import Paginator
 from django.urls import reverse
 from smartmin.mixins import NonAtomicMixin
-from smartmin.views import SmartCRUDL, SmartCreateView, SmartListView, SmartUpdateView, SmartDeleteView, \
+from smartmin.views import SmartCRUDL, SmartCreateView, SmartUpdateView, SmartDeleteView, \
     SmartModelActionView, SmartFormView
 
 from quark.jasmin.models import JasminGroup, JasminUser, JasminSMPPConnector, JasminFilter, JasminRoute, \
     JasminInterceptor, JasminHTTPConnector
-from django import forms
 from quark.jasmin.views.forms import JasminGroupForm, UpdateJasminGroupForm, JasminUserForm, JasminSPPConnectorForm, \
     JasminFilterForm, JasminRouteForm, JasminInterceptorForm, JasminHttpConnectorForm
 from quark.utils.mixins.mixins import ModalFormMixin
@@ -68,7 +68,7 @@ class JasminGroupCRUDL(SmartCRUDL):
         ordering = ("-created_on",)
         permission = "jasmin.jasmingroup_list"
         paginate_by = 10
-        template_name = "jasmin/group_list.html"
+        template_name = "jasmin/groups/group_list.html"
         fields = ("gid", "created_on", "description",)
         search_fields = ("gid",)
         modal_form = JasminGroupForm
@@ -140,7 +140,7 @@ class JasminUserCRUDL(SmartCRUDL):
     class List(InjectModalFormMixin, BaseListView):
         permission = "jasmin.jasminuser_list"
         fields = ("username", "group", 'enabled', 'created_on')
-        template_name = "jasmin/user_list.html"
+        template_name = "jasmin/users/user_list.html"
 
         title = "Jasmin Groups"
         ordering = ("-created_on",)
@@ -160,7 +160,7 @@ class JasminUserCRUDL(SmartCRUDL):
                 title="Create a Jasmin User",
                 modal_id="jasmin_user",
                 post_url=reverse("jasmin.jasminuser_create"),
-                custom_form="jasmin/user_create.html",
+                custom_form="jasmin/users/user_create.html",
             )
 
         def get_context_data(self, **kwargs):
@@ -231,7 +231,7 @@ class JasminSMPPConnectorCRUDL(SmartCRUDL):
         paginator_class = Paginator
         paginate_by = 10
         fields = ("cid", "host", "port", 'created_on')
-        template_name = "jasmin/smpp_connectors.html"
+        template_name = "jasmin/connectors/smpp_connectors.html"
         ordering = ("-created_on",)
         search_fields = ("cid",)
         modal_form = JasminSPPConnectorForm
@@ -293,7 +293,7 @@ class JasminHTTPConnectorCRUDL(SmartCRUDL):
         paginator_class = Paginator
         paginate_by = 10
         fields = ("cid", "base_url", "method", 'created_on')
-        template_name = "jasmin/http_connectors.html"
+        template_name = "jasmin/connectors/http_connectors.html"
         ordering = ("-created_on",)
         search_fields = ("cid",)
         modal_form = JasminHttpConnectorForm
@@ -346,7 +346,7 @@ class JasminFilterCRUDL(SmartCRUDL):
         paginator_class = Paginator
         paginate_by = 10
         fields = ("fid", "nature", "filter_type", "param", 'created_on')
-        template_name = "jasmin/filters.html"
+        template_name = "jasmin/filters/filters.html"
         ordering = ("-created_on",)
         search_fields = ("fid",)
         modal_form = JasminFilterForm
@@ -357,7 +357,7 @@ class JasminFilterCRUDL(SmartCRUDL):
                 title="Configure a Filter",
                 modal_id="jasmin_filter",
                 post_url=reverse("jasmin.jasminfilter_create"),
-                custom_form="jasmin/filter_create.html"
+                custom_form="jasmin/filters/filter_create.html"
             )
 
         def get_context_data(self, **kwargs):
@@ -376,7 +376,7 @@ class JasminRouteCRUDL(SmartCRUDL):
     actions = ("create", "list", "update", "delete",)
     model = JasminRoute
 
-    class Create(FormMixin, WorkspacePermsMixin, NonAtomicMixin, SmartCreateView):
+    class Create(FormMixin, ModalFormMixin, WorkspacePermsMixin, NonAtomicMixin, SmartCreateView):
         title = "Create Route"
         permission = "jasmin.jasminroute_create"
         form_class = JasminRouteForm
@@ -387,29 +387,52 @@ class JasminRouteCRUDL(SmartCRUDL):
             kwargs["workspace"] = self.derive_workspace()
             return kwargs
 
-        def save(self, obj):
+        def form_valid(self, form):
             route = JasminRoute(
-                router_type=self.form.cleaned_data["router_type"],
-                nature=self.form.cleaned_data["nature"],
+                router_type=form.cleaned_data["router_type"],
+                nature=form.cleaned_data["nature"],
                 workspace=self.derive_workspace(),
-                order=self.form.cleaned_data["order"],
-                rate=self.form.cleaned_data["rate"],
+                order=form.cleaned_data["order"],
+                rate=form.cleaned_data["rate"],
                 created_by=self.request.user,
                 modified_by=self.request.user,
             )
             route.save(run_on_reactor=False)  # save it but do not run reactor yet
 
-            route.connectors.set(self.form.cleaned_data["connectors"])
+            route.smpp_connectors.set(self.form.cleaned_data["smpp_connectors"])
+            route.http_connectors.set(self.form.cleaned_data["http_connectors"])
             route.filters.set(self.form.cleaned_data["filters"])
             route.save()  # now run on reactor
+            form.instance.pk = route.pk  # so we do not save it again in the mixin
+            super().form_valid(form)
 
-            return route
-
-    class List(BaseListView):
+    class List(InjectModalFormMixin, BaseListView):
         title = "Routers"
         permission = "jasmin.jasminroute_list"
         paginator_class = Paginator
         paginate_by = 10
+
+        fields = ("order", "router_type", "nature", "filters", "rate", 'created_on')
+        template_name = "jasmin/routers/routers.html"
+        ordering = ("-created_on",)
+        search_fields = ("fid",)
+        modal_form = JasminRouteForm
+        update_form = JasminRouteForm
+        actions = ['delete']
+
+        def build_modal(self, modal):
+            modal.register_modal(
+                title="Configure a Router",
+                modal_id="jasmin_router",
+                post_url=reverse("jasmin.jasminroute_create"),
+                custom_form="jasmin/routers/router_create.html"
+            )
+
+        def get_context_data(self, **kwargs):
+            context = super().get_context_data(**kwargs)
+            # set delete url
+            context["delete_url"] = "jasmin.jasminroute_delete"
+            return context
 
 
 class JasminInterceptorCRUDL(SmartCRUDL):
@@ -417,7 +440,7 @@ class JasminInterceptorCRUDL(SmartCRUDL):
     model = JasminInterceptor
 
     class Create(FormMixin, WorkspacePermsMixin, NonAtomicMixin, SmartCreateView):
-        template_name = "jasmin/interceptor.html"
+        template_name = "jasmin/interceptors/interceptor.html"
         title = "Create Interceptor"
         permission = "jasmin.jasmininterceptor_create"
         form_class = JasminInterceptorForm

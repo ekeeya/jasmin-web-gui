@@ -1,0 +1,61 @@
+{% extends 'includes/list.html' %}
+
+{% load smartmin i18n %}
+
+{% block pre-table %}
+    <div class="bg-white w-full mb-1 p-2">
+        <label class="font-bold uppercase"><span id="router_nature"></span> Routers</label>
+        <div role="alertdialog" class="alert alert-info alert-outline">
+            <span class="icon-info text-lg"></span>
+           <span class="text-xs">
+               The message router is Jasmin’s decision making component for routing every type of exchanged message through the gateway.
+           </span>
+        </div>
+    </div>
+{% endblock pre-table %}
+
+{% block table %}
+    <div class="overflow-x-auto">
+        <table class="w-full text-sm text-left border border-gray-200 rounded-lg">
+            <thead class="text-xs font-semibold uppercase bg-gray-800 text-gray-100">
+            <tr>
+                {% for field in fields %}
+                    <th class="px-3 py-2 border-b border-r border-gray-200 last:border-r-0 {% if view|field_orderable:field %}cursor-pointer hover:bg-gray-700{% endif %}"
+                        scope="col"
+                        {% if view|field_orderable:field %}onclick="orderBy('{{ field }}')"{% endif %}>
+                        {% get_label field %}
+                    </th>
+                {% endfor %}
+                {% if actions %}
+                    <th class="px-3 py-2 border-b border-gray-200 text-center">
+                        Actions
+                    </th>
+                {% endif %}
+            </tr>
+            </thead>
+            <tbody class="bg-white">
+            {% for obj in object_list %}
+                <tr data-pk="{{ obj.id }}" data-row-{{ obj.id }}="{{ obj.cid }}"
+                    class="border-b border-gray-200 hover:bg-gray-50 {% cycle 'bg-gray-50' 'bg-white' %} {% if not obj.is_active and obj|is_smartobject %}opacity-60{% endif %}">
+                    {% for field in fields %}
+                        <td class="px-3 py-2 border-r border-gray-200 last:border-r-0 text-gray-900 ">
+                        {% get_value obj field as result %}
+                        {{ result|safe }}
+                        </td>
+                    {% endfor %}
+                    {% if actions %}
+                        {% include 'includes/table-actions.html' %}
+                    {% endif %}
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="{{ fields|length|add:1 }}"
+                        class="text-center py-4 text-gray-500 border-b border-gray-200">
+                        {% trans "No results found" %}
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% endblock %}

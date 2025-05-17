@@ -1,36 +1,204 @@
-{% load static %}
-{% load smartmin i18n %}
-{% load countries %}
+{% load static smartmin i18n countries %}
 {% get_countries as countries %}
 
-{% block content %}
-    <div class="max-w-lg mx-auto bg-white p-6 rounded-lg shadow-md">
-    <form method="post" class="my-6">
-        {% csrf_token %}
-        {% if form.non_field_errors %}
-            <div class="alert alert-error form-errors">{{ form.non_field_errors }}</div>{% endif %}
-        <div class="flex">
-            <div class="mr-3">{% render_field 'first_name' %}</div>
-            <div class="flex-grow">{% render_field 'last_name' %}</div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Joyce | Sign Up</title>
+
+    <!-- Tailwind CSS v4 via CDN -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        primary: {
+                            DEFAULT: '#000000',
+                            50: '#f6f6f6',
+                            100: '#e7e7e7',
+                            200: '#d1d1d1',
+                            300: '#b0b0b0',
+                            400: '#888888',
+                            500: '#6d6d6d',
+                            600: '#5d5d5d',
+                            700: '#4f4f4f',
+                            800: '#454545',
+                            900: '#3d3d3d',
+                            950: '#000000',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght=300..700&display=swap" rel="stylesheet">
+    <style type="text/tailwindcss">
+        @layer base {
+            body {
+                background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+            }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4 bg-white">
+    <div class="w-full max-w-lg bg-white rounded-xl shadow-xl overflow-hidden border border-gray-100">
+        <!-- Header -->
+        <div class="bg-primary-950 p-6 text-white">
+            <div class="flex items-center justify-center gap-3">
+                <svg xmlns="http://www.w3.org/2000/svg" class="size-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                </svg>
+                <h1 class="text-2xl font-bold tracking-tight">Joyce</h1>
+            </div>
+            <p class="text-primary-200 text-center mt-2 text-sm/relaxed">Create your Workspace account.</p>
         </div>
-        {% render_field 'username' %}
-        {% render_field 'email' %}
-        {% render_field 'password' %}
-        {% render_field 'name' %}
-        {% render_field 'country' %}
-        {% render_field 'timezone' %}
-        <div class="mt-4">
-            <input type="submit" value="Sign Up" class="button-primary">
+
+        <!-- Main Content -->
+        <div class="p-8">
+            <div class="text-center mb-6">
+                <h2 class="text-2xl font-semibold text-gray-900">{% trans "Create Account" %}</h2>
+                <p class="text-gray-600 mt-1">{% trans "Get started with your SMS gateway configuration" %}</p>
+            </div>
+
+            <form method="post" class="space-y-5">
+                {% csrf_token %}
+
+                <!-- Form Errors -->
+                {% if form.non_field_errors or form.errors %}
+                    <div class="rounded-md bg-red-50 p-4 border border-red-100">
+                        <div class="flex">
+                            <div class="flex-shrink-0">
+                                <svg class="size-5 text-red-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                                </svg>
+                            </div>
+                            <div class="ml-3">
+                                <h3 class="text-sm font-medium text-red-800">There were errors with your submission</h3>
+                                <div class="mt-2 text-sm text-red-700">
+                                    {% if form.non_field_errors %}
+                                        {{ form.non_field_errors }}
+                                    {% endif %}
+                                    {% if form.errors %}
+                                        {{ form.errors }}
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+
+                <!-- Name Fields -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div class="space-y-2">
+                        <label for="first_name" class="block text-sm font-medium text-gray-700">{% trans "First Name" %}</label>
+                        <input type="text"
+                               name="first_name"
+                               id="first_name"
+                               required
+                               class="block w-full rounded-md border-0 py-2.5 px-4 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-primary-950 sm:text-sm">
+                    </div>
+                    <div class="space-y-2">
+                        <label for="last_name" class="block text-sm font-medium text-gray-700">{% trans "Last Name" %}</label>
+                        <input type="text"
+                               name="last_name"
+                               id="last_name"
+                               required
+                               class="block w-full rounded-md border-0 py-2.5 px-4 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-primary-950 sm:text-sm">
+                    </div>
+                </div>
+
+                <!-- Username Field -->
+                <div class="space-y-2">
+                    <label for="username" class="block text-sm font-medium text-gray-700">{% trans "Username" %}</label>
+                    <input type="text"
+                           name="username"
+                           id="username"
+                           required
+                           class="block w-full rounded-md border-0 py-2.5 px-4 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-primary-950 sm:text-sm">
+                </div>
+
+                <!-- Email Field -->
+                <div class="space-y-2">
+                    <label for="email" class="block text-sm font-medium text-gray-700">{% trans "Email" %}</label>
+                    <input type="email"
+                           name="email"
+                           id="email"
+                           required
+                           class="block w-full rounded-md border-0 py-2.5 px-4 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-primary-950 sm:text-sm">
+                </div>
+
+                <!-- Password Field -->
+                <div class="space-y-2">
+                    <label for="password" class="block text-sm font-medium text-gray-700">{% trans "Password" %}</label>
+                    <input type="password"
+                           name="password"
+                           id="password"
+                           required
+                           class="block w-full rounded-md border-0 py-2.5 px-4 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-primary-950 sm:text-sm">
+                </div>
+
+                <!-- Organization Name -->
+                <div class="space-y-2">
+                    <label for="name" class="block text-sm font-medium text-gray-700">{% trans "Organization Name" %}</label>
+                    <input type="text"
+                           name="name"
+                           id="name"
+                           required
+                           class="block w-full rounded-md border-0 py-2.5 px-4 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-primary-950 sm:text-sm">
+                </div>
+
+                <!-- Country and Timezone -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div class="space-y-2">
+                        <label for="country" class="block text-sm font-medium text-gray-700">{% trans "Country" %}</label>
+                        <select name="country"
+                                id="country"
+                                required
+                                class="block w-full rounded-md border-0 py-2.5 px-4 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-primary-950 sm:text-sm">
+                            {% for country in countries %}
+                                <option value="{{ country.code }}">{{ country.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="space-y-2">
+                        <label for="timezone" class="block text-sm font-medium text-gray-700">{% trans "Timezone" %}</label>
+                        <select name="timezone"
+                                id="timezone"
+                                required
+                                class="block w-full rounded-md border-0 py-2.5 px-4 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-primary-950 sm:text-sm">
+                            <option value="UTC">UTC</option>
+                            <!-- Additional timezone options would go here -->
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Submit Button -->
+                <div class="pt-2">
+                    <button type="submit" class="flex w-full justify-center rounded-md bg-primary-950 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-primary-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-950 transition-colors">
+                        {% trans "Sign Up" %}
+                    </button>
+                </div>
+
+                <!-- Sign In Link -->
+                <div class="text-center text-sm text-gray-600 pt-2">
+                    {% trans "Already have an account?" %}
+                    <a href="/login/" class="font-medium text-primary-950 hover:text-primary-800">{% trans "Sign In" %}</a>
+                </div>
+            </form>
         </div>
-        <br/>
-        {% if form.errors %}
-            <div class="alert alert-error form-errors">{{ form.errors }}</div>{% endif %}
-        <div class="mt-6">
-            Already have an account?
-            <a href="/users/login/">{% trans "Sign In" %}</a>
+
+        <!-- Footer -->
+        <div class="bg-gray-50 px-6 py-4 border-t border-gray-200/50">
+            <p class="text-xs text-gray-500 text-center">
+                &copy; {% now "Y" %} Joyce for Jasmin. All rights reserved.
+            </p>
         </div>
-    </form>
     </div>
-{% endblock %}
-
-
+</body>
+</html>

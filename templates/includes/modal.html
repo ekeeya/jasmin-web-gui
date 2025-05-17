@@ -100,12 +100,14 @@
             const fieldName = field.attr('name');
             const errorDiv = $(`[data-modal-error="${fieldName}"]`);
             const formGroup = field.closest('.form-group');
-
-            if (!field.val().trim()) {
+            if (field.val() instanceof Array){
+                if (!field.val().trim()) {
                 isValid = false;
                 formGroup.addClass('has-error');
                 errorDiv.removeClass('hidden').append($('<p></p>').text('This field is required'));
             }
+            }
+            
         });
 
         return isValid;

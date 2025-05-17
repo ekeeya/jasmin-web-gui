@@ -100,23 +100,14 @@
                             <span class="font-medium">Filters</span>
                         </a>
                     </li>
-
+                    
                     <li>
-                        <button class="group relative flex items-center justify-between w-full p-3 rounded-lg hover:bg-gray-100 text-gray-700 submenu-toggle transition-smooth">
-                            <div class="flex items-center space-x-3">
-                                <span class="icon-flow-tree text-xl"></span>
-                                <span class="font-medium">Routers</span>
-                            </div>
-                            <span class="icon-chevron-thin-down"></span>
-                        </button>
-                        <ul class="submenu">
-                            <li><a href="/jasminroute?nature=mt"
-                                   class="group block p-2 pl-5 text-sm text-gray-600 hover:bg-gray-100 rounded transition-smooth hover:text-gray-900">MT Routers</a>
-                            </li>
-                            <li><a href="/jasminroute?nature=mo"
-                                   class="group block p-2 pl-5 text-sm text-gray-600 hover:bg-gray-100 rounded transition-smooth hover:text-gray-900">MO Routers</a>
-                            </li>
-                        </ul>
+                        <a href="/jasminroute"
+                           class="relative flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-100 text-gray-700 menu-item transition-smooth"
+                           data-page="jasminroute">
+                            <span class="icon-flow-tree text-xl"></span>
+                            <span class="font-medium">Routers</span>
+                        </a>
                     </li>
                     <li>
                         <a href="/jasmininterceptor"

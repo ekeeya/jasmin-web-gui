@@ -544,7 +544,7 @@ class JasminSMPPConnector(BaseJasminConnector, BaseJasminModel, SmartModel):
     )
 
     def __str__(self):
-        return f"SMPP_CON-{str(self.cid)}"
+        return f"{str(self.cid)}:smpp"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -721,7 +721,7 @@ class JasminHTTPConnector(BaseJasminConnector, BaseJasminModel, SmartModel):
         return HttpConnector(**config)
 
     def __str__(self):
-        return f"HTTP_CON-{self.cid}"
+        return f"{self.cid}:http"
 
     class Meta:
         db_table = "jasmin_http_connector"
@@ -767,7 +767,7 @@ class JasminFilter(JasminBaseFilter, SmartModel):
         return jasmin_filter()
 
     def __str__(self):
-        return f"FID:{self.fid} TYPE: {self.filter_type} - {self.nature}"
+        return f"{self.fid}:{self.filter_type}({self.nature})"
 
     class Meta:
         db_table = 'jasmin_filter'
@@ -783,8 +783,8 @@ class JasminRoute(BaseJasminModel, JasminBaseRouter, SmartModel):
         help_text="Type of router for message routing."
     )
     filters = models.ManyToManyField(JasminFilter, help_text="Filters applied to the route.")
-    mt_connectors = models.ManyToManyField(JasminSMPPConnector, help_text="MT Connectors for the route.")
-    mo_connectors = models.ManyToManyField(JasminHTTPConnector, help_text="MO Connectors for the route.")
+    smpp_connectors = models.ManyToManyField(JasminSMPPConnector, help_text="MT Connectors for the route.")
+    http_connectors = models.ManyToManyField(JasminHTTPConnector, help_text="MO Connectors for the route.")
 
     def to_jasmin_route(self) -> Route:
         """
@@ -797,12 +797,13 @@ class JasminRoute(BaseJasminModel, JasminBaseRouter, SmartModel):
             ValidationError: If no connectors are found for the route.
         """
         filters = [f.to_jasmin_filter() for f in self.filters.all()]
-        connectors = []
+        smpp_connectors = [c.to_connector() for c in self.smpp_connectors.all()]
+        http_connectors = [c.to_connector() for c in self.http_connectors.all()]
         if self.nature == MT:
-            connectors = [c.to_connector() for c in self.mt_connectors.all()]
+            connectors = smpp_connectors  # only pull smpp connectors
         else:
-            connectors = [c.to_connector() for c in self.mo_connectors.all()]
-
+            # consider both for a mo router, so, join them connectors
+            connectors = smpp_connectors + http_connectors
         if not connectors:
             raise ValidationError("Cannot save route: No connectors found.")
 

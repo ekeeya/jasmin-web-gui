@@ -287,6 +287,12 @@ class JasminRouteForm(BaseWorkspaceForm):
 
         # Must conform to our workspace.
         self.fields['filters'].queryset = JasminFilter.objects.filter(workspace=self.workspace)
+        self.fields['smpp_connectors'].queryset = JasminSMPPConnector.objects.filter(workspace=self.workspace)
+        self.fields['http_connectors'].queryset = JasminHTTPConnector.objects.filter(workspace=self.workspace)
+        # un mandatory these connectors
+        self.fields['filters'].required = False
+        self.fields['smpp_connectors'].required = False
+        self.fields['http_connectors'].required = False
 
     def save(self, commit=True):
         instance = super().save(commit=False)
@@ -299,7 +305,7 @@ class JasminRouteForm(BaseWorkspaceForm):
 
     class Meta:
         model = JasminRoute
-        fields = ("nature", "router_type", "order", "filters", "mo_connectors", "mt_connectors", "rate")
+        fields = ("nature", "router_type", "order", "filters", "smpp_connectors", "http_connectors", "rate")
 
 
 class JasminInterceptorForm(BaseWorkspaceForm):
