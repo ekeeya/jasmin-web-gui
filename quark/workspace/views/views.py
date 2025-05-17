@@ -44,6 +44,7 @@ class LoginView(AuthLoginView):
 
     template_name = "workspace/login/login.html"
     redirect_authenticated_user = True
+    redirect_next_page = True
 
     def post(self, request, *args, **kwargs):
         form = self.get_form()
@@ -99,6 +100,9 @@ class LoginView(AuthLoginView):
     def get_username(self, form):
         return form.cleaned_data.get("username")
 
+    def get_success_url(self):
+        return reverse("dashboard.dashboard_home")
+
 
 class LogoutView(View):
     """
@@ -126,7 +130,7 @@ class WorkspaceCRUDL(SmartCRUDL):
         permission = None
 
         def get_success_url(self):
-            return "/"
+            return "/dashboard"
 
         def save(self, obj):
             new_user = User.create(

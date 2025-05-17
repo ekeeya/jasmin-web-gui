@@ -68,5 +68,15 @@ class Home(WorkspacePermsMixin, SmartTemplateView):
         return self.render_to_response(context)
 
 
-def profile(request,user_id):
+class Landing(SmartTemplateView):
+    """
+    The main dashboard view
+    """
+
+    title = "Landing Page"
+    permission = None
+    template_name = "home/landing.html"
+
+
+def profile(request, user_id):
     return HttpResponse("<h1>Page was found</h1>")
