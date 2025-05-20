@@ -7,7 +7,7 @@
         <label class="font-bold uppercase"><span id="router_nature"></span> Routers</label>
         <div role="alertdialog" class="alert alert-info alert-outline">
             <span class="icon-info text-lg"></span>
-           <span class="text-xs">
+            <span class="text-xs">
                The message router is Jasmin’s decision making component for routing every type of exchanged message through the gateway.
            </span>
         </div>
@@ -39,12 +39,17 @@
                     class="border-b border-gray-200 hover:bg-gray-50 {% cycle 'bg-gray-50' 'bg-white' %} {% if not obj.is_active and obj|is_smartobject %}opacity-60{% endif %}">
                     {% for field in fields %}
                         <td class="px-3 py-2 border-r border-gray-200 last:border-r-0 text-gray-900 ">
-                        {% get_value obj field as result %}
-                        {{ result|safe }}
+                            {% get_value obj field as result %}
+                            {% if field == 'order' %}
+                                <a class="text-blue-500 underline" data-details-open href="javascript:void(0)">
+                                    Order-{{ result|safe }}</a>
+                            {% else %}
+                                {{ result|safe }}
+                            {% endif %}
                         </td>
                     {% endfor %}
                     {% if actions %}
-                        {% include 'includes/table-actions.html' %}
+                        {% include 'includes/table-actions.html'%}
                     {% endif %}
                 </tr>
             {% empty %}
@@ -57,5 +62,6 @@
             {% endfor %}
             </tbody>
         </table>
+        {% include 'includes/details.html' %}
     </div>
 {% endblock %}

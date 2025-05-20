@@ -1,13 +1,10 @@
-import base64
 import logging
 
 from rest_framework import serializers
+from rest_framework.fields import SerializerMethodField
 
-from quark.api.v1.fields import JoyceUniqueFieldValidator
+from quark.jasmin.models import JasminGroup, JasminRoute, JasminFilter, JasminSMPPConnector, JasminHTTPConnector
 from quark.utils import json
-from quark.utils.utils import strprice
-
-from quark.jasmin.models import JasminGroup
 
 logger = logging.getLogger(__name__)
 
@@ -74,3 +71,89 @@ class JasminGroupWriteSerializer(WriteSerializer):
             return self.instance.update(form_data)
         else:
             return JasminGroup.create(**form_data)
+
+
+class JasminFilterReadSerializer(ReadSerializer):
+    workspace = SerializerMethodField()
+
+    def get_workspace(self, instance):
+        return instance.workspace.name
+
+    class Meta:
+        model = JasminFilter
+        fields = (
+            "id",
+            "nature",
+            "param",
+            "workspace",
+            "filter_type"
+        )
+
+
+class JasminSMPPConnectorReadSerializer(ReadSerializer):
+    config = serializers.SerializerMethodField()
+
+    def get_config(self, instance):
+        return instance.to_json()
+
+    class Meta:
+        model = JasminSMPPConnector
+        fields = (
+            "id",
+            "cid",
+            "connector_type",
+            "host",
+            "port",
+            "username",
+            "password",
+            "config"
+        )
+
+
+class JasminHTTPConnectorReadSerializer(ReadSerializer):
+    class Meta:
+        model = JasminHTTPConnector
+        fields = (
+            "id",
+            "cid",
+            "connector_type",
+            "base_url",
+            "method",
+            "description"
+        )
+
+
+class JasminRouterReadSerializer(ReadSerializer):
+    filters = serializers.SerializerMethodField()
+    smpp_connectors = serializers.SerializerMethodField()
+    http_connectors = serializers.SerializerMethodField()
+
+    def get_filters(self, instance):
+        if instance.filters and len(instance.filters.all()) > 0:
+            return JasminFilterReadSerializer(instance.filters, many=True).data
+        return []
+
+    def get_smpp_connectors(self, instance):
+        if instance.smpp_connectors and len(instance.smpp_connectors.all()) > 0:
+            return JasminSMPPConnectorReadSerializer(instance.smpp_connectors.all(), many=True).data
+        return []
+
+    def get_http_connectors(self, instance):
+        if instance.http_connectors and len(instance.http_connectors.all()) > 0:
+            return JasminHTTPConnectorReadSerializer(instance.http_connectors.all(), many=True).data
+
+        return []
+
+    class Meta:
+        model = JasminRoute
+        fields = (
+            "id",
+            "rate",
+            "nature",
+            "workspace",
+            "order",
+            "router_type",
+            "filters",
+            "smpp_connectors",
+            "http_connectors"
+        )

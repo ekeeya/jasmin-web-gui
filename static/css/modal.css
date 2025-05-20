@@ -31,6 +31,8 @@
     -webkit-overflow-scrolling: touch;
 }
 
+
+
 [data-modal] .sticky {
     position: sticky;
     bottom: 0;
@@ -46,6 +48,12 @@
 
 [data-modal] .overflow-y-auto {
     min-height: 200px;
+}
+
+[data-details] .overflow-y-auto {
+    max-height: 85vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
 }
 
 /**

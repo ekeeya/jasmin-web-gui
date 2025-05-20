@@ -17,11 +17,13 @@
 #
 from django import forms
 from django.core.paginator import Paginator
+from django.http import JsonResponse
 from django.urls import reverse
 from smartmin.mixins import NonAtomicMixin
 from smartmin.views import SmartCRUDL, SmartCreateView, SmartUpdateView, SmartDeleteView, \
-    SmartModelActionView, SmartFormView
+    SmartModelActionView, SmartFormView, SmartReadView
 
+from quark.api.v1.serializers import JasminRouterReadSerializer
 from quark.jasmin.models import JasminGroup, JasminUser, JasminSMPPConnector, JasminFilter, JasminRoute, \
     JasminInterceptor, JasminHTTPConnector
 from quark.jasmin.views.forms import JasminGroupForm, UpdateJasminGroupForm, JasminUserForm, JasminSPPConnectorForm, \
@@ -373,7 +375,7 @@ class JasminFilterCRUDL(SmartCRUDL):
 
 
 class JasminRouteCRUDL(SmartCRUDL):
-    actions = ("create", "list", "update", "delete",)
+    actions = ("create", "list", "update", "Read", "delete",)
     model = JasminRoute
 
     class Create(FormMixin, ModalFormMixin, WorkspacePermsMixin, NonAtomicMixin, SmartCreateView):
@@ -404,7 +406,7 @@ class JasminRouteCRUDL(SmartCRUDL):
             route.filters.set(self.form.cleaned_data["filters"])
             route.save()  # now run on reactor
             form.instance.pk = route.pk  # so we do not save it again in the mixin
-            super().form_valid(form)
+            return super().form_valid(form)
 
     class List(InjectModalFormMixin, BaseListView):
         title = "Routers"
@@ -412,12 +414,11 @@ class JasminRouteCRUDL(SmartCRUDL):
         paginator_class = Paginator
         paginate_by = 10
 
-        fields = ("order", "router_type", "nature", "filters", "rate", 'created_on')
+        fields = ("order", "router_type", "nature", "rate", 'created_on')
         template_name = "jasmin/routers/routers.html"
         ordering = ("-created_on",)
         search_fields = ("fid",)
         modal_form = JasminRouteForm
-        update_form = JasminRouteForm
         actions = ['delete']
 
         def build_modal(self, modal):
@@ -433,6 +434,35 @@ class JasminRouteCRUDL(SmartCRUDL):
             # set delete url
             context["delete_url"] = "jasmin.jasminroute_delete"
             return context
+
+    class Read(WorkspacePermsMixin, SmartReadView):
+        permission = "jasmin.jasminroute_list"
+        slug_url_kwarg = "id"
+
+        def get_context_data(self, **kwargs):
+            context = super().get_context_data(**kwargs)
+            serializer = JasminRouterReadSerializer(self.object)
+            context["object"] = serializer.data
+            return context
+
+        def get(self, request, *args, **kwargs):
+            self.object = self.get_object()
+            context = self.get_context_data()
+            response = dict(fields=context.get("fields", []), object=context["object"])
+            return JsonResponse(response, safe=False)
+
+        @classmethod
+        def derive_url_pattern(cls, path, action):
+            return r"^%s/(?P<pk>[^/]+)/$" % path.lower()
+
+        def derive_queryset(self):
+            # narrow down the search
+            return super().derive_queryset().filter(workspace=self.derive_workspace())
+
+    class Delete(WorkspacePermsMixin, NonAtomicMixin, SmartDeleteView):
+        permission = "jasmin.jasminroute_delete"
+        redirect_url = "@jasmin.jasminroute_list"
+        cancel_url = "@jasmin.jasminroute_list"
 
 
 class JasminInterceptorCRUDL(SmartCRUDL):

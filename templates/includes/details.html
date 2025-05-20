@@ -1,0 +1,186 @@
+<div data-details-backdrop class="fixed inset-0 bg-black/60 bg-opacity-30 z-40 backdrop-transition opacity-0 pointer-events-none"></div>
+
+<div data-details class="fixed top-0 right-0 h-auto w-full max-w-lg modal-transition modal-hidden z-50 p-4">
+    <div class="bg-white border rounded shadow-2xl flex flex-col overflow-hidden mt-4 h-[90vh]">
+        <div class="bg-black px-4 py-2 border-b border-gray-200 flex justify-between items-center shrink-0">
+            <h2 class="text-lg font-semibold text-white">
+                Router Details
+            </h2>
+            <button data-details-close class="text-gray-500 hover:text-gray-700 focus:outline-none">
+                <span class="icon-cross text-xl text-white"></span>
+            </button>
+        </div>
+        
+        <div class="flex-1 overflow-hidden flex flex-col">
+            <div id="loading-indicator" class="flex-grow flex flex-col items-center justify-center hidden">
+                <div class="inline-block animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-blue-500"></div>
+                <p class="mt-2 text-sm text-gray-600">Loading details...</p>
+            </div>
+            
+            <div id="modal-content" class="overflow-y-auto flex-grow p-3 space-y-3 text-sm">
+                <!-- Content will be dynamically inserted by JavaScript -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    $(document).ready(function(){
+        function openModal() {
+            $('[data-details-backdrop]').removeClass('opacity-0 pointer-events-none').addClass('opacity-100');
+            $('[data-details]').removeClass('modal-hidden');
+        }
+
+        function closeModal() {
+            $('[data-details-backdrop]').removeClass('opacity-100').addClass('opacity-0 pointer-events-none');
+            $('[data-details]').addClass('modal-hidden');
+        }
+        
+        $('[data-details-open]').on('click', function(e) {
+            const routerId = $(this).closest("tr").data("pk");
+            fetchRouterDetails(routerId);
+            e.preventDefault();
+            openModal();
+        });
+
+        $('[data-details-close]').on('click', function(e) {
+            e.preventDefault();
+            closeModal();
+        });
+
+        $('[data-details-backdrop]').on('click', function(e) {
+            if (e.target === this) {
+                closeModal();
+            }
+        });
+        
+        const fetchRouterDetails = async (routerId) => {
+            $('#loading-indicator').removeClass('hidden');
+            $('#modal-content').empty();
+            
+            try {
+                const response = await fetch(`/jasminroute/${routerId}`);
+                const data = await response.json();
+                $('#loading-indicator').addClass('hidden');
+                displayRouterDetails(data.object);
+            } catch (error) {
+                console.error('Error fetching router details:', error);
+                $('#loading-indicator').addClass('hidden');
+                $('#modal-content').html(`
+                    <div class="bg-red-100 border border-red-400 text-red-700 px-3 py-2 rounded text-sm" role="alert">
+                        <strong>Error!</strong> Failed to load router details.
+                    </div>
+                `);
+            }
+        };
+        
+        const displayRouterDetails = (router) => {
+            const content = `
+                <div class="space-y-3">
+                    <div>
+                        <h3 class="font-semibold border-b pb-1 text-base">Basic Information</h3>
+                        <div class="grid grid-cols-2 gap-1 mt-1 text-sm">
+                            <div><span class="font-medium">ID:</span> ${router.id}</div>
+                            <div><span class="font-medium">Nature:</span> ${router.nature}</div>
+                            <div><span class="font-medium">Order:</span> ${router.order}</div>
+                            <div><span class="font-medium">Rate:</span> ${router.rate}</div>
+                            <div><span class="font-medium">Type:</span> ${router.router_type}</div>
+                        </div>
+                    </div>
+                    
+                    ${router.filters.length ? `
+                    <div>
+                        <h3 class="font-semibold border-b pb-1 text-base">Filters (${router.filters.length})</h3>
+                        <div class="space-y-1 mt-1">
+                            ${router.filters.map(filter => `
+                                <div class="border rounded p-1.5 text-sm">
+                                    <div class="font-medium">Filter ID: ${filter.id}</div>
+                                    <div>Type: ${filter.filter_type}</div>
+                                    <div>Nature: ${filter.nature}</div>
+                                    ${filter.param ? `
+                                    <div class="mt-0.5">
+                                        <span class="font-medium">Parameter:</span> 
+                                        ${filter.param.key} = ${filter.param.value}
+                                    </div>
+                                    ` : ''}
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    ` : ''}
+                    
+                    ${router.smpp_connectors.length ? `
+                    <div>
+                        <h3 class="font-semibold border-b pb-1 text-base">SMPP Connectors (${router.smpp_connectors.length})</h3>
+                        <div class="space-y-2 mt-1">
+                            ${router.smpp_connectors.map(connector => `
+                                <div class="border rounded p-1.5 text-sm">
+                                    <div class="grid grid-cols-2 gap-1">
+                                        <div><span class="font-medium">ID:</span> ${connector.id}</div>
+                                        <div><span class="font-medium">CID:</span> ${connector.cid}</div>
+                                        <div><span class="font-medium">Host:</span> ${connector.host}</div>
+                                        <div><span class="font-medium">Port:</span> ${connector.port}</div>
+                                        <div><span class="font-medium">Username:</span> ${connector.username}</div>
+                                    </div>
+                                    <div class="mt-1">
+                                        <button class="toggle-config text-blue-600 text-xs font-medium" data-target="config-${connector.id}">
+                                            Show Configuration
+                                        </button>
+                                        <div id="config-${connector.id}" class="hidden mt-1 bg-gray-50 p-1 rounded text-xs overflow-x-auto">
+                                            <pre class="text-xs">${JSON.stringify(connector.config, null, 2)}</pre>
+                                        </div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    ` : ''}
+                    
+                    ${router.http_connectors.length ? `
+                    <div>
+                        <h3 class="font-semibold border-b pb-1 text-base">HTTP Connectors (${router.http_connectors.length})</h3>
+                        <div class="space-y-2 mt-1">
+                            ${router.http_connectors.map(connector => `
+                                <div class="border rounded p-1.5 text-sm">
+                                    <div class="grid grid-cols-2 gap-1">
+                                        <div><span class="font-medium">ID:</span> ${connector.id}</div>
+                                        <div><span class="font-medium">CID:</span> ${connector.cid}</div>
+                                        <div><span class="font-medium">Method:</span> ${connector.method}</div>
+                                        <div><span class="font-medium">URL:</span> ${connector.base_url}</div>
+                                    </div>
+                                    ${connector.description ? `
+                                    <div class="mt-1">
+                                        <span class="font-medium">Description:</span> 
+                                        ${connector.description}
+                                    </div>
+                                    ` : ''}
+                                    <div class="mt-1">
+                                        <button class="toggle-config text-blue-600 text-xs font-medium" data-target="http-config-${connector.id}">
+                                            Show Details
+                                        </button>
+                                        <div id="http-config-${connector.id}" class="hidden mt-1 bg-gray-50 p-1 rounded text-xs overflow-x-auto">
+                                            <pre class="text-xs">${JSON.stringify(connector, ['id', 'cid', 'connector_type', 'base_url', 'method', 'description'], 2)}</pre>
+                                        </div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    ` : ''}
+                </div>
+            `;
+            
+            $('#modal-content').html(content);
+            
+            $('.toggle-config').on('click', function() {
+                const target = $(this).data('target');
+                $(`#${target}`).toggleClass('hidden');
+                $(this).text(function(i, text) {
+                    return text === "Show Configuration" || text === "Show Details" 
+                        ? (text.includes("Configuration") ? "Hide Configuration" : "Hide Details")
+                        : (text.includes("Configuration") ? "Show Configuration" : "Show Details");
+                });
+            });
+        };
+    });
+</script>

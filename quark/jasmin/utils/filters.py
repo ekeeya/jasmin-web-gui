@@ -116,7 +116,7 @@ def validate_py_script(value):
 
 
 class MoFilters(BaseFilterValidator, Enum):
-    ConnectorFilter = ConnectorFilter, "Will match the source connector of a message"
+    ConnectorFilter = ConnectorFilter, Connector
 
     @classmethod
     def validate(cls, filter_type: str, value: Any) -> Any:
@@ -124,8 +124,8 @@ class MoFilters(BaseFilterValidator, Enum):
 
 
 class MTFilters(BaseFilterValidator, Enum):
-    UserFilter = UserFilter, "Will match the owner of a MT message"
-    GroupFilter = GroupFilter, "Will match the owner’s group of a MT message"
+    UserFilter = UserFilter, User
+    GroupFilter = GroupFilter, Group
 
     @classmethod
     def validate(cls, filter_type: str, value: Any) -> Any:
@@ -133,15 +133,15 @@ class MTFilters(BaseFilterValidator, Enum):
 
 
 class AllFilters(BaseFilterValidator, Enum):
-    TransparentFilter = TransparentFilter, "This filter will always match any message criteria"
-    SourceAddrFilter = SourceAddrFilter, "Will match the source address of a MO message"
-    DestinationAddrFilter = DestinationAddrFilter, "Will match the destination address of a MT message"
-    ShortMessageFilter = DestinationAddrFilter, "Will match the content of a message"
-    DateIntervalFilter = DateIntervalFilter, "Will match the date of a message"
-    TimeIntervalFilter = TimeIntervalFilter, "Will match the time of a message"
-    TagFilter = TagFilter, "Will check if message has a defined tag"
-    EvalPyFilter = EvalPyFilter, ("Will pass the message to a third party python script for user-defined "
-                                  "filtering")
+    # we have already validated these so let's just use None and empty lists
+    TransparentFilter = TransparentFilter, None
+    SourceAddrFilter = SourceAddrFilter, []
+    DestinationAddrFilter = DestinationAddrFilter, []
+    ShortMessageFilter = ShortMessageFilter, []
+    DateIntervalFilter = DateIntervalFilter, []
+    TimeIntervalFilter = TimeIntervalFilter, []
+    TagFilter = TagFilter, []
+    EvalPyFilter = EvalPyFilter, []
 
     @classmethod
     def validate(cls, filter_type: str, value: Any) -> Any:

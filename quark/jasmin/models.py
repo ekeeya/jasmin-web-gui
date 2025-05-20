@@ -637,6 +637,44 @@ class JasminSMPPConnector(BaseJasminConnector, BaseJasminModel, SmartModel):
 
         return JCliSMPPClientConfig(**params)
 
+    def to_json(self):
+        return {
+            'systemType': self.system_type,
+            'log_file': self.log_file,
+            'log_rotate': self.log_rotate,
+            'log_level': self.log_level,
+            'log_privacy': self.log_privacy,
+            'sessionInitTimerSecs': self.session_init_timer_secs,
+            'enquireLinkTimerSecs': self.enquire_link_timer_secs,
+            'inactivityTimerSecs': self.inactivity_timer_secs,
+            'responseTimerSecs': self.response_timer_secs,
+            'pduReadTimerSecs': self.pdu_read_timer_secs,
+            'dlr_expiry': self.dlr_expiry,
+            'reconnectOnConnectionLoss': self.reconnect_on_connection_loss,
+            'reconnectOnConnectionFailure': self.reconnect_on_connection_failure,
+            'reconnectOnConnectionLossDelay': self.reconnect_on_connection_loss_delay,
+            'reconnectOnConnectionFailureDelay': self.reconnect_on_connection_failure_delay,
+            'useSSL': self.use_ssl,
+            'SSLCertificateFile': self.ssl_certificate_file,
+            'bindOperation': self.bind_operation,
+            'source_addr': self.source_addr,
+            'source_addr_ton': self.source_addr_ton,
+            'source_addr_npi': self.source_addr_npi,
+            'dest_addr_ton': self.dest_addr_ton,
+            'dest_addr_npi': self.dest_addr_npi,
+            'addressTon': self.address_ton,
+            'addressNpi': self.address_npi,
+            'addressRange': self.address_range,
+            'validity_period': self.validity_period,
+            'priority_flag': self.priority_flag,
+            'registered_delivery': self.registered_delivery,
+            'replace_if_present_flag': self.replace_if_present_flag,
+            'data_coding': self.data_coding,
+            'requeue_delay': self.requeue_delay,
+            'submit_sm_throughput': self.submit_sm_throughput,
+            'dlr_msg_id_bases': self.dlr_msg_id_bases,
+        }
+
     @classmethod
     def from_smpp_client_config(cls, config_data, workspace):
         """Create Django model instance from SMPPClientConfig dictionary"""
@@ -754,14 +792,25 @@ class JasminFilter(JasminBaseFilter, SmartModel):
         super(JasminFilter, self).save(*args, **kwargs)
 
     def to_jasmin_filter(self):
-        if self.filter_type == MO:
-            jasmin_filter = MoFilters[self.filter_type].value[0]
-        elif self.filter_type == MT:
-            jasmin_filter = MTFilters[self.filter_type].value[0]
+        filter_param_class = None
+        if self.nature == MO:
+            jasmin_filter, filter_param_class = MoFilters[self.filter_type].value[0], MoFilters[self.filter_type].value[
+                1]
+        elif self.nature == MT:
+            jasmin_filter, filter_param_class = MTFilters[self.filter_type].value[0], MTFilters[self.filter_type].value[
+                1]
         else:
             jasmin_filter = AllFilters[self.filter_type].value[0]
         if self.param and isinstance(self.param, dict):
             payload = {self.param["key"]: self.param["value"]}
+            if not isinstance(filter_param_class, list):
+                key = filter_param_class.__name__.lower()
+                if key == "user":
+                    # fake as mandatory jasmin user params
+                    payload.update(dict(group="fake", username=payload["uid"], password="fake"))
+
+                payload = {key: filter_param_class(**payload)}
+
             return jasmin_filter(**payload)
 
         return jasmin_filter()
