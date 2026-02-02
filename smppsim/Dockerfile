@@ -1,4 +1,4 @@
-FROM openjdk:17-slim as builder
+FROM eclipse-temurin:17-jdk AS backend-builder
 
 LABEL maintainer="ekeeya@thothcode.tech"
 
