@@ -1,30 +1,38 @@
-FROM python:3.11.8-slim as base
+FROM python:3.11.8-slim
 
-RUN python -m venv /venv
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    POETRY_NO_INTERACTION=1 \
+    POETRY_VIRTUALENVS_CREATE=false
 
-FROM base as builder
-
-RUN apt-get update && apt-get install -y build-essential
-
-COPY requirements.txt .
-
-RUN /venv/bin/pip install --upgrade pip \
-    && /venv/bin/pip install -r requirements.txt
-
-FROM base
-
-COPY --from=builder /venv /venv
-
-ENV PATH="/venv/bin:$PATH"
-
-ENV PYTHONUNBUFFERED=1
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+      git \
+      build-essential \
+      libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-COPY . /app/
+# Source (clone repo), then overlay local build-context patches.
+ARG JOYCE_REPO="https://github.com/ekeeya/jasmin-web-gui.git"
+ARG JOYCE_REF="main"
+RUN git clone --depth 1 --branch "${JOYCE_REF}" "${JOYCE_REPO}" /app
+
+# Install Poetry using the system python (requested).
+RUN python -m pip install --no-cache-dir --upgrade pip \
+    && python -m pip install --no-cache-dir poetry
+
+# Install dependencies via Poetry (skip installing the project package itself).
+RUN poetry install --only main --no-root --no-ansi
+
+# In the cloned repo, ensure datasource.py exists (prefer copying).
+# RUN cp /app/quark/datasource.py.sample /app/quark/datasource.py
+
+COPY ./joyce-entrypoint.sh /app/docker/joyce-entrypoint.sh
+
+RUN chmod +x /app/docker/joyce-entrypoint.sh
 
 EXPOSE 8000
 
-CMD ["python", "manage.py", "migrate"]
-
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+ENTRYPOINT ["/bin/sh", "/app/docker/joyce-entrypoint.sh"]

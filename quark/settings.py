@@ -32,7 +32,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-nl7ec)b+qk$@ytxui!65^bt27x&538$g7h@i&l#282l-#&jpa$'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv("DEBUG", "True").lower() in ("1", "true", "yes", "y", "on")
 
 ALLOWED_HOSTS = ["*"]
 
@@ -51,7 +51,7 @@ INSTALLED_APPS = [
     'django_countries',
     'smartmin',
     'quark.web',
-    'quark.jasmin',
+    'quark.jasmin.apps.AdapterConfig',
     'quark.api',
     'quark.utils',
     'quark.workspace',
@@ -187,8 +187,8 @@ LOGGING = {
 
 JASMIN_PERSIST = True
 
-CELERY_BROKER_URL = 'redis://localhost:6379/0'
-CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0")
+CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", "redis://localhost:6379/0")
 
 SMARTMIN_DEFAULT_MESSAGES = True
 

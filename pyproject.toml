@@ -78,6 +78,7 @@ pandas = "^2.2.3"
 django-timezone-field = "^7.1"
 django-countries = {version = "^7.6.1", extras = ["pyuca"]}
 iso8601 = "^2.1.0"
+gunicorn = "^25.0.1"
 
 
 [build-system]

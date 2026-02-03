@@ -17,7 +17,11 @@
 #  If not, see <http://www.gnu.org/licenses/>.
 #
 
+import atexit
+import threading
+
 from django.apps import AppConfig
+from twisted.internet import reactor
 
 
 class AdapterConfig(AppConfig):
@@ -25,4 +29,19 @@ class AdapterConfig(AppConfig):
     name = 'quark.jasmin'
 
     def ready(self):
-        pass
+        # This project uses Twisted PB adapters (see quark/jasmin/*_pb.py) which
+        # rely on a running reactor. Under manage.py this is started manually,
+        # but under Gunicorn (WSGI) we must start it here per worker process.
+        if not reactor.running:
+            reactor_thread = threading.Thread(
+                target=lambda: reactor.run(installSignalHandlers=False),
+                daemon=True,
+                name="twisted-reactor",
+            )
+            reactor_thread.start()
+
+            def _cleanup():
+                if reactor.running:
+                    reactor.stop()
+
+            atexit.register(_cleanup)

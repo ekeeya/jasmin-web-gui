@@ -14,7 +14,7 @@ services:
       - no-new-privileges:true
 
   rabbit-mq:
-    image: rabbitmq:3.10-management-alpine
+    image: rabbitmq:4.2.3-management-alpine
     restart: unless-stopped
     healthcheck:
       test: rabbitmq-diagnostics -q ping
@@ -25,16 +25,6 @@ services:
           memory: 525M
     security_opt:
       - no-new-privileges:true
-
-#  django:
-#    image: django-docker:0.0.1
-#    build: .
-#    ports:
-#      - 8000:8000
-#    volumes:
-#      - .:/app
-#    environment:
-#      - DEBUG=False
 
   jasmin:
     image: jookies/jasmin:0.10
@@ -108,3 +98,44 @@ services:
           memory: 256M
     security_opt:
       - no-new-privileges:true
+
+  joyce:
+    container_name: joyce
+    restart: unless-stopped
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - 8000:8000
+    depends_on:
+      redis:
+        condition: service_healthy
+      rabbit-mq:
+        condition: service_healthy
+      jasmin:
+        condition: service_started
+      jasmin_rest:
+        condition: service_started
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      # Postgres on the Docker host's localhost
+      DB_HOST: host.docker.internal
+      DB_PORT: "5432"
+      DB_NAME: joyce
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+
+      # Talk to other services on the compose network
+      JASMIN_HOST: jasmin
+      JASMIN_PORT: "8990"
+      JASMIN_ROUTER_PB_HOST: jasmin
+      JASMIN_ROUTER_PB_PORT: "8988"
+      JASMIN_SMPP_PB_HOST: jasmin
+      JASMIN_SMPP_PB_PORT: "8989"
+
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+
+      # Optional
+      DEBUG: "False"
