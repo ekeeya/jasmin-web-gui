@@ -51,7 +51,7 @@ INSTALLED_APPS = [
     'django_countries',
     'smartmin',
     'quark.web',
-    'quark.jasmin.apps.AdapterConfig',
+    'quark.jasmin',
     'quark.api',
     'quark.utils',
     'quark.workspace',
