@@ -12,6 +12,8 @@ if [ -f "/app/quark/datasource.py.sample" ]; then
   cp "/app/quark/datasource.py.sample" "/app/quark/datasource.py"
 fi
 
+poetry add gunicorn
+
 cat /app/quark/datasource.py
 # Wait briefly for DB connectivity (helps avoid race conditions).
 # We'll attempt a lightweight DB connection check via Django.
@@ -31,6 +33,9 @@ while [ "$tries" -gt 0 ]; do
 done
 
 python manage.py migrate --noinput
+
+# Collect static files for Gunicorn/WhiteNoise.
+python manage.py collectstatic --noinput
 
 exec gunicorn quark.wsgi:application \
   --bind 0.0.0.0:8000 \

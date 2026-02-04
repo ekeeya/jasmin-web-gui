@@ -14,7 +14,6 @@ RUN apt-get update \
 
 WORKDIR /app
 
-# Source (clone repo), then overlay local build-context patches.
 ARG JOYCE_REPO="https://github.com/ekeeya/jasmin-web-gui.git"
 ARG JOYCE_REF="main"
 RUN git clone --depth 1 --branch "${JOYCE_REF}" "${JOYCE_REPO}" /app
@@ -26,8 +25,8 @@ RUN python -m pip install --no-cache-dir --upgrade pip \
 # Install dependencies via Poetry (skip installing the project package itself).
 RUN poetry install --only main --no-root --no-ansi
 
-# In the cloned repo, ensure datasource.py exists (prefer copying).
-# RUN cp /app/quark/datasource.py.sample /app/quark/datasource.py
+# Force the datasource template used in-container to our known-good version.
+COPY ./quark/datasource.py.sample /app/quark/datasource.py.sample
 
 COPY ./joyce-entrypoint.sh /app/docker/joyce-entrypoint.sh
 

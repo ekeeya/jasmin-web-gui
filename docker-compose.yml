@@ -59,8 +59,10 @@ services:
     restart: unless-stopped
     container_name: jasmin_celery
     depends_on:
-      - rabbit-mq
-      - redis
+      rabbit-mq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     entrypoint: [ "/usr/local/bin/celery", "-A", "jasmin.protocols.rest.tasks", "worker", "-l", "INFO", "-c", "4" ]
     environment:
       CELERY_BROKER_URL: amqp://guest:guest@rabbit-mq:5672//
