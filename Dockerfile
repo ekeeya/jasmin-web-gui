@@ -18,6 +18,10 @@ ARG JOYCE_REPO="https://github.com/ekeeya/jasmin-web-gui.git"
 ARG JOYCE_REF="main"
 RUN git clone --depth 1 --branch "${JOYCE_REF}" "${JOYCE_REPO}" /app
 
+# Overlay local templates/static so the container matches this workspace.
+COPY ./templates /app/templates
+COPY ./static /app/static
+
 # Install Poetry using the system python (requested).
 RUN python -m pip install --no-cache-dir --upgrade pip \
     && python -m pip install --no-cache-dir poetry
@@ -25,13 +29,16 @@ RUN python -m pip install --no-cache-dir --upgrade pip \
 # Install dependencies via Poetry (skip installing the project package itself).
 RUN poetry install --only main --no-root --no-ansi
 
+# Ensure runtime server + static serving are available on PATH.
+RUN python -m pip install --no-cache-dir gunicorn whitenoise
+
 # Force the datasource template used in-container to our known-good version.
 COPY ./quark/datasource.py.sample /app/quark/datasource.py.sample
+
+COPY ./quark/settings.py /app/quark/settings.py
 
 COPY ./joyce-entrypoint.sh /app/docker/joyce-entrypoint.sh
 
 RUN chmod +x /app/docker/joyce-entrypoint.sh
-
-EXPOSE 8000
 
 ENTRYPOINT ["/bin/sh", "/app/docker/joyce-entrypoint.sh"]
