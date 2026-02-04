@@ -7,20 +7,14 @@ ENV PYTHONUNBUFFERED=1 \
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-      git \
       build-essential \
       libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-ARG JOYCE_REPO="https://github.com/ekeeya/jasmin-web-gui.git"
-ARG JOYCE_REF="main"
-RUN git clone --depth 1 --branch "${JOYCE_REF}" "${JOYCE_REPO}" /app
-
-# Overlay local templates/static so the container matches this workspace.
-COPY ./templates /app/templates
-COPY ./static /app/static
+# Copy the current workspace into the image (no git clone).
+COPY . /app
 
 # Install Poetry using the system python (requested).
 RUN python -m pip install --no-cache-dir --upgrade pip \
@@ -32,12 +26,10 @@ RUN poetry install --only main --no-root --no-ansi
 # Ensure runtime server + static serving are available on PATH.
 RUN python -m pip install --no-cache-dir gunicorn whitenoise
 
-# Force the datasource template used in-container to our known-good version.
-COPY ./quark/datasource.py.sample /app/quark/datasource.py.sample
-
-COPY ./quark/settings.py /app/quark/settings.py
 
 COPY ./joyce-entrypoint.sh /app/docker/joyce-entrypoint.sh
+
+EXPOSE 8000 80
 
 RUN chmod +x /app/docker/joyce-entrypoint.sh
 

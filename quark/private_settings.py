@@ -20,8 +20,8 @@ import os
 
 JASMIN_HOST = os.getenv("JASMIN_HOST", "127.0.0.1")
 JASMIN_PORT = os.getenv("JASMIN_PORT", "8990")
-JASMIN_JCLI_USERNAME = os.getenv("JASMIN_JCLI_USERNAME", "")  # jcliadmin if authentication=True in your jasmin.cfg
-JASMIN_JCLI_PASSWORD = os.getenv("JASMIN_JCLI_PASSWORD", "")  # jclipwd
+JASMIN_JCLI_USERNAME = os.getenv("JASMIN_JCLI_USERNAME", "jcliadmin")  # jcliadmin if authentication=True in your jasmin.cfg
+JASMIN_JCLI_PASSWORD = os.getenv("JASMIN_JCLI_PASSWORD", "jclipwd")  # jclipwd
 
 JASMIN_ROUTER_PB_HOST = os.getenv("JASMIN_ROUTER_PB_HOST", "127.0.0.1")
 JASMIN_ROUTER_PB_PORT = int(os.getenv("JASMIN_ROUTER_PB_PORT", "8988"))

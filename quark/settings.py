@@ -36,6 +36,12 @@ DEBUG = os.getenv("DEBUG", "True").lower() in ("1", "true", "yes", "y", "on")
 
 ALLOWED_HOSTS = ["*"]
 
+# Allow local dev origins behind nginx/localhost.
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
+]
+
 # Application definition
 
 INSTALLED_APPS = [

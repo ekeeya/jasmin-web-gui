@@ -132,6 +132,12 @@ services:
       JASMIN_HOST: jasmin
       JASMIN_PORT: "8990"
       JASMIN_ROUTER_PB_HOST: jasmin
+      JASMIN_JCLI_USERNAME: "jcliadmin"
+      JASMIN_JCLI_PASSWORD: "jclipwd"
+      JASMIN_ROUTER_PB_USERNAME: "radmin"
+      JASMIN_ROUTER_PB_PASSWORD: "rpwd"
+      JASMIN_SMPP_PB_USERNAME: "cmadmin"
+      JASMIN_SMPP_PB_PASSWORD: "cmpwd"
       JASMIN_ROUTER_PB_PORT: "8988"
       JASMIN_SMPP_PB_HOST: jasmin
       JASMIN_SMPP_PB_PORT: "8989"
@@ -149,7 +155,7 @@ services:
     depends_on:
       - joyce
     ports:
-      - 8000:5000
+      - 8000:80
     volumes:
       - joyce_static:/usr/share/nginx/html/static:ro
       - ./docker/nginx.conf:/etc/nginx/conf.d/default.conf:ro
