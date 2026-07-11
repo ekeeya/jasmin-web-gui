@@ -1,166 +1,138 @@
-<div id="sidebar"
-     class="fixed inset-y-0 left-0 w-64 bg-white shadow-sm transform transition-transform duration-300 ease-in-out md:translate-x-0 -translate-x-full flex flex-col border-r border-gray-200">
+<div id="sidebar-overlay" class="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-300 md:hidden"></div>
 
-    <div class="p-5 border-b border-gray-100">
-        <div class="flex items-center space-x-3">
-            <div class="w-9 h-9 bg-black rounded-lg flex items-center justify-center shadow">
-                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+<aside id="sidebar"
+       class="fixed inset-y-0 left-0 z-50 w-64 flex flex-col bg-neutral-950 text-neutral-400
+              transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out">
 
-                    <circle cx="12" cy="12" r="9" stroke-width="2"/>
-                    <path d="M12 7c-1 .5-1 .5-1 1s0 1 1 1 1-.5 1-1-0-1-1-1z" stroke-linecap="round"
-                          stroke-linejoin="round" stroke-width="2"/>
-                    <path d="M11 9c-.5 1.5-1.5 3-3 3" stroke-linecap="round" stroke-width="2"/>
-                    <path d="M13 9c.5 1.5 1.5 3 3 3" stroke-linecap="round" stroke-width="2"/>
+    <!-- soft glow behind the brand -->
+    <div class="pointer-events-none absolute -top-24 -left-24 h-64 w-64 rounded-full bg-white/10 blur-3xl"></div>
 
-                    <path d="M3.5 10.5c1.5-2 3.5-4 6-5" stroke-linecap="round" stroke-linejoin="round"
-                          stroke-width="2"/>
-                    <path d="M20.5 10.5c-1.5-2-3.5-4-6-5" stroke-linecap="round" stroke-linejoin="round"
-                          stroke-width="2"/>
-
-                    <path d="M9 14h6l-3 3-3-3z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+    <!-- ================= brand ================= -->
+    <div class="relative px-5 py-5 border-b border-white/10">
+        <a href="/dashboard" class="group flex items-center gap-3">
+            <span class="brand-mark inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white text-black">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/>
                 </svg>
-            </div>
-            <span class="text-xl font-bold tracking-tight">Jasmin</span>
-        </div>
+            </span>
+            <span class="flex flex-col">
+                <span class="font-display text-xl font-bold tracking-tight text-white leading-none">Joyce</span>
+                <span class="mt-1 font-mono text-[10px] uppercase tracking-[0.2em] text-neutral-500">for jasmin</span>
+            </span>
+        </a>
     </div>
 
-    <div class="flex-1 p-4 overflow-y-auto no-scrollbar" style="max-height: calc(100vh - 180px);">
-        <div class="mb-6">
-            <nav>
-                <ul class="space-y-1">
-                    <li>
-                        <a href="/dashboard"
-                           class="relative flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-100 text-gray-700 menu-item transition-smooth"
-                           data-page="dashboard">
-                            <span class="icon-home text-xl"></span>
-                            <span class="font-medium">Dashboard</span>
-                        </a>
-                    </li>
-                </ul>
-            </nav>
-        </div>
+    <!-- ================= navigation ================= -->
+    <div class="sidebar-nav relative flex-1 overflow-y-auto no-scrollbar px-3 py-5 space-y-7">
 
-        <div class="mb-6">
-            <div class="text-xs font-semibold uppercase tracking-wider mb-3 pl-3">Users / Groups</div>
-            <nav>
-                <ul class="space-y-1">
-                    <li>
-                        <a href="/jasmingroup"
-                           data-page="jasmingroup"
-                           class="group relative flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-100 text-gray-700 menu-item transition-smooth">
-                            <span class="icon-layers text-xl"></span>
-                            <span class="font-medium">Groups</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="/jasminuser"
-                           class="relative flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-100 text-gray-700 menu-item transition-smooth"
-                           data-page="jasminuser">
-                            <span class="icon-users text-xl"></span>
-                            <span class="font-medium">Users</span>
-                        </a>
-                    </li>
-                </ul>
-            </nav>
-        </div>
-        <div class="mb-6">
-            <div class="active text-xs font-semibold uppercase tracking-wider mb-3 pl-3">Connectors</div>
-            <nav>
-                <ul class="space-y-1">
-                    <li>
-                        <button class="group relative flex items-center justify-between w-full p-3 rounded-lg hover:bg-gray-100 text-gray-700 submenu-toggle transition-smooth">
-                            <div class="flex items-center space-x-3">
-                                <span class="icon-power-plug text-xl"></span>
-                                <span class="font-medium">Connectors</span>
-                            </div>
-                            <span class="icon-chevron-thin-down"></span>
-                        </button>
-                        <ul class="submenu">
-                            <li><a href="/jasminsmppconnector"
-                                   class="group block p-2 pl-5 text-sm text-gray-600 hover:bg-gray-100 rounded transition-smooth hover:text-gray-900">SMPP&nbsp;Connector</a>
-                            </li>
-                            <li><a href="/jasminhttpconnector"
-                                   class="group block p-2 pl-5 text-sm text-gray-600 hover:bg-gray-100 rounded transition-smooth hover:text-gray-900">HTTP&nbsp;Connector</a>
-                            </li>
-                        </ul>
-                    </li>
-                </ul>
-            </nav>
-        </div>
+        <nav class="nav-group">
+            <p class="nav-label">Overview</p>
+            <ul class="space-y-1">
+                <li>
+                    <a href="/dashboard" data-page="dashboard" class="nav-link menu-item">
+                        <span class="nav-icon icon-gauge"></span>
+                        <span class="nav-text">Dashboard</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
 
-        <div class="mb-6">
-            <div class="text-xs font-semibold uppercase tracking-wider mb-3 pl-3">Router PB</div>
-            <nav>
-                <ul class="space-y-1">
-                    <li>
-                        <a href="/jasminfilter"
-                           class="relative flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-100 text-gray-700 menu-item transition-smooth"
-                           data-page="jasminfilter">
-                            <span class="icon-funnel text-xl"></span>
-                            <span class="font-medium">Filters</span>
-                        </a>
-                    </li>
-                    
-                    <li>
-                        <a href="/jasminroute"
-                           class="relative flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-100 text-gray-700 menu-item transition-smooth"
-                           data-page="jasminroute">
-                            <span class="icon-flow-tree text-xl"></span>
-                            <span class="font-medium">Routers</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="/jasmininterceptor"
-                           data-page="jasmininterceptor"
-                           class="group relative flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-100 text-gray-700 menu-item transition-smooth">
-                            <span class="icon-align-horizontal-middle text-xl"></span>
-                            <span class="font-medium">Interceptors</span>
-                            <span class="ml-auto bg-black text-white text-xs font-semibold rounded-full px-2 py-1">12</span>
-                        </a>
-                    </li>
-                </ul>
-            </nav>
-        </div>
+        <nav class="nav-group">
+            <p class="nav-label">Users &amp; groups</p>
+            <ul class="space-y-1">
+                <li>
+                    <a href="/jasmingroup" data-page="jasmingroup" class="nav-link menu-item">
+                        <span class="nav-icon icon-layers"></span>
+                        <span class="nav-text">Groups</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/jasminuser" data-page="jasminuser" class="nav-link menu-item">
+                        <span class="nav-icon icon-users"></span>
+                        <span class="nav-text">Users</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
 
-        <div class="mb-6">
-            <div class="text-xs font-semibold uppercase tracking-wider mb-3 pl-3">Misc.</div>
-            <nav>
-                <ul class="space-y-1">
-                    <li>
-                        <a href="#"
-                           class="group relative flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-100 text-gray-700 menu-item transition-smooth">
-                            <span class="icon-cog text-xl"></span>
-                            <span class="font-medium">Setting</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a href="#"
-                           class="group relative flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-100 text-gray-700 menu-item transition-smooth">
-                            <span class="icon-help-with-circle text-xl"></span>
-                            <span class="font-medium">Help Center</span>
-                        </a>
-                    </li>
-                </ul>
-            </nav>
-        </div>
+        <nav class="nav-group">
+            <p class="nav-label">Connectors</p>
+            <ul class="space-y-1">
+                <li>
+                    <button class="nav-link submenu-toggle w-full">
+                        <span class="nav-icon icon-power-plug"></span>
+                        <span class="nav-text">Connectors</span>
+                        <span class="icon-chevron-thin-down nav-chevron"></span>
+                    </button>
+                    <ul class="submenu">
+                        <li><a href="/jasminsmppconnector" class="submenu-link">SMPP client</a></li>
+                        <li><a href="/jasminhttpconnector" class="submenu-link">HTTP</a></li>
+                    </ul>
+                </li>
+            </ul>
+        </nav>
+
+        <nav class="nav-group">
+            <p class="nav-label">Routing</p>
+            <ul class="space-y-1">
+                <li>
+                    <a href="/jasminfilter" data-page="jasminfilter" class="nav-link menu-item">
+                        <span class="nav-icon icon-funnel"></span>
+                        <span class="nav-text">Filters</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/jasminroute" data-page="jasminroute" class="nav-link menu-item">
+                        <span class="nav-icon icon-flow-tree"></span>
+                        <span class="nav-text">Routes</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="/jasmininterceptor" data-page="jasmininterceptor" class="nav-link menu-item">
+                        <span class="nav-icon icon-align-horizontal-middle"></span>
+                        <span class="nav-text">Interceptors</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+
+        <nav class="nav-group">
+            <p class="nav-label">System</p>
+            <ul class="space-y-1">
+                <li>
+                    <a href="#" class="nav-link menu-item">
+                        <span class="nav-icon icon-cog"></span>
+                        <span class="nav-text">Settings</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="https://docs.jasminsms.com" target="_blank" rel="noopener" class="nav-link menu-item">
+                        <span class="nav-icon icon-help-with-circle"></span>
+                        <span class="nav-text">Jasmin docs</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
     </div>
 
-    <div class="p-4 border-t border-gray-100">
-        <div class="bg-black text-white p-4 rounded-xl shadow-md">
-            <div class="flex items-center space-x-3 mb-2">
-                <div class="p-1.5 bg-white bg-opacity-20 rounded-lg">
-                    <svg class="w-4 h-4" fill="none" stroke="#333" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                              d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/>
-                    </svg>
-                </div>
-                <span class="text-sm font-semibold tracking-tight">GitHub</span>
+    <!-- ================= footer ================= -->
+    <div class="relative border-t border-white/10 px-4 py-4 space-y-3">
+        <div class="github-card group relative overflow-hidden rounded-xl border border-white/10 bg-white/5 p-4">
+            <div class="flex items-center gap-2.5 mb-2">
+                <span class="icon-github text-lg text-white"></span>
+                <span class="font-display text-sm font-semibold tracking-tight text-white">Open source</span>
             </div>
-            <p class="text-xs text-gray-200 mb-3 leading-relaxed">Give us a star if you like this project to enable it grow.</p>
-            <a href="https://github.com/ekeeya/jasmin-web-gui" target="_blank" class="w-full btn bg-white text-black border-gray-200 flex items-center justify-center space-x-2 py-2 rounded-lg">
-                <span class="icon-github text-lg"></span>
-                <span>Find us on GitHub</span>
+            <p class="text-xs text-neutral-400 leading-relaxed mb-3">Enjoying Joyce? A star on GitHub helps the project grow.</p>
+            <a href="https://github.com/ekeeya/jasmin-web-gui" target="_blank" rel="noopener"
+               class="star-btn inline-flex w-full items-center justify-center gap-2 rounded-lg bg-white px-3 py-2 text-xs font-semibold text-black transition-colors duration-200 hover:bg-neutral-200">
+                <span class="star-icon">&#9733;</span>
+                <span>Star on GitHub</span>
             </a>
         </div>
+        <p class="flex items-center justify-center gap-2 font-mono text-[10px] uppercase tracking-widest text-neutral-600">
+            <span class="pulse-dot h-1.5 w-1.5 rounded-full bg-white/70"></span>
+            gateway console &middot; GPL v3
+        </p>
     </div>
-</div>
+</aside>

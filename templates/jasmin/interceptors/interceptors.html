@@ -4,12 +4,20 @@
 
 {% block pre-table %}
     <div class="bg-white w-full mb-1 p-2">
-        <label class="font-bold uppercase">SMPP Connectors</label>
+        <label class="font-bold uppercase">Interceptors</label>
         <div role="alertdialog" class="alert alert-info alert-outline">
             <span class="icon-info text-lg"></span>
-           <span class="text-xs">
-               A SMPP Client connector is used to send/receive SMS through SMPP v3.4 protocol, it is directly connected to MO and MT routers to provide end-to-end message delivery.
-           </span>
+            <span class="text-xs">
+                MO and MT interceptors hand messages to a user-defined Python script before routing.
+                Filters decide which interceptor matches; DefaultInterceptor (order 0) is the fallback.
+                See
+                <a class="underline" target="_blank" rel="noopener"
+                   href="https://docs.jasminsms.com/en/latest/management/jcli/modules.html#mo-interceptor-manager">MO</a>
+                /
+                <a class="underline" target="_blank" rel="noopener"
+                   href="https://docs.jasminsms.com/en/latest/management/jcli/modules.html#mt-interceptor-manager">MT</a>
+                interceptor manager docs.
+            </span>
         </div>
     </div>
 {% endblock pre-table %}
@@ -35,19 +43,17 @@
             </thead>
             <tbody class="bg-white">
             {% for obj in object_list %}
-                <tr data-pk="{{ obj.id }}" data-row-{{ obj.id }}="{{ obj.cid }}"
+                <tr data-pk="{{ obj.id }}" data-row-{{ obj.id }}="{{ obj.order }}"
                     class="border-b border-gray-200 hover:bg-gray-50 {% cycle 'bg-gray-50' 'bg-white' %} {% if not obj.is_active and obj|is_smartobject %}opacity-60{% endif %}">
                     {% for field in fields %}
-                        <td class="px-3 py-2 border-r border-gray-200 last:border-r-0 text-gray-900 ">
-                        {% get_value obj field as result %}
-                        {% if field == 'cid' %}
-                                {% if obj.is_active %}
-                                    <div class="status status-success animate-ping"></div>
-                                    {% else %}
-                                    <div class="status status-error"></div>
-                                    {% endif %}
+                        <td class="px-3 py-2 border-r border-gray-200 last:border-r-0 text-gray-900">
+                            {% get_value obj field as result %}
+                            {% if field == 'order' %}
+                                <a class="text-blue-500 underline" data-interceptor-details-open href="javascript:void(0)">
+                                    Order-{{ result|safe }}</a>
+                            {% else %}
+                                {{ result|safe }}
                             {% endif %}
-                        {{ result|safe }}
                         </td>
                     {% endfor %}
                     {% if actions %}
@@ -64,5 +70,6 @@
             {% endfor %}
             </tbody>
         </table>
+        {% include 'includes/interceptor_details.html' %}
     </div>
 {% endblock %}

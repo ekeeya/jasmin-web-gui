@@ -1,61 +1,225 @@
-/* Add these to your existing CSS */
-.submenu {
-    max-height: 0;
-    overflow: hidden;
-    transition: max-height 0.3s ease-in-out, opacity 0.3s ease-in-out;
-    opacity: 0;
+/* ============================================================
+   Sidebar navigation - dark console theme
+   ============================================================ */
+
+.no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+
+/* ---------- staggered entrance ---------- */
+@keyframes nav-slide-in {
+    from { opacity: 0; transform: translateX(-14px); }
+    to   { opacity: 1; transform: translateX(0); }
 }
 
-.submenu.open {
-    max-height: 500px; /* Increased to accommodate more items */
-    opacity: 1;
+.nav-group { animation: nav-slide-in .45s cubic-bezier(.22, .8, .36, 1) both; }
+.nav-group:nth-of-type(1) { animation-delay: .05s; }
+.nav-group:nth-of-type(2) { animation-delay: .13s; }
+.nav-group:nth-of-type(3) { animation-delay: .21s; }
+.nav-group:nth-of-type(4) { animation-delay: .29s; }
+.nav-group:nth-of-type(5) { animation-delay: .37s; }
+
+/* ---------- section labels ---------- */
+.nav-label {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: .18em;
+    color: #737373;
+    padding-left: .75rem;
+    margin-bottom: .625rem;
+    display: flex;
+    align-items: center;
+    gap: .5rem;
 }
 
-.menu-item.active,
-.submenu a.active {
-    background-color: #f3f4f6;
-    color: #000;
-    font-weight: 600;
+.nav-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(to right, rgba(255, 255, 255, .12), transparent);
+}
+
+/* ---------- nav links ---------- */
+.nav-link {
     position: relative;
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    padding: .625rem .75rem;
+    border-radius: .5rem;
+    font-size: .875rem;
+    font-weight: 500;
+    color: #a3a3a3;
+    cursor: pointer;
+    overflow: hidden;
+    transition: color .2s ease, background-color .2s ease;
 }
 
-.menu-item.active::before,
-.submenu a.active::before {
+/* left accent bar that grows on hover / active */
+.nav-link::before {
     content: '';
     position: absolute;
     left: 0;
-    top: 0;
-    bottom: 0;
+    top: 50%;
     width: 3px;
-    background-color: #000;
+    height: 0;
+    border-radius: 999px;
+    background: #fff;
+    transform: translateY(-50%);
+    transition: height .25s cubic-bezier(.22, .8, .36, 1);
 }
+
+.nav-link:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, .06);
+}
+
+.nav-link:hover::before { height: 45%; }
+
+.nav-icon {
+    font-size: 1.125rem;
+    line-height: 1;
+    flex-shrink: 0;
+    transition: transform .25s cubic-bezier(.34, 1.56, .64, 1);
+}
+
+.nav-link:hover .nav-icon { transform: translateX(2px) scale(1.12); }
+
+.nav-text { transition: transform .25s cubic-bezier(.22, .8, .36, 1); }
+
+.nav-link:hover .nav-text { transform: translateX(2px); }
+
+/* ---------- active state: inverted pill ---------- */
+.menu-item.active,
+.submenu-toggle.active {
+    color: #0a0a0a;
+    background: #fff;
+    font-weight: 600;
+    box-shadow: 0 4px 16px rgba(255, 255, 255, .08);
+}
+
+.menu-item.active::before,
+.submenu-toggle.active::before { height: 0; }
+
+.menu-item.active:hover,
+.submenu-toggle.active:hover {
+    color: #0a0a0a;
+    background: #fff;
+}
+
+/* diamond marker, echoes the landing page ticker separator */
+.menu-item.active::after {
+    content: '\25C6';
+    margin-left: auto;
+    font-size: 8px;
+    color: #0a0a0a;
+    animation: nav-slide-in .3s ease both;
+}
+
+/* ---------- submenu ---------- */
+.nav-chevron {
+    margin-left: auto;
+    font-size: .875rem;
+    transition: transform .3s cubic-bezier(.22, .8, .36, 1);
+}
+
+.submenu-toggle.active .nav-chevron,
+.submenu.open ~ .nav-chevron { transform: rotate(180deg); }
+
+.submenu {
+    max-height: 0;
+    overflow: hidden;
+    opacity: 0;
+    margin: .25rem 0 0 1.3rem;
+    padding-left: .875rem;
+    border-left: 1px solid rgba(255, 255, 255, .12);
+    transition: max-height .35s cubic-bezier(.22, .8, .36, 1), opacity .3s ease;
+}
+
+.submenu.open { max-height: 320px; opacity: 1; }
+
+.submenu-link {
+    position: relative;
+    display: block;
+    padding: .45rem .625rem;
+    margin-bottom: 2px;
+    border-radius: .375rem;
+    font-size: .8125rem;
+    color: #a3a3a3;
+    transition: color .2s ease, background-color .2s ease, transform .2s ease;
+}
+
+/* dot marker on the tree line */
+.submenu-link::before {
+    content: '';
+    position: absolute;
+    left: -1.05rem;
+    top: 50%;
+    width: 5px;
+    height: 5px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .25);
+    transform: translateY(-50%) scale(0);
+    transition: transform .2s cubic-bezier(.34, 1.56, .64, 1), background-color .2s ease;
+}
+
+.submenu-link:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, .06);
+    transform: translateX(2px);
+}
+
+.submenu-link:hover::before { transform: translateY(-50%) scale(1); }
 
 .submenu a.active {
-    background-color: #e5e7eb; /* Slightly darker than parent active */
-}
-
-/* Keep parent menu items highlighted when child is active */
-.submenu.open .submenu-toggle {
-    color: #000;
+    color: #fff;
+    background: rgba(255, 255, 255, .1);
     font-weight: 600;
 }
 
-.submenu-toggle.active {
-    color: #000;
-    font-weight: 600;
+.submenu a.active::before {
+    background: #fff;
+    transform: translateY(-50%) scale(1);
 }
 
-.submenu-toggle.active .icon-chevron-thin-down {
-    transform: rotate(180deg);
-    color: #000;
+/* ---------- brand ---------- */
+.brand-mark {
+    transition: transform .3s cubic-bezier(.34, 1.56, .64, 1), box-shadow .3s ease;
 }
 
-/* Better visual hierarchy for submenu items */
-.submenu li a {
-    padding-left: 2.75rem;
-    position: relative;
+.group:hover .brand-mark {
+    transform: rotate(-6deg) scale(1.05);
+    box-shadow: 0 0 24px rgba(255, 255, 255, .25);
 }
 
-.submenu li a:hover {
-    background-color: #f3f4f6;
+/* ---------- footer ---------- */
+@keyframes pulse-dot {
+    0%, 100% { opacity: .9; transform: scale(1); }
+    50%      { opacity: .3; transform: scale(.72); }
+}
+
+.pulse-dot { animation: pulse-dot 2.4s ease-in-out infinite; }
+
+/* shine sweep across the GitHub card on hover */
+.github-card::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -80%;
+    width: 50%;
+    height: 100%;
+    background: linear-gradient(105deg, transparent, rgba(255, 255, 255, .09), transparent);
+    transform: skewX(-20deg);
+    transition: left .6s ease;
+    pointer-events: none;
+}
+
+.github-card:hover::after { left: 130%; }
+
+.star-icon { display: inline-block; transition: transform .4s cubic-bezier(.34, 1.56, .64, 1); }
+.star-btn:hover .star-icon { transform: rotate(72deg) scale(1.25); }
+
+@media (prefers-reduced-motion: reduce) {
+    .nav-group, .pulse-dot, .menu-item.active::after { animation: none !important; }
+    .nav-link, .nav-icon, .nav-text, .submenu, .submenu-link, .brand-mark, .nav-chevron { transition: none !important; }
 }

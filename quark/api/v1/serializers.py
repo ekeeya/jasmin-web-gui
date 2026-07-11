@@ -3,7 +3,8 @@ import logging
 from rest_framework import serializers
 from rest_framework.fields import SerializerMethodField
 
-from quark.jasmin.models import JasminGroup, JasminRoute, JasminFilter, JasminSMPPConnector, JasminHTTPConnector
+from quark.jasmin.models import JasminGroup, JasminRoute, JasminFilter, JasminSMPPConnector, JasminHTTPConnector, \
+    JasminInterceptor
 from quark.utils import json
 
 logger = logging.getLogger(__name__)
@@ -83,6 +84,7 @@ class JasminFilterReadSerializer(ReadSerializer):
         model = JasminFilter
         fields = (
             "id",
+            "fid",
             "nature",
             "param",
             "workspace",
@@ -156,4 +158,31 @@ class JasminRouterReadSerializer(ReadSerializer):
             "filters",
             "smpp_connectors",
             "http_connectors"
+        )
+
+
+class JasminInterceptorReadSerializer(ReadSerializer):
+    filters = serializers.SerializerMethodField()
+    workspace = SerializerMethodField()
+
+    def get_workspace(self, instance):
+        return instance.workspace.name
+
+    def get_filters(self, instance):
+        if instance.filters.exists():
+            return JasminFilterReadSerializer(instance.filters.all(), many=True).data
+        return []
+
+    class Meta:
+        model = JasminInterceptor
+        fields = (
+            "id",
+            "nature",
+            "order",
+            "interceptor_type",
+            "workspace",
+            "script_name",
+            "script_source",
+            "filters",
+            "created_on",
         )

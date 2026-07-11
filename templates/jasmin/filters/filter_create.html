@@ -62,6 +62,17 @@
                 <div style="font-size: 6pt !important;" data-modal-error="{{ form.param_key.name }}"
                      class="hidden text-red-600"></div>
             </div>
+            <div class="space-y-1 hidden" id="evalpy-upload">
+                <label for="{{ form.script_file.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                    {{ form.script_file.label }}
+                </label>
+                {{ form.script_file }}
+                {% if form.script_file.help_text %}
+                    <span style="font-size: 6pt !important;" class="text-gray-500">{{ form.script_file.help_text }}</span>
+                {% endif %}
+                <div style="font-size: 6pt !important;" data-modal-error="{{ form.script_file.name }}"
+                     class="hidden text-red-600"></div>
+            </div>
             <div class="space-y-1 md:col-span-2">
                 <label for="{{ form.param_value.id_for_label }}" class="block text-sm font-medium text-gray-700">
                     {{ form.param_value.label }}
@@ -81,6 +92,7 @@
 </div>
 <script>
     $(document).ready(function () {
+        const evalPyExample = "# result = True to match / continue\n# result = False to reject\nresult = True\n";
         const allFilters = [
             ["TransparentFilter", null, "This filter will always match any message criteria"],
             ["SourceAddrFilter", {source_addr: "^20d+"}, "Will match the source address of a MO message. arg source_addr: is a regular expression to match source address"],
@@ -89,7 +101,7 @@
             ["DateIntervalFilter", {dateInterval: "2025-05-01;2025-05-16"}, "Will match the date of a message. dateInterval: are Two dates separated by ; (date format is YYYY-MM-DD)"],
             ["TimeIntervalFilter", {timeInterval: "08:00:00;18:00:00"}, "Will match the time of a message. timeInterval: Two timestamps separated by ; (timestamp format is HH:MM:SS)"],
             ["TagFilter", {tag: 32401}, "Will check if message has a defined tag. tag: numeric tag to match in message"],
-            ["EvalPyFilter", {pyCode: "/var/filters/thirdparty.py"}, "Will pass the message to a third party python script for user-defined filtering. pyCode:file system path to a python script,"]
+            ["EvalPyFilter", {pyCode: evalPyExample}, "EvalPyFilter stores Python source in Joyce (not a file path). Jasmin receives it as pyCode. Re-save any route/interceptor using this filter after editing so Jasmin gets the new source."]
         ];
         const moFilters = [
             ["ConnectorFilter", {cid: "smppc_1_1"}, "Will match the source connector of a message. cid: cid of the connector to match"]
@@ -114,6 +126,8 @@
                     break;
             }
             setFilterTypeOptions();
+            $("#evalpy-upload").hide();
+            $("#id_param_value").attr("rows", 3);
         })
         let selectedFilter = {}
 
@@ -125,6 +139,7 @@
             const attributes = selectedFilter[1]
             let key= ""
             let value =""
+            const isEvalPy = selectedFilter[0] === "EvalPyFilter";
             if (attributes) {
                 key = Object.keys(attributes)[0];
                 value = attributes[key];
@@ -133,10 +148,37 @@
                 $("#show-args").hide("delay")
             }
             $("#id_param_key").val(key);
-                $("#id_param_value").val(value);
+            $("#id_param_value").val(value);
+            if (isEvalPy) {
+                $("#evalpy-upload").show();
+                $("#id_param_value").attr("rows", 12);
+                $("#id_param_key").prop("readonly", true);
+            } else {
+                $("#evalpy-upload").hide();
+                $("#id_param_value").attr("rows", 3);
+                $("#id_param_key").prop("readonly", false);
+            }
             $("#filter-info").html(selectedFilter[2])
             $("#filter-info").show("slow")
         })
+
+        $("#id_script_file").on("change", function (e) {
+            const file = e.target.files && e.target.files[0];
+            if (!file) {
+                return;
+            }
+            if (!file.name.toLowerCase().endsWith(".py")) {
+                alert("Please choose a .py file");
+                $(this).val("");
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = function (ev) {
+                $("#id_param_key").val("pyCode");
+                $("#id_param_value").val(ev.target.result || "");
+            };
+            reader.readAsText(file);
+        });
 
         function setFilterTypeOptions() {
             let options = "<option>---Select Filter---</option>"

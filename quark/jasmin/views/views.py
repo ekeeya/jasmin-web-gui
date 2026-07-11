@@ -16,19 +16,21 @@
 #  If not, see <http://www.gnu.org/licenses/>.
 #
 from django import forms
+from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.http import JsonResponse
 from django.urls import reverse
+from django.utils.safestring import mark_safe
 from smartmin.mixins import NonAtomicMixin
 from smartmin.views import SmartCRUDL, SmartCreateView, SmartUpdateView, SmartDeleteView, \
     SmartModelActionView, SmartFormView, SmartReadView
 
-from quark.api.v1.serializers import JasminRouterReadSerializer
+from quark.api.v1.serializers import JasminRouterReadSerializer, JasminInterceptorReadSerializer
 from quark.jasmin.models import JasminGroup, JasminUser, JasminSMPPConnector, JasminFilter, JasminRoute, \
     JasminInterceptor, JasminHTTPConnector
 from quark.jasmin.views.forms import JasminGroupForm, UpdateJasminGroupForm, JasminUserForm, JasminSPPConnectorForm, \
     JasminFilterForm, JasminRouteForm, JasminInterceptorForm, JasminHttpConnectorForm
-from quark.utils.mixins.mixins import ModalFormMixin
+from quark.utils.mixins.mixins import ModalFormMixin, ReactorErrorFormMixin, ReactorErrorDeleteMixin
 from quark.utils.views.mixins import FormMixin, InjectModalFormMixin
 from quark.workspace.views.base import BaseListView
 from quark.workspace.views.mixins import WorkspacePermsMixin
@@ -111,7 +113,7 @@ class JasminGroupCRUDL(SmartCRUDL):
         def save(self, obj):
             return super().save(obj)
 
-    class Delete(WorkspacePermsMixin, NonAtomicMixin, SmartDeleteView):
+    class Delete(ReactorErrorDeleteMixin, WorkspacePermsMixin, NonAtomicMixin, SmartDeleteView):
         permission = "jasmin.jasmingroup_delete"
         redirect_url = "@jasmin.jasmingroup_list"
         cancel_url = "@jasmin.jasmingroup_list"
@@ -171,7 +173,7 @@ class JasminUserCRUDL(SmartCRUDL):
             context["delete_url"] = "jasmin.jasminuser_delete"
             return context
 
-    class Delete(WorkspacePermsMixin, NonAtomicMixin, SmartDeleteView):
+    class Delete(ReactorErrorDeleteMixin, WorkspacePermsMixin, NonAtomicMixin, SmartDeleteView):
         permission = "jasmin.jasminuser_delete"
         redirect_url = "@jasmin.jasminuser_list"
         cancel_url = "@jasmin.jasminuser_list"
@@ -232,13 +234,26 @@ class JasminSMPPConnectorCRUDL(SmartCRUDL):
         permission = "jasmin.jasminsmppconnector_list"
         paginator_class = Paginator
         paginate_by = 10
-        fields = ("cid", "host", "port", 'created_on')
+        fields = ("cid", "status", "host", "port", 'created_on')
         template_name = "jasmin/connectors/smpp_connectors.html"
         ordering = ("-created_on",)
         search_fields = ("cid",)
         modal_form = JasminSPPConnectorForm
         update_form = JasminSPPConnectorForm
         actions = ['status', 'edit', 'delete']
+
+        def get_status(self, obj):
+            if obj.is_active:
+                return mark_safe(
+                    '<span class="inline-flex items-center gap-1.5 rounded-full bg-neutral-950 px-2.5 py-0.5 '
+                    'font-mono text-[10px] uppercase tracking-wider text-white">'
+                    '<span class="h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse"></span>started</span>'
+                )
+            return mark_safe(
+                '<span class="inline-flex items-center gap-1.5 rounded-full border border-neutral-300 bg-white px-2.5 py-0.5 '
+                'font-mono text-[10px] uppercase tracking-wider text-neutral-600">'
+                '<span class="h-1.5 w-1.5 rounded-full bg-red-500"></span>stopped</span>'
+            )
 
         def build_update(self):
             self.set_update_form_params(
@@ -259,7 +274,7 @@ class JasminSMPPConnectorCRUDL(SmartCRUDL):
             context["delete_url"] = "jasmin.jasminsmppconnector_delete"
             return context
 
-    class Delete(WorkspacePermsMixin, NonAtomicMixin, SmartDeleteView):
+    class Delete(ReactorErrorDeleteMixin, WorkspacePermsMixin, NonAtomicMixin, SmartDeleteView):
         permission = "jasmin.jasminsmppconnector_delete"
         redirect_url = "@jasmin.jasminsmppconnector_list"
         cancel_url = "@jasmin.jasminsmppconnector_list"
@@ -404,7 +419,12 @@ class JasminRouteCRUDL(SmartCRUDL):
             route.smpp_connectors.set(self.form.cleaned_data["smpp_connectors"])
             route.http_connectors.set(self.form.cleaned_data["http_connectors"])
             route.filters.set(self.form.cleaned_data["filters"])
-            route.save()  # now run on reactor
+            try:
+                route.save()  # now run on reactor
+            except ValidationError:
+                # Jasmin rejected the route, don't keep an orphan row locally
+                route.delete(run_on_reactor=False)
+                raise
             form.instance.pk = route.pk  # so we do not save it again in the mixin
             return super().form_valid(form)
 
@@ -459,18 +479,17 @@ class JasminRouteCRUDL(SmartCRUDL):
             # narrow down the search
             return super().derive_queryset().filter(workspace=self.derive_workspace())
 
-    class Delete(WorkspacePermsMixin, NonAtomicMixin, SmartDeleteView):
+    class Delete(ReactorErrorDeleteMixin, WorkspacePermsMixin, NonAtomicMixin, SmartDeleteView):
         permission = "jasmin.jasminroute_delete"
         redirect_url = "@jasmin.jasminroute_list"
         cancel_url = "@jasmin.jasminroute_list"
 
 
 class JasminInterceptorCRUDL(SmartCRUDL):
-    actions = ("create", "list", "update", "delete",)
+    actions = ("create", "list", "Read", "delete")
     model = JasminInterceptor
 
-    class Create(FormMixin, WorkspacePermsMixin, NonAtomicMixin, SmartCreateView):
-        template_name = "jasmin/interceptors/interceptor.html"
+    class Create(FormMixin, ModalFormMixin, WorkspacePermsMixin, NonAtomicMixin, SmartCreateView):
         title = "Create Interceptor"
         permission = "jasmin.jasmininterceptor_create"
         form_class = JasminInterceptorForm
@@ -481,25 +500,105 @@ class JasminInterceptorCRUDL(SmartCRUDL):
             kwargs["workspace"] = self.derive_workspace()
             return kwargs
 
-        def save(self, obj):
+        def form_valid(self, form):
             interceptor = JasminInterceptor(
-                interceptor_type=self.form.cleaned_data["interceptor_type"],
-                nature=self.form.cleaned_data["nature"],
+                interceptor_type=form.cleaned_data["interceptor_type"],
+                nature=form.cleaned_data["nature"],
                 workspace=self.derive_workspace(),
-                order=self.form.cleaned_data["order"],
-                script=self.form.cleaned_data["script"],
+                order=form.cleaned_data["order"],
+                script_name=form.cleaned_data.get("script_name") or "",
+                script_source=form.cleaned_data["script_source"],
                 created_by=self.request.user,
                 modified_by=self.request.user,
             )
-            interceptor.save(run_on_reactor=False)  # save it but do not run reactor yet
+            interceptor.save(run_on_reactor=False)
 
-            interceptor.filters.set(self.form.cleaned_data["filters"])
-            interceptor.save()  # now run on reactor
+            filters = form.cleaned_data.get("filters")
+            if filters is not None:
+                interceptor.filters.set(filters)
 
-            return obj
+            try:
+                interceptor.save()  # sync to Jasmin via Router PB
+            except ValidationError:
+                interceptor.delete(run_on_reactor=False)
+                raise
 
-    class List(BaseListView):
-        title = "MT Interceptors"
+            form.instance.pk = interceptor.pk
+            return super().form_valid(form)
+
+    class List(InjectModalFormMixin, BaseListView):
+        title = "Interceptors"
         permission = "jasmin.jasmininterceptor_list"
         paginator_class = Paginator
         paginate_by = 10
+        fields = ("order", "interceptor_type", "nature", "script_name", "filters", "created_on")
+        template_name = "jasmin/interceptors/interceptors.html"
+        ordering = ("nature", "-order")
+        search_fields = ("interceptor_type", "nature", "script_name")
+        modal_form = JasminInterceptorForm
+        actions = ["delete"]
+
+        def get_script_name(self, obj):
+            if obj.script_name:
+                return obj.script_name
+            return mark_safe(
+                '<span class="font-mono text-[10px] uppercase tracking-wider text-neutral-400">'
+                "inline</span>"
+            )
+
+        def get_filters(self, obj):
+            fids = list(obj.filters.values_list("fid", flat=True))
+            if not fids:
+                return mark_safe(
+                    '<span class="font-mono text-[10px] uppercase tracking-wider text-neutral-400">'
+                    "none</span>"
+                )
+            badges = "".join(
+                f'<span class="inline-flex items-center rounded-full border border-neutral-300 '
+                f'bg-white px-2 py-0.5 font-mono text-[10px] text-neutral-700 mr-1">{fid}</span>'
+                for fid in fids
+            )
+            return mark_safe(badges)
+
+        def build_modal(self, modal):
+            modal.register_modal(
+                title="Configure an Interceptor",
+                modal_id="jasmin_interceptor",
+                post_url=reverse("jasmin.jasmininterceptor_create"),
+                custom_form="jasmin/interceptors/interceptor_create.html",
+            )
+
+        def get_context_data(self, **kwargs):
+            context = super().get_context_data(**kwargs)
+            context["delete_url"] = "jasmin.jasmininterceptor_delete"
+            return context
+
+    class Read(WorkspacePermsMixin, SmartReadView):
+        permission = "jasmin.jasmininterceptor_list"
+        slug_url_kwarg = "id"
+
+        def get_context_data(self, **kwargs):
+            context = super().get_context_data(**kwargs)
+            serializer = JasminInterceptorReadSerializer(self.object)
+            context["object"] = serializer.data
+            return context
+
+        def get(self, request, *args, **kwargs):
+            self.object = self.get_object()
+            context = self.get_context_data()
+            return JsonResponse(
+                dict(fields=context.get("fields", []), object=context["object"]),
+                safe=False,
+            )
+
+        @classmethod
+        def derive_url_pattern(cls, path, action):
+            return r"^%s/(?P<pk>[^/]+)/$" % path.lower()
+
+        def derive_queryset(self):
+            return super().derive_queryset().filter(workspace=self.derive_workspace())
+
+    class Delete(ReactorErrorDeleteMixin, WorkspacePermsMixin, NonAtomicMixin, SmartDeleteView):
+        permission = "jasmin.jasmininterceptor_delete"
+        redirect_url = "@jasmin.jasmininterceptor_list"
+        cancel_url = "@jasmin.jasmininterceptor_list"

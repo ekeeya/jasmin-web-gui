@@ -1,0 +1,134 @@
+<div data-interceptor-details-backdrop class="fixed inset-0 bg-black/60 bg-opacity-30 z-40 backdrop-transition opacity-0 pointer-events-none"></div>
+
+<div data-interceptor-details class="fixed top-0 right-0 h-auto w-full max-w-lg modal-transition modal-hidden z-50 p-4">
+    <div class="bg-white border rounded shadow-2xl flex flex-col overflow-hidden mt-4 h-[90vh]">
+        <div class="bg-black px-4 py-2 border-b border-gray-200 flex justify-between items-center shrink-0">
+            <h2 class="text-lg font-semibold text-white">Interceptor Details</h2>
+            <button data-interceptor-details-close class="text-gray-500 hover:text-gray-700 focus:outline-none">
+                <span class="icon-cross text-xl text-white"></span>
+            </button>
+        </div>
+
+        <div class="flex-1 overflow-hidden flex flex-col">
+            <div id="interceptor-loading" class="flex-grow flex flex-col items-center justify-center hidden">
+                <div class="inline-block animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-blue-500"></div>
+                <p class="mt-2 text-sm text-gray-600">Loading details...</p>
+            </div>
+
+            <div id="interceptor-modal-content" class="overflow-y-auto flex-grow p-3 space-y-3 text-sm">
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    $(document).ready(function () {
+        function openModal() {
+            $('[data-interceptor-details-backdrop]').removeClass('opacity-0 pointer-events-none').addClass('opacity-100');
+            $('[data-interceptor-details]').removeClass('modal-hidden');
+        }
+
+        function closeModal() {
+            $('[data-interceptor-details-backdrop]').removeClass('opacity-100').addClass('opacity-0 pointer-events-none');
+            $('[data-interceptor-details]').addClass('modal-hidden');
+        }
+
+        $('[data-interceptor-details-open]').on('click', function (e) {
+            const interceptorId = $(this).closest("tr").data("pk");
+            fetchInterceptorDetails(interceptorId);
+            e.preventDefault();
+            openModal();
+        });
+
+        $('[data-interceptor-details-close]').on('click', function (e) {
+            e.preventDefault();
+            closeModal();
+        });
+
+        $('[data-interceptor-details-backdrop]').on('click', function (e) {
+            if (e.target === this) {
+                closeModal();
+            }
+        });
+
+        const fetchInterceptorDetails = async (interceptorId) => {
+            $('#interceptor-loading').removeClass('hidden');
+            $('#interceptor-modal-content').empty();
+
+            try {
+                const response = await fetch(`/jasmininterceptor/${interceptorId}`);
+                const data = await response.json();
+                $('#interceptor-loading').addClass('hidden');
+                displayInterceptorDetails(data.object);
+            } catch (error) {
+                console.error('Error fetching interceptor details:', error);
+                $('#interceptor-loading').addClass('hidden');
+                $('#interceptor-modal-content').html(`
+                    <div class="bg-red-100 border border-red-400 text-red-700 px-3 py-2 rounded text-sm" role="alert">
+                        <strong>Error!</strong> Failed to load interceptor details.
+                    </div>
+                `);
+            }
+        };
+
+        const displayInterceptorDetails = (item) => {
+            const scriptName = item.script_name || 'inline';
+            const source = item.script_source || '';
+            const escaped = source
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+            const content = `
+                <div class="space-y-3">
+                    <div>
+                        <h3 class="font-semibold border-b pb-1 text-base">Basic Information</h3>
+                        <div class="grid grid-cols-2 gap-1 mt-1 text-sm">
+                            <div><span class="font-medium">ID:</span> ${item.id}</div>
+                            <div><span class="font-medium">Nature:</span> ${item.nature}</div>
+                            <div><span class="font-medium">Order:</span> ${item.order}</div>
+                            <div><span class="font-medium">Type:</span> ${item.interceptor_type}</div>
+                            <div class="col-span-2"><span class="font-medium">Workspace:</span> ${item.workspace}</div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 class="font-semibold border-b pb-1 text-base">Script</h3>
+                        <div class="mt-1 text-sm space-y-1">
+                            <div><span class="font-medium">Name:</span> ${scriptName}</div>
+                            <pre class="mt-2 max-h-64 overflow-auto rounded bg-neutral-950 p-3 font-mono text-[11px] text-neutral-100 whitespace-pre-wrap">${escaped}</pre>
+                            <p class="text-xs text-neutral-500 mt-1">
+                                Stored in Joyce's database. Jasmin keeps its own copy from the last sync.
+                            </p>
+                        </div>
+                    </div>
+
+                    ${item.filters && item.filters.length ? `
+                    <div>
+                        <h3 class="font-semibold border-b pb-1 text-base">Filters (${item.filters.length})</h3>
+                        <div class="space-y-1 mt-1">
+                            ${item.filters.map(filter => `
+                                <div class="border rounded p-1.5 text-sm">
+                                    <div class="font-medium">${filter.fid || filter.id}: ${filter.filter_type}</div>
+                                    <div>Nature: ${filter.nature}</div>
+                                    ${filter.param ? `
+                                    <div class="mt-0.5">
+                                        <span class="font-medium">Parameter:</span>
+                                        ${filter.param.key} = ${filter.param.value}
+                                    </div>
+                                    ` : ''}
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    ` : `
+                    <div>
+                        <h3 class="font-semibold border-b pb-1 text-base">Filters</h3>
+                        <p class="mt-1 text-sm text-neutral-500">No filters (DefaultInterceptor / fallback).</p>
+                    </div>
+                    `}
+                </div>
+            `;
+            $('#interceptor-modal-content').html(content);
+        };
+    });
+</script>

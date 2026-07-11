@@ -1,5 +1,6 @@
 import logging
 
+from django.core.exceptions import ValidationError
 from django.db import transaction
 from django import forms
 from django.http import HttpResponse, JsonResponse, HttpResponseRedirect
@@ -7,6 +8,37 @@ from django.http import HttpResponse, JsonResponse, HttpResponseRedirect
 from quark.utils.fields import *
 
 logger = logging.getLogger(__name__)
+
+
+class ReactorErrorFormMixin:
+    """
+    Catches ValidationErrors raised by synchronous Jasmin PB operations
+    (see quark.utils.jasmin.extras.BaseJasminModel) during form processing and
+    turns them into non-field form errors so the UI reports a truthful outcome.
+    """
+
+    def post(self, request, *args, **kwargs):
+        try:
+            return super().post(request, *args, **kwargs)
+        except ValidationError as e:
+            form = getattr(self, "form", None) or self.get_form()
+            for message in e.messages:
+                form.add_error(None, message)
+            return self.form_invalid(form)
+
+
+class ReactorErrorDeleteMixin:
+    """
+    Catches ValidationErrors raised by synchronous Jasmin PB operations during
+    object deletion and returns a JSON 400 instead of a server error.
+    """
+
+    def post(self, request, *args, **kwargs):
+        try:
+            return super().post(request, *args, **kwargs)
+        except ValidationError as e:
+            message = "; ".join(e.messages)
+            return JsonResponse(dict(success=False, message=message), status=400)
 
 
 class NonAtomicMixin:
@@ -84,7 +116,7 @@ class FormMixin:
         return field
 
 
-class ModalFormMixin:
+class ModalFormMixin(ReactorErrorFormMixin):
     """
         Handles invalid form submissions and returns a JSON response on form_invalid for modal(ajax) creates
     """
@@ -94,8 +126,14 @@ class ModalFormMixin:
         return HttpResponseRedirect(self.get_success_url())
 
     def form_invalid(self, form):
-        errors = form.errors
-        message = "Form submission failed, see errors for details"
+        # non-field errors (e.g. Jasmin sync failures) are surfaced through the
+        # message since the modal template only renders per-field error slots
+        errors = {name: errs for name, errs in form.errors.items() if name != forms.forms.NON_FIELD_ERRORS}
+        non_field_errors = form.non_field_errors()
+        if non_field_errors and not errors:
+            message = "; ".join(non_field_errors)
+        else:
+            message = "Form submission failed, see errors for details"
         response = dict(errors=errors, success=False, message=message)
         return JsonResponse(response, status=400, safe=False)
 

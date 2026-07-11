@@ -1,2 +1,8 @@
 @import "tailwindcss";
-@source "../../**/**/*.{html,js}";
+@source "../../**/**/*.{html,js,py}";
+
+@theme {
+    --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+    --font-display: "Space Grotesk", "Inter", ui-sans-serif, system-ui, sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+}

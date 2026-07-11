@@ -5,7 +5,9 @@
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Joyce for Jasmin</title>
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
         <link href="{% static 'css/daisyui.css' %}" rel="stylesheet" type="text/css"/>
         <link href="{% static 'css/base.css' %}" rel="stylesheet">
         <link href="{% static 'css/modal.css' %}" rel="stylesheet">
@@ -18,25 +20,25 @@
         {% block styles %}
         {% endblock %}
     </head>
-    
-    <body class="bg-gray-100 font-['Inter']">
+
+    <body class="bg-neutral-50 font-sans text-neutral-900 antialiased">
         {% include 'includes/topbar.html' %}
-        <div class="flex h-screen">
+        <div class="flex min-h-screen">
             {% include 'includes/sidebar.html' %}
-            <div class="flex-1 px-5 py-24 md:py-8  md:ml-64">
-        
+            <div class="flex-1 px-5 pt-20 pb-8 md:ml-64">
+
                 {% block content %}
-        
+
                 {% endblock %}
             </div>
         </div>
         {% block scripts %}
-        
+
         {% endblock %}
         <script>
             $(document).ready(function () {
                 const currentPath = window.location.pathname + window.location.search;
-        
+
                 function setActiveMenu() {
                     let activeFound = false;
                     $('.menu-item').removeClass('active');
@@ -45,7 +47,7 @@
                     $('.menu-item').each(function () {
                         const page = $(this).data('page');
                         const href = $(this).attr('href');
-        
+
                         if (href === currentPath || (page && currentPath.includes(page))) {
                             $(this).addClass('active');
                             activeFound = true;
@@ -64,7 +66,7 @@
                         $('a[href="/"]').addClass('active');
                     }
                 }
-        
+
                 setActiveMenu();
                 $('.submenu-toggle').on('click', function (e) {
                     e.preventDefault();
@@ -76,6 +78,18 @@
                         $('.submenu').not($submenu).removeClass('open');
                         $('.submenu-toggle').not(this).removeClass('active');
                     }
+                });
+
+                // mobile sidebar
+                const $sidebar = $('#sidebar');
+                const $overlay = $('#sidebar-overlay');
+                $('#menu-toggle').on('click', function () {
+                    $sidebar.removeClass('-translate-x-full');
+                    $overlay.removeClass('opacity-0 pointer-events-none');
+                });
+                $overlay.on('click', function () {
+                    $sidebar.addClass('-translate-x-full');
+                    $overlay.addClass('opacity-0 pointer-events-none');
                 });
             });
         </script>

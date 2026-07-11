@@ -15,11 +15,11 @@
 #  You should have received a copy of the GNU General Public License along with this project.
 #  If not, see <http://www.gnu.org/licenses/>.
 #
-import re
 import os
+import re
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict
+from typing import Any
 
 from django.db import models
 from jasmin.routing.Filters import *
@@ -58,6 +58,8 @@ class BaseFilterValidator:
         'DateIntervalFilter': (lambda v: validate_date_interval(v), True),
         'TimeIntervalFilter': (lambda v: validate_time_interval(v), True),
         'TagFilter': (lambda v: int(v), True),
+        # EvalPyFilter stores Python source in DB (same idea as interceptors).
+        # Jasmin's EvalPyFilter(pyCode=...) expects source text, not a file path.
         'EvalPyFilter': (lambda v: validate_py_script(v), True),
     }
 
@@ -108,11 +110,50 @@ def validate_time_interval(value):
 
 
 def validate_py_script(value):
-    if not os.path.exists(value):
-        raise ValueError("File does not exist")
-    if not value.endswith('.py'):
-        raise ValueError("Must be a Python script (.py)")
-    return value
+    """
+    Validate EvalPyFilter pyCode.
+
+    Accepts Python source text (preferred). For backwards compatibility, if the
+    value looks like a filesystem path to an existing .py file, read and return
+    its contents (mirroring what jcli does with `pyCode /path/to/script.py`).
+    """
+    if value is None:
+        raise ValueError("pyCode source is required")
+
+    source = value
+    if isinstance(source, bytes):
+        source = source.decode("utf-8")
+    source = str(source)
+
+    stripped = source.strip()
+    if not stripped:
+        raise ValueError("pyCode source is empty")
+
+    # Legacy: stored path instead of source — read the file once (jcli behaviour)
+    looks_like_path = (
+        "\n" not in stripped
+        and stripped.endswith(".py")
+        and (stripped.startswith("/") or stripped.startswith("./") or "\\" in stripped)
+    )
+    if looks_like_path:
+        if os.path.isfile(stripped):
+            with open(stripped, "r", encoding="utf-8", errors="replace") as handle:
+                source = handle.read()
+            stripped = source.strip()
+            if not stripped:
+                raise ValueError(f"Script file is empty: {value}")
+        else:
+            raise ValueError(
+                "EvalPyFilter expects Python source code stored in Joyce. "
+                f"Path '{stripped}' was not found. Paste the script or upload a .py file."
+            )
+
+    try:
+        compile(stripped, "<EvalPyFilter>", "exec")
+    except SyntaxError as exc:
+        raise ValueError(f"Script has a syntax error: {exc}") from exc
+
+    return stripped
 
 
 class MoFilters(BaseFilterValidator, Enum):
@@ -165,11 +206,12 @@ class JasminBaseFilter(models.Model):
     )
 
     param = StructuredJSONField(
-        max_length=100,
         null=True,
         blank=True,
-        help_text="For a given filter type, additional parameters may be required. Must be in format {'key': '', "
-                  "'value': ''}",
+        help_text=(
+            "Filter parameter as {'key': '...', 'value': '...'}. "
+            "For EvalPyFilter, key is pyCode and value is the Python source stored in the DB."
+        ),
     )
     workspace = models.ForeignKey("workspace.WorkSpace", on_delete=models.CASCADE)
 

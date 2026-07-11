@@ -1,0 +1,213 @@
+<div class="p-2 overflow-y-auto space-y-2">
+    <div role="alert" class="alert alert-dash alert-warning text-xs">
+        Script source is stored in Joyce's database and copied into Jasmin when you save.
+        Edit the source here and re-save to refresh Jasmin's copy.
+        <a class="underline text-blue-600" target="_blank" rel="noopener"
+           href="https://docs.jasminsms.com/en/latest/management/jcli/modules.html#mo-interceptor-manager">Docs</a>
+    </div>
+
+    <div class="grid grid-cols-1 gap-3">
+        <div class="space-y-1">
+            <label for="{{ form.nature.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                {{ form.nature.label }}
+                {% if form.nature.field.required %}<span class="text-red-500">*</span>{% endif %}
+            </label>
+            {{ form.nature }}
+            {% if form.nature.help_text %}
+                <span style="font-size: 6pt !important;" class="text-gray-500">{{ form.nature.help_text }}</span>
+            {% endif %}
+            <div style="font-size: 6pt !important;" data-modal-error="{{ form.nature.name }}"
+                 class="hidden text-red-600"></div>
+            <div id="nature-alert" role="alert" class="hidden alert alert-dash alert-info text-xs flex flex-row"></div>
+        </div>
+
+        <div class="space-y-1">
+            <label for="{{ form.interceptor_type.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                {{ form.interceptor_type.label }}
+                {% if form.interceptor_type.field.required %}<span class="text-red-500">*</span>{% endif %}
+            </label>
+            {{ form.interceptor_type }}
+            {% if form.interceptor_type.help_text %}
+                <span style="font-size: 6pt !important;" class="text-gray-500">{{ form.interceptor_type.help_text }}</span>
+            {% endif %}
+            <div style="font-size: 6pt !important;" data-modal-error="{{ form.interceptor_type.name }}"
+                 class="hidden text-red-600"></div>
+            <div id="type-alert" role="alert" class="hidden alert alert-dash alert-info text-xs flex flex-row"></div>
+        </div>
+    </div>
+
+    <div id="div_order" class="space-y-1">
+        <label for="{{ form.order.id_for_label }}" class="block text-sm font-medium text-gray-700">
+            {{ form.order.label }}
+            <span class="text-red-500">*</span>
+        </label>
+        {{ form.order }}
+        {% if form.order.help_text %}
+            <span style="font-size: 6pt !important;" class="text-gray-500">{{ form.order.help_text }}</span>
+        {% endif %}
+        <div style="font-size: 6pt !important;" data-modal-error="{{ form.order.name }}"
+             class="hidden text-red-600"></div>
+    </div>
+
+    <div class="space-y-1">
+        <label for="{{ form.script_name.id_for_label }}" class="block text-sm font-medium text-gray-700">
+            {{ form.script_name.label }}
+        </label>
+        {{ form.script_name }}
+        {% if form.script_name.help_text %}
+            <span style="font-size: 6pt !important;" class="text-gray-500">{{ form.script_name.help_text }}</span>
+        {% endif %}
+        <div style="font-size: 6pt !important;" data-modal-error="{{ form.script_name.name }}"
+             class="hidden text-red-600"></div>
+    </div>
+
+    <div class="space-y-1">
+        <label for="{{ form.script_file.id_for_label }}" class="block text-sm font-medium text-gray-700">
+            {{ form.script_file.label }}
+        </label>
+        {{ form.script_file }}
+        {% if form.script_file.help_text %}
+            <span style="font-size: 6pt !important;" class="text-gray-500">{{ form.script_file.help_text }}</span>
+        {% endif %}
+        <div style="font-size: 6pt !important;" data-modal-error="{{ form.script_file.name }}"
+             class="hidden text-red-600"></div>
+    </div>
+
+    <div class="space-y-1">
+        <label for="{{ form.script_source.id_for_label }}" class="block text-sm font-medium text-gray-700">
+            {{ form.script_source.label }}
+            <span class="text-red-500">*</span>
+        </label>
+        {{ form.script_source }}
+        {% if form.script_source.help_text %}
+            <span style="font-size: 6pt !important;" class="text-gray-500">{{ form.script_source.help_text }}</span>
+        {% endif %}
+        <div style="font-size: 6pt !important;" data-modal-error="{{ form.script_source.name }}"
+             class="hidden text-red-600"></div>
+    </div>
+
+    <div id="div_filters" class="grid grid-cols-1">
+        <fieldset class="space-y-2">
+            <legend class="text-lg font-medium text-gray-900">Filters</legend>
+            <div class="space-y-1">
+                <label for="{{ form.filters.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                    {{ form.filters.label }}
+                </label>
+                {{ form.filters }}
+                {% if form.filters.help_text %}
+                    <span style="font-size: 6pt !important;" class="text-gray-500">{{ form.filters.help_text }}</span>
+                {% endif %}
+                <div style="font-size: 6pt !important;" data-modal-error="{{ form.filters.name }}"
+                     class="hidden text-red-600"></div>
+            </div>
+        </fieldset>
+    </div>
+</div>
+<script>
+    $(document).ready(function () {
+        const typeEl = $("#id_interceptor_type");
+        typeEl.empty();
+
+        const mtTypes = [
+            ["DefaultInterceptor", "Fallback interceptor with no filters. Order is always 0."],
+            ["StaticMTInterceptor", "Matches outbound (MT) messages against filters, then runs the script."]
+        ];
+        const moTypes = [
+            ["DefaultInterceptor", "Fallback interceptor with no filters. Order is always 0."],
+            ["StaticMOInterceptor", "Matches inbound (MO) messages against filters, then runs the script."]
+        ];
+        const moAlert = "MO Interceptor hands inbound SMS (MO) to a script before MO routing.";
+        const mtAlert = "MT Interceptor hands outbound SMS (MT) to a script before MT routing.";
+
+        let applyTypes = [];
+
+        function setTypeOptions() {
+            let options = "<option value=\"\">----Select interceptor----</option>";
+            applyTypes.forEach((item, index) => {
+                options += `<option data-index="${index}" value="${item[0]}">${item[0]}</option>`;
+            });
+            typeEl.html(options);
+        }
+
+        function syncTypeUI() {
+            const selected = typeEl.val();
+            const isDefault = selected === "DefaultInterceptor";
+            const orderDiv = $("#div_order");
+            const filtersDiv = $("#div_filters");
+            const orderInput = $("#id_order");
+
+            if (isDefault) {
+                orderInput.val(0).prop("disabled", true);
+                orderDiv.hide();
+                filtersDiv.hide();
+            } else if (selected) {
+                orderInput.prop("disabled", false);
+                if (orderInput.val() === "0") {
+                    orderInput.val("");
+                }
+                orderDiv.show();
+                filtersDiv.show();
+            } else {
+                orderInput.prop("disabled", false);
+                orderDiv.show();
+                filtersDiv.show();
+            }
+        }
+
+        // Optional upload: fill the textarea (and name) from a local .py file
+        $("#id_script_file").on("change", function (e) {
+            const file = e.target.files && e.target.files[0];
+            if (!file) {
+                return;
+            }
+            if (!file.name.toLowerCase().endsWith(".py")) {
+                alert("Please choose a .py file");
+                $(this).val("");
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = function (ev) {
+                $("#id_script_source").val(ev.target.result || "");
+                if (!$("#id_script_name").val()) {
+                    $("#id_script_name").val(file.name);
+                }
+            };
+            reader.readAsText(file);
+        });
+
+        $("#id_nature").on("change", function (e) {
+            const nature = e.target.value;
+            const alertDiv = $("#nature-alert");
+            alertDiv.show("slow");
+            switch (nature) {
+                case "MO":
+                    alertDiv.html(moAlert);
+                    applyTypes = moTypes;
+                    break;
+                case "MT":
+                    alertDiv.html(mtAlert);
+                    applyTypes = mtTypes;
+                    break;
+                default:
+                    alertDiv.html("").hide("slow");
+                    applyTypes = [];
+                    break;
+            }
+            setTypeOptions();
+            $("#type-alert").hide("slow").html("");
+            syncTypeUI();
+        });
+
+        typeEl.on("change", function () {
+            const selectedOption = $(this).find("option:selected");
+            const index = selectedOption.data("index");
+            const typeAlert = $("#type-alert");
+            if (index > -1) {
+                typeAlert.html(applyTypes[index][1]).show("slow");
+            } else {
+                typeAlert.hide("slow").html("");
+            }
+            syncTypeUI();
+        });
+    });
+</script>

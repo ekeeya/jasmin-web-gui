@@ -56,6 +56,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'django_countries',
     'smartmin',
+    'smartmin.users',  # provides the FailedLogin model used by the login view
     'quark.web',
     'quark.jasmin',
     'quark.api',
@@ -192,6 +193,10 @@ LOGGING = {
 }
 
 JASMIN_PERSIST = True
+
+# How long (seconds) a Django request thread waits for a Jasmin PB operation
+# to complete before giving up with an error.
+JASMIN_PB_TIMEOUT = int(os.getenv("JASMIN_PB_TIMEOUT", "30"))
 
 CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0")
 CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", "redis://localhost:6379/0")

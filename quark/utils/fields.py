@@ -65,7 +65,20 @@ class NumberInputTextWidget(InputTextWidget):
 
 
 class FilePickerWidget(JoyceWidgetMixin, widgets.ClearableFileInput):
-    template_name = 'widgets/file_picker.html'
+    template_name = "widgets/file_picker.html"
+    input_type = "file"
+
+    def get_context(self, name, value, attrs):
+        context = super().get_context(name, value, attrs)
+        # Drop boolean attrs that are False — HTML treats disabled="False" as disabled
+        cleaned = {
+            key: val
+            for key, val in context["widget"]["attrs"].items()
+            if val is not False and val is not None
+        }
+        context["widget"]["attrs"] = cleaned
+        context["widget"]["type"] = self.input_type
+        return context
 
 
 class CheckboxInputWidget(JoyceWidgetMixin, widgets.CheckboxInput):

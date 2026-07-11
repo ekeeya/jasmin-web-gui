@@ -31,7 +31,8 @@ from jasmin.routing.Interceptors import MTInterceptor, DefaultInterceptor, Stati
     StaticMOInterceptor, Interceptor
 from jasmin.routing.Routes import DefaultRoute, StaticMTRoute, RandomRoundrobinMTRoute, FailoverMTRoute, \
     RandomRoundrobinMORoute, StaticMORoute, FailoverMORoute, MTRoute, MORoute, Route
-from jasmin.routing.jasminApi import Connector, SmppClientConnector, InterceptorScript, HttpConnector
+from jasmin.routing.jasminApi import Connector, SmppClientConnector, HttpConnector, \
+    MOInterceptorScript, MTInterceptorScript
 from smartmin.models import SmartModel
 from smpp.pdu.constants import *
 from smpp.pdu.pdu_types import RegisteredDelivery
@@ -39,7 +40,9 @@ from smpp.pdu.pdu_types import RegisteredDelivery
 from quark.jasmin.utils import PRIORITY_VALUES, TON_VALUES, NPI_VALUES, REGISTERED_DELIVERY_VALUES, \
     REPLACE_IF_PRESENT_VALUES
 from quark.jasmin.utils.connectors import BaseJasminConnector
-from quark.jasmin.utils.filters import JasminBaseFilter, MO, MoFilters, MTFilters, MT, AllFilters
+from quark.jasmin.utils.filters import (
+    JasminBaseFilter, MO, MoFilters, MTFilters, MT, AllFilters, validate_py_script,
+)
 from quark.jasmin.utils.interceptors import JasminBaseInterceptor
 from quark.jasmin.utils.routers import JasminBaseRouter, MTRouter, MORouter, RouterChoices
 from quark.utils.jasmin.extras import BaseJasminModel
@@ -125,10 +128,11 @@ class JasminGroup(BaseJasminModel, SmartModel):
 
     def save(self, *args, **kwargs):
         run_on_reactor = kwargs.pop('run_on_reactor', True)
+        is_new = self.pk is None
         # Save the Django model first
         super().save(*args, **kwargs)
         if run_on_reactor:
-            self.jasmin_add_group()
+            self.jasmin_add_group(is_new)
 
     def delete(self, *args, **kwargs):
         run_on_reactor = kwargs.pop('run_on_reactor', True)
@@ -555,12 +559,13 @@ class JasminSMPPConnector(BaseJasminConnector, BaseJasminModel, SmartModel):
     def save(self, *args, **kwargs):
         # manipulate the cid, to ensure we add workspace metadata
         run_on_reactor = kwargs.pop('run_on_reactor', True)
-        if self.pk is None:
+        is_new = self.pk is None
+        if is_new:
             self.connector_type = "SMPP"
             self.is_active = False  # it is off by default
         super().save(*args, **kwargs)
         if run_on_reactor:
-            self.jasmin_add_connector()
+            self.jasmin_add_connector(is_new)
 
     def delete(self, *args, **kwargs):
         run_on_reactor = kwargs.pop('run_on_reactor', True)
@@ -778,20 +783,29 @@ class JasminFilter(JasminBaseFilter, SmartModel):
     )
 
     def save(self, *args, **kwargs):
-        # validate the params given a filter  and params
+        # validate the params given a filter and params
         validated = None
+        param_value = self.param.get("value") if self.param and isinstance(self.param, dict) else None
         if self.nature == MO:
-            validated = MoFilters.validate(self.filter_type, self.param.get("value"))
+            validated = MoFilters.validate(self.filter_type, param_value)
         elif self.nature == MT:
-            validated = MTFilters.validate(self.filter_type, self.param.get("value"))
+            validated = MTFilters.validate(self.filter_type, param_value)
         else:
-            if self.param and isinstance(self.param, dict):
-                validated = AllFilters.validate(self.filter_type, self.param.get("value"))
-        if validated:
-            self.param["value"] = validated
-        super(JasminFilter, self).save(*args, **kwargs)
+            validated = AllFilters.validate(self.filter_type, param_value)
+        if validated is not None:
+            if not self.param or not isinstance(self.param, dict):
+                self.param = {"key": "pyCode" if self.filter_type == "EvalPyFilter" else "", "value": validated}
+            else:
+                self.param["value"] = validated
+        super().save(*args, **kwargs)
 
     def to_jasmin_filter(self):
+        """
+        Build a live Jasmin Filter instance.
+
+        For EvalPyFilter, param.value must be Python source (pyCode). That mirrors
+        jcli, which reads a path and passes file contents into EvalPyFilter(pyCode=...).
+        """
         filter_param_class = None
         if self.nature == MO:
             jasmin_filter, filter_param_class = MoFilters[self.filter_type].value[0], MoFilters[self.filter_type].value[
@@ -800,16 +814,28 @@ class JasminFilter(JasminBaseFilter, SmartModel):
             jasmin_filter, filter_param_class = MTFilters[self.filter_type].value[0], MTFilters[self.filter_type].value[
                 1]
         else:
-            jasmin_filter = AllFilters[self.filter_type].value[0]
+            jasmin_filter, filter_param_class = (
+                AllFilters[self.filter_type].value[0],
+                AllFilters[self.filter_type].value[1],
+            )
+
         if self.param and isinstance(self.param, dict):
-            payload = {self.param["key"]: self.param["value"]}
-            if not isinstance(filter_param_class, list):
-                key = filter_param_class.__name__.lower()
-                if key == "user":
+            key = self.param.get("key")
+            value = self.param.get("value")
+
+            # EvalPyFilter: ensure we pass source text as pyCode (never a bare path)
+            if self.filter_type == "EvalPyFilter":
+                value = validate_py_script(value)
+                return jasmin_filter(pyCode=value)
+
+            payload = {key: value}
+            if filter_param_class is not None and not isinstance(filter_param_class, list):
+                class_key = filter_param_class.__name__.lower()
+                if class_key == "user":
                     # fake as mandatory jasmin user params
                     payload.update(dict(group="fake", username=payload["uid"], password="fake"))
 
-                payload = {key: filter_param_class(**payload)}
+                payload = {class_key: filter_param_class(**payload)}
 
             return jasmin_filter(**payload)
 
@@ -905,9 +931,10 @@ class JasminRoute(BaseJasminModel, JasminBaseRouter, SmartModel):
 
     def save(self, *args, **kwargs):
         run_on_reactor = kwargs.pop('run_on_reactor', True)
+        is_new = self.pk is None
         super().save(*args, **kwargs)
         if run_on_reactor:
-            self.jasmin_add_route()
+            self.jasmin_add_route(is_new)
 
     def delete(self, *args, **kwargs):
         run_on_reactor = kwargs.pop('run_on_reactor', True)
@@ -921,68 +948,114 @@ class JasminRoute(BaseJasminModel, JasminBaseRouter, SmartModel):
 
 
 class JasminInterceptor(BaseJasminModel, JasminBaseInterceptor, SmartModel):
-    filters = models.ManyToManyField(JasminFilter)
-    script = models.FileField(
-        upload_to="jasmin/scripts/interceptors",
-        help_text="Upload a Python script (.py files only)"
+    """
+    Local representation of a Jasmin MO or MT interceptor.
+
+    Script source is stored in the database (Cloud Run / multi-instance safe).
+    When the interceptor is synced, Joyce sends that source to Jasmin as pyCode;
+    Jasmin copies it into its core (same as jcli's python3(/path) behaviour).
+    """
+    filters = models.ManyToManyField(
+        JasminFilter,
+        blank=True,
+        help_text="Required for StaticMO/StaticMTInterceptor. Ignored for DefaultInterceptor.",
+    )
+    script_name = models.CharField(
+        max_length=255,
+        blank=True,
+        default="",
+        help_text="Optional display name (e.g. uploaded filename).",
+    )
+    script_source = models.TextField(
+        help_text="Python 3 interception script source. This is what Jasmin receives as pyCode.",
     )
 
-    def _create_mt_interceptor(self, filters: List) -> MTInterceptor:
-        """Creates an MT interceptor based on the interceptor type."""
-        self.script = InterceptorScript(self.script)
-        configs = {
-            "DefaultInterceptor": lambda: DefaultInterceptor(script=self.script),
-            "StaticMTInterceptor": lambda: StaticMTInterceptor(filters=filters, script=self.script),
-        }
+    def _read_script_code(self) -> str:
+        """Return validated script source for Jasmin."""
+        content = (self.script_source or "").strip()
+        if not content:
+            raise ValidationError("Interceptor script source is required")
 
+        filename = self.script_name or "<interceptor>"
+        try:
+            compile(content, filename, "exec")
+        except SyntaxError as exc:
+            raise ValidationError(f"Interceptor script has a syntax error: {exc}") from exc
+
+        return content
+
+    def _to_interceptor_script(self):
+        """Build the MO/MT-specific InterceptorScript Jasmin expects."""
+        py_code = self._read_script_code()
+        if self.nature == MT:
+            return MTInterceptorScript(py_code)
+        return MOInterceptorScript(py_code)
+
+    def _create_mt_interceptor(self, filters: List, script) -> MTInterceptor:
+        configs = {
+            "DefaultInterceptor": lambda: DefaultInterceptor(script=script),
+            "StaticMTInterceptor": lambda: StaticMTInterceptor(filters=filters, script=script),
+        }
         interceptor_factory = configs.get(self.interceptor_type)
         if not interceptor_factory:
-            raise ValueError(f"Unsupported MT interceptor type: {self.interceptor_type}")
-
+            raise ValidationError(f"Unsupported MT interceptor type: {self.interceptor_type}")
         return interceptor_factory()
 
-    def _create_mo_interceptor(self, filters: List) -> MOInterceptor:
-        """Creates an MO interceptor based on the interceptor type."""
-        self.script = InterceptorScript(self.script)
+    def _create_mo_interceptor(self, filters: List, script) -> MOInterceptor:
         configs = {
-            "DefaultInterceptor": lambda: DefaultInterceptor(script=self.script),
-            "StaticMOInterceptor": lambda: StaticMOInterceptor(filters=filters, script=self.script),
+            "DefaultInterceptor": lambda: DefaultInterceptor(script=script),
+            "StaticMOInterceptor": lambda: StaticMOInterceptor(filters=filters, script=script),
         }
-
         interceptor_factory = configs.get(self.interceptor_type)
         if not interceptor_factory:
-            raise ValueError(f"Unsupported MO interceptor type: {self.interceptor_type}")
-
+            raise ValidationError(f"Unsupported MO interceptor type: {self.interceptor_type}")
         return interceptor_factory()
 
     def to_jasmin_interceptor(self) -> Interceptor:
         """
-        Converts the model instance to a Jasmin interceptor object based on its nature (MT or MO).
+        Convert this Django row into a Jasmin Interceptor object for Router PB.
 
-        Returns:
-            A Jasmin route object (e.g., DefaultInterceptor, StaticMOInterceptor, StaticMTInterceptor.).
-
-        Raises:
-            ValidationError: If no connectors are found for the route.
+        Returns DefaultInterceptor, StaticMOInterceptor or StaticMTInterceptor.
         """
-        filters = [f.to_jasmin_filter() for f in self.filters.all()]
+        script = self._to_interceptor_script()
 
-        if self.nature == "MT":
-            return self._create_mt_interceptor(filters)
-        return self._create_mo_interceptor(filters)
+        if self.interceptor_type == "DefaultInterceptor":
+            filters = []
+        else:
+            filters = [f.to_jasmin_filter() for f in self.filters.all()]
+            if not filters:
+                raise ValidationError(
+                    f"{self.interceptor_type} requires at least one filter "
+                    "(see Jasmin MO/MT interceptor manager docs)"
+                )
+
+        if self.nature == MT:
+            return self._create_mt_interceptor(filters, script)
+        return self._create_mo_interceptor(filters, script)
 
     def save(self, *args, **kwargs):
-        run_on_reactor = kwargs.pop('run_on_reactor', True)
+        run_on_reactor = kwargs.pop("run_on_reactor", True)
+        is_new = self.pk is None
+
+        # DefaultInterceptor is always order 0 (jcli sets this automatically)
+        if self.interceptor_type == "DefaultInterceptor":
+            self.order = 0
+
         super().save(*args, **kwargs)
         if run_on_reactor:
-            self.jasmin_add_interceptor()
+            self.jasmin_add_interceptor(is_new)
 
     def delete(self, *args, **kwargs):
-        run_on_reactor = kwargs.pop('run_on_reactor', True)
+        run_on_reactor = kwargs.pop("run_on_reactor", True)
         if run_on_reactor:
             self.jasmin_remove_interceptor()
         else:
             super().delete(*args, **kwargs)
 
+    def __str__(self):
+        return f"{self.nature}:{self.interceptor_type}@{self.order}"
+
     class Meta:
-        db_table = 'jasmin_interceptor'
+        db_table = "jasmin_interceptor"
+        unique_together = [("workspace", "nature", "order")]
+

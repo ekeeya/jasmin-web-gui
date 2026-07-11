@@ -4,249 +4,719 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Joyce is an open-source web console for the Jasmin SMS Gateway. Manage connectors, users, routes, filters and interceptors without touching jcli or telnet.">
 
-    <title>Joyce | Jasmin SMS Gateway Dashboard</title>
-   <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <title>Joyce | The web console for Jasmin SMS Gateway</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
     <style>
-        body {
-            font-family: 'Inter', sans-serif;
+        :root {
+            --ink: #0a0a0a;
         }
+        body { font-family: 'Inter', sans-serif; }
+        .font-display { font-family: 'Space Grotesk', sans-serif; }
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
 
-        /* Background texture + vignette (theme: black/white). */
+        /* ---------- background texture ---------- */
         .joyce-grid {
             background-image:
-                radial-gradient(circle at 1px 1px, rgba(0,0,0,.10) 1px, transparent 0);
-            background-size: 28px 28px;
-            mask-image: radial-gradient(ellipse at center, black 45%, transparent 78%);
-            -webkit-mask-image: radial-gradient(ellipse at center, black 45%, transparent 78%);
+                linear-gradient(rgba(0,0,0,.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0,0,0,.05) 1px, transparent 1px);
+            background-size: 44px 44px;
+            mask-image: radial-gradient(ellipse at 50% 0%, black 30%, transparent 75%);
+            -webkit-mask-image: radial-gradient(ellipse at 50% 0%, black 30%, transparent 75%);
         }
-        .joyce-vignette {
-            background:
-                radial-gradient(900px circle at 15% 20%, rgba(0,0,0,.10), transparent 55%),
-                radial-gradient(900px circle at 85% 25%, rgba(0,0,0,.08), transparent 55%),
-                radial-gradient(900px circle at 50% 90%, rgba(0,0,0,.06), transparent 55%);
-        }
-
-        /* Floating icons (subtle). */
-        @keyframes joyce-drift-a { 0%,100%{transform:translate3d(0,0,0) rotate(0)} 50%{transform:translate3d(18px,-22px,0) rotate(6deg)} }
-        @keyframes joyce-drift-b { 0%,100%{transform:translate3d(0,0,0) rotate(0)} 50%{transform:translate3d(-22px,16px,0) rotate(-8deg)} }
-        @keyframes joyce-drift-c { 0%,100%{transform:translate3d(0,0,0) rotate(0)} 50%{transform:translate3d(10px,26px,0) rotate(10deg)} }
-        .joyce-float-a { animation: joyce-drift-a 7.5s ease-in-out infinite; }
-        .joyce-float-b { animation: joyce-drift-b 9.2s ease-in-out infinite; }
-        .joyce-float-c { animation: joyce-drift-c 8.4s ease-in-out infinite; }
-        .joyce-delay-1 { animation-delay: .6s; }
-        .joyce-delay-2 { animation-delay: 1.3s; }
-        .joyce-delay-3 { animation-delay: 2.1s; }
-
-        /* “Glass” cards without relying on Tailwind opacity utilities. */
         .joyce-glass {
-            background: rgba(255,255,255,0.78);
-            border: 1px solid rgba(0,0,0,0.10);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
+            background: rgba(255,255,255,.8);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
         }
+
+        /* ---------- scroll reveal ---------- */
+        .reveal {
+            opacity: 0;
+            transform: translateY(26px);
+            transition: opacity .7s cubic-bezier(.16,1,.3,1), transform .7s cubic-bezier(.16,1,.3,1);
+        }
+        .reveal.in-view { opacity: 1; transform: none; }
+        .reveal-d1 { transition-delay: .08s; }
+        .reveal-d2 { transition-delay: .16s; }
+        .reveal-d3 { transition-delay: .24s; }
+        .reveal-d4 { transition-delay: .32s; }
+
+        /* ---------- hero headline underline ---------- */
+        .draw-underline { position: relative; white-space: nowrap; }
+        .draw-underline::after {
+            content: "";
+            position: absolute; left: 0; bottom: .04em;
+            width: 100%; height: .12em;
+            background: var(--ink);
+            transform: scaleX(0); transform-origin: left;
+            animation: draw .9s cubic-bezier(.16,1,.3,1) 1s forwards;
+        }
+        @keyframes draw { to { transform: scaleX(1); } }
+
+        /* ---------- terminal ---------- */
+        .term-caret {
+            display: inline-block; width: .55em; height: 1.05em;
+            background: #e5e5e5; vertical-align: text-bottom;
+            animation: blink 1s steps(1) infinite;
+        }
+        @keyframes blink { 50% { opacity: 0; } }
+
+        /* ---------- flow diagram ---------- */
+        .flow-dash {
+            stroke-dasharray: 6 8;
+            animation: flow 1.4s linear infinite;
+        }
+        @keyframes flow { to { stroke-dashoffset: -14; } }
+        .pulse-dot { animation: pulse-dot 2.2s ease-in-out infinite; transform-origin: center; transform-box: fill-box; }
+        .pulse-dot.p2 { animation-delay: .7s; }
+        .pulse-dot.p3 { animation-delay: 1.4s; }
+        @keyframes pulse-dot { 0%,100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.35); opacity: .55; } }
+        .packet { offset-rotate: 0deg; animation: packet 3.2s linear infinite; }
+        .packet.k2 { animation-delay: 1.05s; }
+        .packet.k3 { animation-delay: 2.1s; }
+        @keyframes packet {
+            0% { offset-distance: 0%; opacity: 0; }
+            8% { opacity: 1; }
+            88% { opacity: 1; }
+            100% { offset-distance: 100%; opacity: 0; }
+        }
+
+        /* ---------- feature cards ---------- */
+        .feature-card { transition: transform .35s cubic-bezier(.16,1,.3,1), box-shadow .35s, border-color .35s; }
+        .feature-card:hover {
+            transform: translateY(-4px);
+            border-color: #0a0a0a;
+            box-shadow: 8px 8px 0 0 #0a0a0a;
+        }
+
+        /* ---------- buttons ---------- */
+        .btn-ink { transition: transform .25s cubic-bezier(.16,1,.3,1), box-shadow .25s, background-color .2s; }
+        .btn-ink:hover { transform: translateY(-2px); box-shadow: 4px 4px 0 0 rgba(0,0,0,.85); }
+        .btn-ghost:hover { background: #f5f5f5; }
+
+        /* ---------- FAQ ---------- */
+        details > summary { list-style: none; cursor: pointer; }
+        details > summary::-webkit-details-marker { display: none; }
+        details .faq-icon { transition: transform .3s; }
+        details[open] .faq-icon { transform: rotate(45deg); }
+
         @media (prefers-reduced-motion: reduce) {
-            .joyce-float-a, .joyce-float-b, .joyce-float-c { animation: none !important; }
+            .reveal { opacity: 1 !important; transform: none !important; transition: none !important; }
+            .flow-dash, .pulse-dot, .packet, .term-caret, .draw-underline::after { animation: none !important; }
+            .draw-underline::after { transform: scaleX(1); }
         }
     </style>
 </head>
-<body class="min-h-screen bg-white text-gray-900">
-    <div class="relative overflow-hidden">
-        <!-- Background layer -->
-        <div class="pointer-events-none absolute inset-0">
-            <div class="absolute inset-0 joyce-grid opacity-60"></div>
-            <div class="absolute inset-0 joyce-vignette"></div>
+<body class="min-h-screen bg-white text-neutral-900 antialiased">
 
-            <!-- Floating icons -->
-            <div class="absolute -top-10 left-6 sm:left-16 opacity-10 joyce-float-a">
-                <!-- SMS icon -->
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 sm:h-20 sm:w-20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.3" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/>
-                </svg>
+<!-- ======================= NAV ======================= -->
+<nav class="fixed top-0 inset-x-0 z-50 border-b border-neutral-200 joyce-glass">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between items-center h-16">
+            <a href="/" class="flex items-center gap-2">
+                <span class="flex items-center justify-center h-9 w-9 bg-black text-white rounded-lg">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/>
+                    </svg>
+                </span>
+                <span class="font-display text-xl font-700 font-bold tracking-tight">Joyce</span>
+            </a>
+            <div class="hidden md:flex items-center gap-1 text-sm font-medium text-neutral-600">
+                <a href="#features" class="px-3 py-2 rounded-md hover:text-black hover:bg-neutral-100 transition-colors">Features</a>
+                <a href="#how-it-works" class="px-3 py-2 rounded-md hover:text-black hover:bg-neutral-100 transition-colors">How it works</a>
+                <a href="#self-host" class="px-3 py-2 rounded-md hover:text-black hover:bg-neutral-100 transition-colors">Self-hosting</a>
+                <a href="#faq" class="px-3 py-2 rounded-md hover:text-black hover:bg-neutral-100 transition-colors">FAQ</a>
             </div>
-
-            <div class="absolute top-24 right-6 sm:right-20 opacity-10 joyce-float-b joyce-delay-1">
-                <!-- Mail icon -->
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-14 w-14 sm:h-18 sm:w-18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.3" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8m-18 8h18a2 2 0 002-2V6a2 2 0 00-2-2H3a2 2 0 00-2 2v8a2 2 0 002 2z"/>
-                </svg>
-            </div>
-
-            <div class="absolute top-1/2 -left-10 opacity-10 joyce-float-c joyce-delay-2">
-                <!-- SMS icon (outline) -->
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-20 w-20 sm:h-28 sm:w-28" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.1" d="M7 8h10M7 12h6m-6 8l-4 4V5a2 2 0 012-2h14a2 2 0 012 2v9a2 2 0 01-2 2H8z"/>
-                </svg>
-            </div>
-
-            <div class="absolute bottom-10 right-2 sm:right-16 opacity-10 joyce-float-a joyce-delay-3">
-                <!-- Mail icon (outline) -->
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-20 w-20 sm:h-28 sm:w-28" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.1" d="M4 6h16v12H4V6zm0 2l8 5 8-5"/>
-                </svg>
+            <div class="flex items-center gap-2 sm:gap-3">
+                <a href="/login/" class="btn-ghost text-sm font-medium text-neutral-700 hover:text-black px-4 py-2 rounded-md transition-colors">Sign in</a>
+                <a href="/workspace/signup/" class="btn-ink bg-black text-white px-4 py-2 rounded-md text-sm font-semibold">Get started</a>
             </div>
         </div>
+    </div>
+</nav>
 
-        <!-- Navigation -->
-        <nav class="relative border-b border-gray-200 joyce-glass">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="flex justify-between h-16">
-                    <div class="flex items-center">
-                        <div class="flex-shrink-0 flex items-center">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-                            </svg>
-                            <span class="ml-2 text-xl font-bold text-black">Joyce</span>
-                        </div>
+<!-- ======================= HERO ======================= -->
+<header class="relative overflow-hidden pt-16">
+    <div class="pointer-events-none absolute inset-0 joyce-grid"></div>
+
+    <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 sm:pt-24 pb-14">
+        <div class="grid lg:grid-cols-2 gap-14 items-center">
+            <!-- Left: copy -->
+            <div>
+                <div class="reveal in-view inline-flex items-center gap-2 rounded-full border border-neutral-300 bg-white px-3 py-1 text-xs font-medium text-neutral-600">
+                    <span class="relative flex h-2 w-2">
+                        <span class="absolute inline-flex h-full w-full rounded-full bg-black opacity-60 animate-ping"></span>
+                        <span class="relative inline-flex h-2 w-2 rounded-full bg-black"></span>
+                    </span>
+                    Open source &middot; GPL v3 &middot; Built on Jasmin's Perspective Broker API
+                </div>
+
+                <h1 class="reveal in-view reveal-d1 font-display mt-6 text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.05]">
+                    Run your Jasmin SMS gateway.<br>
+                    <span class="draw-underline">Skip the telnet.</span>
+                </h1>
+
+                <p class="reveal in-view reveal-d2 mt-6 text-lg text-neutral-600 max-w-xl leading-relaxed">
+                    Joyce is a self-hosted web console for the
+                    <a href="https://www.jasminsms.com/" class="underline decoration-neutral-300 underline-offset-4 hover:decoration-black">Jasmin SMS Gateway</a>.
+                    Configure SMPP connectors, users, MO/MT routes, filters and interceptors from a clean UI.
+                    Every change is applied to your running gateway in real time, and you only see success when Jasmin confirms it.
+                </p>
+
+                <div class="reveal in-view reveal-d3 mt-9 flex flex-col sm:flex-row gap-3">
+                    <a href="/workspace/signup/" class="btn-ink inline-flex items-center justify-center gap-2 bg-black text-white px-7 py-3.5 rounded-md text-base font-semibold">
+                        Create your workspace
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+                    </a>
+                    <a href="/login/" class="btn-ghost inline-flex items-center justify-center border border-neutral-900 text-black px-7 py-3.5 rounded-md text-base font-semibold transition-colors">
+                        Sign in
+                    </a>
+                </div>
+
+                <dl class="reveal in-view reveal-d4 mt-12 grid grid-cols-3 gap-6 max-w-md">
+                    <div>
+                        <dt class="text-2xl font-display font-bold">0</dt>
+                        <dd class="text-xs text-neutral-500 mt-1">telnet sessions needed</dd>
                     </div>
-                    <div class="flex items-center space-x-2 sm:space-x-4">
-                        <a href="#features" class="hidden sm:inline-flex text-gray-700 hover:text-black px-3 py-2 text-sm font-medium">Features</a>
-                        <a href="/login/" class="text-gray-700 hover:text-black px-3 py-2 text-sm font-medium">Sign In</a>
-                        <a href="/workspace/signup/" class="bg-black text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-800 transition-colors">Get Started</a>
+                    <div>
+                        <dt class="text-2xl font-display font-bold">100%</dt>
+                        <dd class="text-xs text-neutral-500 mt-1">of jcli config modules covered</dd>
+                    </div>
+                    <div>
+                        <dt class="text-2xl font-display font-bold">1</dt>
+                        <dd class="text-xs text-neutral-500 mt-1">docker compose to run it all</dd>
+                    </div>
+                </dl>
+            </div>
+
+            <!-- Right: animated terminal + flow -->
+            <div class="reveal in-view reveal-d2 space-y-5">
+                <!-- The old way: terminal -->
+                <div class="rounded-xl overflow-hidden border border-neutral-800 shadow-2xl bg-neutral-950 text-neutral-200">
+                    <div class="flex items-center justify-between px-4 py-2.5 bg-neutral-900 border-b border-neutral-800">
+                        <div class="flex gap-1.5">
+                            <span class="h-3 w-3 rounded-full bg-neutral-700"></span>
+                            <span class="h-3 w-3 rounded-full bg-neutral-700"></span>
+                            <span class="h-3 w-3 rounded-full bg-neutral-700"></span>
+                        </div>
+                        <span class="font-mono text-[11px] text-neutral-500">the old way: telnet :8990</span>
+                    </div>
+                    <div class="p-4 font-mono text-[13px] leading-6">
+                        <div id="term" class="whitespace-pre-wrap min-h-[132px]"></div><span class="term-caret"></span>
                     </div>
                 </div>
-            </div>
-        </nav>
 
-        <!-- Hero -->
-        <header class="relative">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-24">
-                <div class="max-w-3xl">
-                    <div class="inline-flex items-center gap-2 rounded-full border border-gray-200 joyce-glass px-3 py-1 text-xs text-gray-700">
-                        <span class="inline-flex h-2 w-2 rounded-full bg-black"></span>
-                        Built for Jasmin SMS Gateway
+                <!-- The Joyce way: flow diagram -->
+                <div class="rounded-xl border border-neutral-200 bg-white shadow-xl p-5">
+                    <div class="flex items-center justify-between mb-3">
+                        <p class="text-xs font-semibold uppercase tracking-widest text-neutral-500">The Joyce way</p>
+                        <span class="inline-flex items-center gap-1.5 text-[11px] font-medium text-neutral-600">
+                            <span class="h-1.5 w-1.5 rounded-full bg-black animate-pulse"></span> live via Perspective Broker
+                        </span>
                     </div>
+                    <svg viewBox="0 0 560 150" class="w-full" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Message flow: apps into Jasmin routing out to carriers">
+                        <!-- lanes -->
+                        <path id="lane1" d="M85 40 C 160 40, 180 62, 262 70" stroke="#d4d4d4" stroke-width="1.5" class="flow-dash"/>
+                        <path id="lane2" d="M85 110 C 160 110, 180 82, 262 74" stroke="#d4d4d4" stroke-width="1.5" class="flow-dash"/>
+                        <path id="lane3" d="M300 72 C 380 72, 400 40, 476 40" stroke="#d4d4d4" stroke-width="1.5" class="flow-dash"/>
+                        <path id="lane4" d="M300 76 C 380 76, 400 110, 476 110" stroke="#d4d4d4" stroke-width="1.5" class="flow-dash"/>
 
-                    <h1 class="mt-6 text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight">
-                        A clean dashboard for
-                        <span class="text-black">SMS routing</span>,
-                        users and connectors.
-                    </h1>
-                    <p class="mt-6 text-lg text-gray-600 max-w-2xl">
-                        Joyce helps you manage Jasmin faster: create groups and users, configure SMPP/HTTP connectors,
-                        add filters and routes, and keep operations simple — all in a focused black & white UI.
+                        <!-- moving packets -->
+                        <circle r="3.5" fill="#0a0a0a" class="packet" style="offset-path: path('M85 40 C 160 40, 180 62, 262 70')"/>
+                        <circle r="3.5" fill="#0a0a0a" class="packet k2" style="offset-path: path('M85 110 C 160 110, 180 82, 262 74')"/>
+                        <circle r="3.5" fill="#0a0a0a" class="packet k3" style="offset-path: path('M300 72 C 380 72, 400 40, 476 40')"/>
+
+                        <!-- left nodes -->
+                        <rect x="8" y="22" width="78" height="36" rx="8" fill="white" stroke="#0a0a0a" stroke-width="1.5"/>
+                        <text x="47" y="44" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="11" fill="#0a0a0a">HTTP API</text>
+                        <rect x="8" y="92" width="78" height="36" rx="8" fill="white" stroke="#0a0a0a" stroke-width="1.5"/>
+                        <text x="47" y="114" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="11" fill="#0a0a0a">SMPP bind</text>
+
+                        <!-- center node -->
+                        <rect x="234" y="46" width="96" height="56" rx="10" fill="#0a0a0a"/>
+                        <text x="282" y="70" text-anchor="middle" font-family="Space Grotesk, sans-serif" font-weight="600" font-size="12" fill="white">Routing</text>
+                        <text x="282" y="88" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9" fill="#a3a3a3">filters &middot; rules</text>
+                        <circle cx="234" cy="74" r="3" fill="#0a0a0a" class="pulse-dot"/>
+                        <circle cx="330" cy="74" r="3" fill="#0a0a0a" class="pulse-dot p2"/>
+
+                        <!-- right nodes -->
+                        <rect x="476" y="22" width="76" height="36" rx="8" fill="white" stroke="#0a0a0a" stroke-width="1.5"/>
+                        <text x="514" y="40" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#0a0a0a">smppc_01</text>
+                        <text x="514" y="51" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="8" fill="#737373">carrier A</text>
+                        <rect x="476" y="92" width="76" height="36" rx="8" fill="white" stroke="#0a0a0a" stroke-width="1.5"/>
+                        <text x="514" y="110" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#0a0a0a">smppc_02</text>
+                        <text x="514" y="121" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="8" fill="#737373">carrier B</text>
+                        <circle cx="514" cy="16" r="3" fill="#0a0a0a" class="pulse-dot p3"/>
+                    </svg>
+                    <p class="mt-2 text-xs text-neutral-500">Traffic from your apps is filtered, routed and delivered through the SMPP connectors you configure in Joyce.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</header>
+
+<!-- ======================= CAPABILITIES STRIP ======================= -->
+<div class="border-y border-neutral-200 bg-neutral-950 text-neutral-300 py-4">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex flex-wrap items-center justify-center gap-y-2 font-mono text-xs tracking-wider">
+            <span class="px-5">SMPP v3.4 client connectors</span><span class="text-neutral-600">&#9670;</span>
+            <span class="px-5">MO &amp; MT routing</span><span class="text-neutral-600">&#9670;</span>
+            <span class="px-5">Static / RoundRobin / Failover routes</span><span class="text-neutral-600">&#9670;</span>
+            <span class="px-5">message filters</span><span class="text-neutral-600">&#9670;</span>
+            <span class="px-5">python interceptors</span><span class="text-neutral-600">&#9670;</span>
+            <span class="px-5">user credentials &amp; quotas</span><span class="text-neutral-600">&#9670;</span>
+            <span class="px-5">throughput throttling</span><span class="text-neutral-600">&#9670;</span>
+            <span class="px-5">DLR handling</span><span class="text-neutral-600">&#9670;</span>
+            <span class="px-5">multi-tenant workspaces</span>
+        </div>
+    </div>
+</div>
+
+<!-- ======================= WHAT IS THIS ======================= -->
+<section class="py-20 sm:py-24">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="grid lg:grid-cols-2 gap-12 items-start">
+            <div class="reveal">
+                <p class="font-mono text-xs uppercase tracking-widest text-neutral-500">What is Joyce?</p>
+                <h2 class="font-display mt-3 text-3xl sm:text-4xl font-bold tracking-tight">
+                    Jasmin is a world-class SMS gateway.<br>Its admin experience isn't.
+                </h2>
+                <div class="mt-6 space-y-4 text-neutral-600 leading-relaxed">
+                    <p>
+                        <a href="https://docs.jasminsms.com/" class="underline decoration-neutral-300 underline-offset-4 hover:decoration-black">Jasmin</a>
+                        is a battle-tested, open-source SMS gateway used by carriers, aggregators and businesses to move
+                        millions of messages over SMPP and HTTP. But out of the box, configuring it means a telnet session
+                        into <span class="font-mono text-sm bg-neutral-100 px-1.5 py-0.5 rounded">jcli</span>: cryptic commands,
+                        no validation, no audit trail, and one typo away from broken routing.
                     </p>
+                    <p>
+                        Joyce replaces that with a web console built on Jasmin's native
+                        <span class="font-semibold text-neutral-900">Perspective Broker API</span>, the same
+                        management interface jcli itself uses. Nothing is faked or scraped: when you save a connector
+                        or a route in Joyce, it is applied to the live gateway and persisted, and if Jasmin rejects it
+                        you see the real error immediately.
+                    </p>
+                    <p>
+                        It's a Django application you host yourself, next to your gateway. Your credentials, your
+                        traffic and your configuration never leave your infrastructure.
+                    </p>
+                </div>
+            </div>
 
-                    <div class="mt-10 flex flex-col sm:flex-row gap-3 sm:gap-4">
-                        <a href="/workspace/signup/"
-                           class="inline-flex items-center justify-center bg-black text-white px-6 py-3 rounded-md text-base font-medium hover:bg-gray-800 transition-colors">
-                            Get started
-                        </a>
-                        <a href="/login/"
-                           class="inline-flex items-center justify-center border border-black text-black px-6 py-3 rounded-md text-base font-medium hover:bg-gray-50 transition-colors">
-                            Sign in
-                        </a>
-                        <a href="#features"
-                           class="inline-flex items-center justify-center text-gray-700 px-6 py-3 rounded-md text-base font-medium hover:text-black transition-colors">
-                            See features →
-                        </a>
-                    </div>
-
-                    <div class="mt-12 grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        <div class="rounded-xl p-4 joyce-glass">
-                            <p class="text-xs text-gray-500">Connectors</p>
-                            <p class="mt-1 font-semibold">SMPP & HTTP</p>
+            <!-- before / after card -->
+            <div class="reveal reveal-d2">
+                <div class="rounded-xl border border-neutral-200 overflow-hidden shadow-lg">
+                    <div class="grid sm:grid-cols-2">
+                        <div class="bg-neutral-950 text-neutral-400 p-6">
+                            <p class="font-mono text-[11px] uppercase tracking-widest text-neutral-500 mb-4">Before &middot; jcli</p>
+                            <pre class="font-mono text-[12px] leading-6 overflow-x-auto">smppccm -a
+&gt; cid carrier_a
+&gt; host 10.0.0.12
+&gt; port 2775
+&gt; username smppuser
+&gt; submit_throughput 50
+&gt; ok
+mtrouter -a
+&gt; type StaticMTRoute
+&gt; filters U-tier1
+&gt; ...</pre>
                         </div>
-                        <div class="rounded-xl p-4 joyce-glass">
-                            <p class="text-xs text-gray-500">Routing</p>
-                            <p class="mt-1 font-semibold">Filters & rules</p>
-                        </div>
-                        <div class="rounded-xl p-4 joyce-glass">
-                            <p class="text-xs text-gray-500">Operations</p>
-                            <p class="mt-1 font-semibold">Audit-friendly UI</p>
+                        <div class="bg-white p-6">
+                            <p class="font-mono text-[11px] uppercase tracking-widest text-neutral-500 mb-4">After &middot; Joyce</p>
+                            <ul class="space-y-3 text-sm text-neutral-800">
+                                <li class="flex items-start gap-2.5">
+                                    <svg class="h-5 w-5 shrink-0 mt-px" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                                    Forms with validation for every connector &amp; route option
+                                </li>
+                                <li class="flex items-start gap-2.5">
+                                    <svg class="h-5 w-5 shrink-0 mt-px" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                                    Start / stop connectors with live status indicators
+                                </li>
+                                <li class="flex items-start gap-2.5">
+                                    <svg class="h-5 w-5 shrink-0 mt-px" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                                    Real errors from Jasmin surfaced right in the form
+                                </li>
+                                <li class="flex items-start gap-2.5">
+                                    <svg class="h-5 w-5 shrink-0 mt-px" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                                    Who-changed-what tracked on every object
+                                </li>
+                                <li class="flex items-start gap-2.5">
+                                    <svg class="h-5 w-5 shrink-0 mt-px" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                                    Role-based access per workspace
+                                </li>
+                            </ul>
                         </div>
                     </div>
                 </div>
             </div>
-        </header>
+        </div>
+    </div>
+</section>
 
-    <!-- Features Section -->
-    <div id="features" class="bg-gray-50 py-16">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="text-center">
-                <h2 class="text-3xl font-extrabold text-gray-900">Everything you need to manage your SMS gateway</h2>
-                <p class="mt-4 max-w-2xl mx-auto text-gray-600">
-                    Joyce provides a clean interface for all your Jasmin SMS Gateway configuration needs.
+<!-- ======================= FEATURES ======================= -->
+<section id="features" class="py-20 sm:py-24 bg-neutral-50 border-y border-neutral-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="max-w-2xl reveal">
+            <p class="font-mono text-xs uppercase tracking-widest text-neutral-500">Features</p>
+            <h2 class="font-display mt-3 text-3xl sm:text-4xl font-bold tracking-tight">Every jcli module, as a proper UI</h2>
+            <p class="mt-4 text-neutral-600 leading-relaxed">
+                Everything you would normally manage over telnet (groups, users, connectors, routes, filters and
+                interceptors) is a first-class screen with permissions and history.
+            </p>
+        </div>
+
+        <div class="mt-14 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- 1 -->
+            <div class="feature-card reveal bg-white p-7 rounded-xl border border-neutral-200">
+                <div class="flex items-center justify-center h-11 w-11 rounded-lg bg-black text-white">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0"/></svg>
+                </div>
+                <h3 class="font-display mt-5 text-lg font-semibold">SMPP client connectors</h3>
+                <p class="mt-2 text-sm text-neutral-600 leading-relaxed">
+                    The full <span class="font-mono text-xs bg-neutral-100 px-1 py-0.5 rounded">smppccm</span> surface: bind type,
+                    TON/NPI, timers, reconnection policy, DLR expiry, throughput throttling, SSL. Start, stop and monitor
+                    each connector from the list view.
                 </p>
             </div>
-
-            <div class="mt-16 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
-                <!-- Feature 1 -->
-                <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-                    <div class="flex items-center justify-center h-12 w-12 rounded-md bg-black text-white">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                        </svg>
-                    </div>
-                    <h3 class="mt-6 text-lg font-medium text-gray-900">Message Management</h3>
-                    <p class="mt-2 text-gray-600">
-                        Send, receive, and track SMS messages with comprehensive reporting and analytics.
-                    </p>
+            <!-- 2 -->
+            <div class="feature-card reveal reveal-d1 bg-white p-7 rounded-xl border border-neutral-200">
+                <div class="flex items-center justify-center h-11 w-11 rounded-lg bg-black text-white">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"/></svg>
                 </div>
-
-                <!-- Feature 2 -->
-                <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-                    <div class="flex items-center justify-center h-12 w-12 rounded-md bg-black text-white">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                        </svg>
-                    </div>
-                    <h3 class="mt-6 text-lg font-medium text-gray-900">Gateway Configuration</h3>
-                    <p class="mt-2 text-gray-600">
-                        Easily configure your Jasmin gateway settings, connectors, and routing rules.
-                    </p>
+                <h3 class="font-display mt-5 text-lg font-semibold">MO &amp; MT routing</h3>
+                <p class="mt-2 text-sm text-neutral-600 leading-relaxed">
+                    Build Default, Static, Random-RoundRobin and Failover routes for both directions, attach filters
+                    and connectors, set rates and ordering. No route syntax to memorize.
+                </p>
+            </div>
+            <!-- 3 -->
+            <div class="feature-card reveal reveal-d2 bg-white p-7 rounded-xl border border-neutral-200">
+                <div class="flex items-center justify-center h-11 w-11 rounded-lg bg-black text-white">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>
                 </div>
+                <h3 class="font-display mt-5 text-lg font-semibold">Filters &amp; interceptors</h3>
+                <p class="mt-2 text-sm text-neutral-600 leading-relaxed">
+                    Create MO/MT filters (source, destination, user, group, content and more) and upload Python
+                    interceptor scripts that rewrite or reject messages mid-flight.
+                </p>
+            </div>
+            <!-- 4 -->
+            <div class="feature-card reveal bg-white p-7 rounded-xl border border-neutral-200">
+                <div class="flex items-center justify-center h-11 w-11 rounded-lg bg-black text-white">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                </div>
+                <h3 class="font-display mt-5 text-lg font-semibold">Gateway users &amp; groups</h3>
+                <p class="mt-2 text-sm text-neutral-600 leading-relaxed">
+                    Manage the accounts your customers bind and send with: HTTP/SMPP authorizations, value filters,
+                    defaults, balance and throughput quotas. The complete Jasmin credential model, not a subset.
+                </p>
+            </div>
+            <!-- 5 -->
+            <div class="feature-card reveal reveal-d1 bg-white p-7 rounded-xl border border-neutral-200">
+                <div class="flex items-center justify-center h-11 w-11 rounded-lg bg-black text-white">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+                </div>
+                <h3 class="font-display mt-5 text-lg font-semibold">Multi-tenant workspaces</h3>
+                <p class="mt-2 text-sm text-neutral-600 leading-relaxed">
+                    Isolate teams or customers in workspaces with their own members and roles (Administrator,
+                    Gateway Manager, Reports, API) on one shared Jasmin deployment.
+                </p>
+            </div>
+            <!-- 6 -->
+            <div class="feature-card reveal reveal-d2 bg-white p-7 rounded-xl border border-neutral-200">
+                <div class="flex items-center justify-center h-11 w-11 rounded-lg bg-black text-white">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                </div>
+                <h3 class="font-display mt-5 text-lg font-semibold">Truthful, live sync</h3>
+                <p class="mt-2 text-sm text-neutral-600 leading-relaxed">
+                    Joyce talks to the gateway over Jasmin's Perspective Broker and waits for confirmation.
+                    If Jasmin rejects a change, you get the actual error. Never a green toast over a broken config.
+                </p>
+            </div>
+        </div>
+    </div>
+</section>
 
-                <!-- Feature 3 -->
-                <div class="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-                    <div class="flex items-center justify-center h-12 w-12 rounded-md bg-black text-white">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                        </svg>
+<!-- ======================= HOW IT WORKS ======================= -->
+<section id="how-it-works" class="py-20 sm:py-24">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="max-w-2xl reveal">
+            <p class="font-mono text-xs uppercase tracking-widest text-neutral-500">How it works</p>
+            <h2 class="font-display mt-3 text-3xl sm:text-4xl font-bold tracking-tight">From zero to routed traffic</h2>
+        </div>
+
+        <ol class="mt-14 grid md:grid-cols-4 gap-8">
+            <li class="reveal relative">
+                <div class="font-display text-5xl font-bold text-neutral-200">01</div>
+                <h3 class="font-display mt-3 text-lg font-semibold">Point Joyce at Jasmin</h3>
+                <p class="mt-2 text-sm text-neutral-600 leading-relaxed">
+                    Set the RouterPB and SMPP management ports (<span class="font-mono text-xs">8988</span>/<span class="font-mono text-xs">8989</span>)
+                    in the environment, or just run the bundled Docker Compose, which ships Jasmin, Redis, RabbitMQ and a test SMSC.
+                </p>
+            </li>
+            <li class="reveal reveal-d1 relative">
+                <div class="font-display text-5xl font-bold text-neutral-200">02</div>
+                <h3 class="font-display mt-3 text-lg font-semibold">Create a workspace</h3>
+                <p class="mt-2 text-sm text-neutral-600 leading-relaxed">
+                    Sign up, name your organization and invite teammates with the roles they need. Each workspace keeps
+                    its gateway objects separate.
+                </p>
+            </li>
+            <li class="reveal reveal-d2 relative">
+                <div class="font-display text-5xl font-bold text-neutral-200">03</div>
+                <h3 class="font-display mt-3 text-lg font-semibold">Configure connectors &amp; routes</h3>
+                <p class="mt-2 text-sm text-neutral-600 leading-relaxed">
+                    Add your carriers as SMPP connectors, define groups and users, then wire up filters and MO/MT routes.
+                    Start the connectors and watch them bind.
+                </p>
+            </li>
+            <li class="reveal reveal-d3 relative">
+                <div class="font-display text-5xl font-bold text-neutral-200">04</div>
+                <h3 class="font-display mt-3 text-lg font-semibold">Send traffic</h3>
+                <p class="mt-2 text-sm text-neutral-600 leading-relaxed">
+                    Your applications keep using Jasmin's standard HTTP API and SMPP server. Joyce manages the gateway
+                    and never sits in your message path.
+                </p>
+            </li>
+        </ol>
+    </div>
+</section>
+
+<!-- ======================= SELF-HOSTING ======================= -->
+<section id="self-host" class="py-20 sm:py-24 bg-neutral-950 text-white overflow-hidden">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="grid lg:grid-cols-2 gap-12 items-center">
+            <div class="reveal">
+                <p class="font-mono text-xs uppercase tracking-widest text-neutral-500">Self-hosting</p>
+                <h2 class="font-display mt-3 text-3xl sm:text-4xl font-bold tracking-tight">Your gateway, your servers, your rules</h2>
+                <p class="mt-5 text-neutral-400 leading-relaxed">
+                    Joyce is free software under GPL v3. Run it on the same host as Jasmin or anywhere that can reach
+                    the PB ports. The repository includes a complete development stack.
+                </p>
+                <ul class="mt-8 space-y-4 text-sm">
+                    <li class="flex items-start gap-3">
+                        <span class="font-mono text-xs bg-white text-black rounded px-2 py-1 mt-px shrink-0">1</span>
+                        <span class="text-neutral-300"><span class="text-white font-semibold">Requirements:</span> Python 3.11+, PostgreSQL, and a Jasmin instance with its Perspective Broker ports enabled.</span>
+                    </li>
+                    <li class="flex items-start gap-3">
+                        <span class="font-mono text-xs bg-white text-black rounded px-2 py-1 mt-px shrink-0">2</span>
+                        <span class="text-neutral-300"><span class="text-white font-semibold">Batteries included:</span> docker-compose with Jasmin, Redis, RabbitMQ, a REST API container and an SMPP simulator for safe testing.</span>
+                    </li>
+                    <li class="flex items-start gap-3">
+                        <span class="font-mono text-xs bg-white text-black rounded px-2 py-1 mt-px shrink-0">3</span>
+                        <span class="text-neutral-300"><span class="text-white font-semibold">No lock-in:</span> Joyce writes standard Jasmin configuration. Drop back to jcli any time, everything stays compatible.</span>
+                    </li>
+                </ul>
+            </div>
+            <div class="reveal reveal-d2">
+                <div class="rounded-xl border border-neutral-800 bg-neutral-900 shadow-2xl overflow-hidden">
+                    <div class="flex items-center justify-between px-4 py-2.5 border-b border-neutral-800">
+                        <div class="flex gap-1.5">
+                            <span class="h-3 w-3 rounded-full bg-neutral-700"></span>
+                            <span class="h-3 w-3 rounded-full bg-neutral-700"></span>
+                            <span class="h-3 w-3 rounded-full bg-neutral-700"></span>
+                        </div>
+                        <span class="font-mono text-[11px] text-neutral-500">quick start</span>
                     </div>
-                    <h3 class="mt-6 text-lg font-medium text-gray-900">Secure Access</h3>
-                    <p class="mt-2 text-gray-600">
-                        Role-based access control and audit logging to keep your messaging secure.
-                    </p>
+                    <pre class="p-5 font-mono text-[13px] leading-7 text-neutral-300 overflow-x-auto"><span class="text-neutral-500"># grab the code</span>
+git clone https://github.com/ekeeya/jasmin-web-gui.git
+cd jasmin-web-gui
+
+<span class="text-neutral-500"># bring up jasmin + friends</span>
+docker compose up -d
+
+<span class="text-neutral-500"># run joyce</span>
+poetry install
+python manage.py migrate
+python manage.py runserver</pre>
                 </div>
             </div>
         </div>
     </div>
+</section>
 
-    <!-- CTA Section -->
-    <div class="bg-white py-16">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-            <h2 class="text-3xl font-extrabold text-gray-900">Ready to get started?</h2>
-            <p class="mt-4 max-w-2xl mx-auto text-gray-600">
-                Join businesses who trust Joyce to manage their SMS gateway configuration.
-            </p>
-            <div class="mt-8 flex justify-center space-x-4">
-                <a href="/workspace/signup/" class="bg-black text-white px-6 py-3 rounded-md text-base font-medium hover:bg-gray-800 transition-colors">Sign Up Free</a>
-                <a href="/login/" class="border border-black text-black px-6 py-3 rounded-md text-base font-medium hover:bg-gray-50 transition-colors">Sign In</a>
-            </div>
+<!-- ======================= FAQ ======================= -->
+<section id="faq" class="py-20 sm:py-24">
+    <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="reveal text-center">
+            <p class="font-mono text-xs uppercase tracking-widest text-neutral-500">FAQ</p>
+            <h2 class="font-display mt-3 text-3xl sm:text-4xl font-bold tracking-tight">Common questions</h2>
+        </div>
+
+        <div class="mt-12 space-y-3">
+            <details class="reveal group rounded-lg border border-neutral-200 bg-white px-6 py-4">
+                <summary class="flex items-center justify-between font-medium">
+                    Does Joyce replace jcli?
+                    <span class="faq-icon text-xl leading-none select-none">+</span>
+                </summary>
+                <p class="mt-3 text-sm text-neutral-600 leading-relaxed">
+                    For day-to-day configuration, yes. Joyce uses the same management API that jcli uses, so both stay
+                    in sync. You can keep jcli around for edge cases and debugging, and Joyce won't mind.
+                </p>
+            </details>
+            <details class="reveal reveal-d1 group rounded-lg border border-neutral-200 bg-white px-6 py-4">
+                <summary class="flex items-center justify-between font-medium">
+                    Does my SMS traffic flow through Joyce?
+                    <span class="faq-icon text-xl leading-none select-none">+</span>
+                </summary>
+                <p class="mt-3 text-sm text-neutral-600 leading-relaxed">
+                    No. Messages keep flowing directly through Jasmin's HTTP API and SMPP server. Joyce is a management
+                    plane only. If it goes down, your traffic doesn't.
+                </p>
+            </details>
+            <details class="reveal reveal-d2 group rounded-lg border border-neutral-200 bg-white px-6 py-4">
+                <summary class="flex items-center justify-between font-medium">
+                    Which Jasmin versions are supported?
+                    <span class="faq-icon text-xl leading-none select-none">+</span>
+                </summary>
+                <p class="mt-3 text-sm text-neutral-600 leading-relaxed">
+                    Joyce is developed and tested against Jasmin 0.11.x. Because it uses the stable Perspective Broker
+                    interfaces, nearby versions generally work too.
+                </p>
+            </details>
+            <details class="reveal reveal-d3 group rounded-lg border border-neutral-200 bg-white px-6 py-4">
+                <summary class="flex items-center justify-between font-medium">
+                    Is it really free?
+                    <span class="faq-icon text-xl leading-none select-none">+</span>
+                </summary>
+                <p class="mt-3 text-sm text-neutral-600 leading-relaxed">
+                    Yes. Free and open source under GPL v3. If it saves you hours of telnet pain, the author accepts
+                    coffee in crypto (see the repository README).
+                </p>
+            </details>
         </div>
     </div>
+</section>
 
-    <!-- Footer -->
-    <footer class="bg-white border-t border-gray-200">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-            <div class="flex flex-col md:flex-row justify-between items-center">
-                <div class="flex items-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-                    </svg>
-                    <span class="ml-2 text-lg font-medium text-black">Joyce</span>
+<!-- ======================= CTA ======================= -->
+<section class="py-20 sm:py-24 border-t border-neutral-200 bg-neutral-50">
+    <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center reveal">
+        <h2 class="font-display text-3xl sm:text-4xl font-bold tracking-tight">Your last telnet session ended today.</h2>
+        <p class="mt-4 text-neutral-600">
+            Create a workspace, connect your Jasmin instance and manage your gateway like it's {% now "Y" %}.
+        </p>
+        <div class="mt-9 flex flex-col sm:flex-row justify-center gap-3">
+            <a href="/workspace/signup/" class="btn-ink inline-flex items-center justify-center bg-black text-white px-8 py-3.5 rounded-md text-base font-semibold">Get started for free</a>
+            <a href="/login/" class="btn-ghost inline-flex items-center justify-center border border-neutral-900 text-black px-8 py-3.5 rounded-md text-base font-semibold transition-colors">Sign in</a>
+        </div>
+    </div>
+</section>
+
+<!-- ======================= FOOTER ======================= -->
+<footer class="bg-white border-t border-neutral-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div class="flex flex-col md:flex-row justify-between gap-8">
+            <div>
+                <div class="flex items-center gap-2">
+                    <span class="flex items-center justify-center h-8 w-8 bg-black text-white rounded-lg">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/>
+                        </svg>
+                    </span>
+                    <span class="font-display text-lg font-bold">Joyce</span>
                 </div>
-                <div class="mt-4 md:mt-0">
-                    <p class="text-gray-500 text-sm">
-                         &copy; {% now "Y" %} Joyce for Jasmin. All rights reserved.
-                    </p>
+                <p class="mt-3 text-sm text-neutral-500 max-w-xs leading-relaxed">
+                    The open-source web console for Jasmin SMS Gateway. Made possible by the amazing
+                    <a href="https://www.jasminsms.com/" class="underline decoration-neutral-300 underline-offset-2 hover:decoration-black">Jasmin team</a>.
+                </p>
+            </div>
+            <div class="grid grid-cols-2 gap-12 text-sm">
+                <div>
+                    <p class="font-semibold mb-3">Project</p>
+                    <ul class="space-y-2 text-neutral-500">
+                        <li><a href="https://github.com/ekeeya/jasmin-web-gui" class="hover:text-black transition-colors">GitHub</a></li>
+                        <li><a href="https://docs.jasminsms.com/" class="hover:text-black transition-colors">Jasmin docs</a></li>
+                        <li><a href="#features" class="hover:text-black transition-colors">Features</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <p class="font-semibold mb-3">Contact</p>
+                    <ul class="space-y-2 text-neutral-500">
+                        <li><a href="mailto:ekeeya@ds.co.ug" class="hover:text-black transition-colors">ekeeya@ds.co.ug</a></li>
+                        <li><a href="https://x.com/keldoticom" class="hover:text-black transition-colors">@keldoticom</a></li>
+                    </ul>
                 </div>
             </div>
         </div>
-    </footer>
+        <div class="mt-10 pt-6 border-t border-neutral-200 flex flex-col sm:flex-row justify-between gap-2 text-xs text-neutral-500">
+            <p>&copy; {% now "Y" %} Joyce for Jasmin. Licensed under GPL v3.</p>
+            <p>Not affiliated with the Jasmin project.</p>
+        </div>
     </div>
+</footer>
+
+<script>
+    // scroll reveal
+    (function () {
+        var prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        var items = document.querySelectorAll('.reveal');
+        if (prefersReduced || !('IntersectionObserver' in window)) {
+            items.forEach(function (el) { el.classList.add('in-view'); });
+            return;
+        }
+        var io = new IntersectionObserver(function (entries) {
+            entries.forEach(function (entry) {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('in-view');
+                    io.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.12 });
+        items.forEach(function (el) { io.observe(el); });
+    })();
+
+    // terminal typing animation
+    (function () {
+        var el = document.getElementById('term');
+        if (!el) return;
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+            el.textContent = '$ telnet 127.0.0.1 8990\nAuthentication required.\nUsername: jcliadmin\nPassword:\njcli : group -a\n> gid customers\n> ok\nSuccessfully added Group [customers]';
+            return;
+        }
+        var lines = [
+            { text: '$ telnet 127.0.0.1 8990', cls: 'text-neutral-400' },
+            { text: 'Authentication required.', cls: 'text-neutral-500' },
+            { text: 'Username: jcliadmin', cls: 'text-neutral-400' },
+            { text: 'Password: ********', cls: 'text-neutral-400' },
+            { text: 'jcli : smppccm -a', cls: 'text-white' },
+            { text: '> cid carrier_a', cls: 'text-neutral-300' },
+            { text: '> host 10.0.0.12', cls: 'text-neutral-300' },
+            { text: '> ok', cls: 'text-neutral-300' },
+            { text: 'Error: 400 Mandatory arguments not found', cls: 'text-neutral-100 font-semibold' },
+            { text: '…there has to be a better way.', cls: 'text-neutral-500 italic' }
+        ];
+        var li = 0, ci = 0;
+        function type() {
+            if (li >= lines.length) {
+                setTimeout(function () { el.innerHTML = ''; li = 0; ci = 0; type(); }, 6000);
+                return;
+            }
+            var line = lines[li];
+            if (ci === 0) {
+                var span = document.createElement('span');
+                span.className = line.cls;
+                el.appendChild(span);
+                el.appendChild(document.createTextNode('\n'));
+            }
+            var spans = el.querySelectorAll('span');
+            var current = spans[spans.length - 1];
+            ci++;
+            current.textContent = line.text.slice(0, ci);
+            if (ci >= line.text.length) {
+                li++; ci = 0;
+                setTimeout(type, li === 9 ? 650 : 260);
+            } else {
+                setTimeout(type, 18 + Math.random() * 26);
+            }
+        }
+        type();
+    })();
+</script>
 </body>
 </html>

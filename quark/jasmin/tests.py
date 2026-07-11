@@ -1,15 +1,22 @@
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django.test import TestCase
-from .models import JasminGroup
-from .router_pb import RouterPBInterface
-from quark.utils.utils import logger
 from jasmin.routing.jasminApi import Group
+
+from .models import JasminGroup
+from .reactor import run_in_reactor
+from .router_pb import RouterPBInterface
+
+User = get_user_model()
 
 
 class GroupTestCase(TestCase):
+    """
+    Integration tests, these require a reachable Jasmin RouterPB
+    (see JASMIN_ROUTER_PB_* settings).
+    """
+
     def setUp(self):
         self.router = RouterPBInterface()
-        self.group_jasmin = None
         self.user, _ = User.objects.get_or_create(username="ekeeya", defaults={'password': '12345678'})
 
         self.group, created = JasminGroup.objects.get_or_create(
@@ -25,36 +32,15 @@ class GroupTestCase(TestCase):
         self.assertIsInstance(self.group, JasminGroup)
 
     def test_jasmin_group_creation(self):
-        def handle_result(result):
-            logger.debug(f"Result from Twisted operation: {result}")
-            self.assertIsInstance(result, list, "Result is not a list")
-            self.assertTrue(all(isinstance(item, Group) for item in result),
-                            "Not all items are instances of Jasmin Group")
+        groups = run_in_reactor(self.router.get_all_groups)
 
-            for item in result:
-                if item.gid == self.group.gid:
-                    self.group_jasmin = item
-                    break
-            self.assertIsInstance(self.group_jasmin, Group)
+        self.assertIsInstance(groups, list, "Result is not a list")
+        self.assertTrue(all(isinstance(item, Group) for item in groups),
+                        "Not all items are instances of Jasmin Group")
 
-        def handle_error(error):
-            logger.error("Error in Twisted operation:")
-            raise error
-
-        deferred = self.router.get_all_groups()
-        deferred.addCallbacks(handle_result, handle_error)
-        self.router.set_deferred(deferred)
-        self.router.execute()
+        group_jasmin = next((item for item in groups if item.gid == self.group.gid), None)
+        self.assertIsInstance(group_jasmin, Group)
 
     def test_remove_group(self):
-        def handle_result(result):
-            logger.debug(f"Group successfully removed: {result}")
-
-        def handle_error(error):
-            logger.error(f"Error in Twisted operation: {error}")
-            raise error
-
-        deferred = self.router.remove_groups(self.group.gid)
-        deferred.addCallbacks(handle_result, handle_error)
-        self.router.set_deferred(deferred)
-        self.router.execute()
+        result = run_in_reactor(self.router.remove_groups, self.group.gid)
+        self.assertIsNotNone(result)

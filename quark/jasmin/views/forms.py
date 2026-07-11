@@ -24,7 +24,7 @@ from quark.jasmin.models import JasminGroup, JasminUser, JasminSMPPConnector, Ja
     JasminInterceptor, JasminHTTPConnector
 from quark.jasmin.views.sub_forms import MessagingAuthorizationsForm, MessagingValueFiltersForm, MessagingDefaultsForm, \
     MessagingQuotasForm, SMPPAuthorizationsForm, SMPPQuotasForm
-from quark.utils.fields import SelectWidget
+from quark.utils.fields import SelectWidget, TextareaWidget, FilePickerWidget
 from quark.workspace.views.forms import BaseWorkspaceForm
 
 
@@ -220,14 +220,24 @@ class JasminFilterForm(BaseWorkspaceForm):
         required=False,
         label="Parameter Key",
         initial=None,
-        help_text="Enter the parameter key",
+        help_text="Enter the parameter key (EvalPyFilter uses pyCode)",
     )
     param_value = forms.CharField(
         required=False,
         initial=None,
         label="Parameter Value",
-        help_text="Enter the parameter value",
-        widget=forms.TextInput(attrs={'class': 'param-value-input'})
+        help_text="Enter the parameter value. For EvalPyFilter, paste Python source here.",
+        widget=TextareaWidget(attrs={
+            "class": "param-value-input",
+            "rows": 3,
+            "placeholder": "Parameter value",
+        }),
+    )
+    script_file = forms.FileField(
+        required=False,
+        label="Upload script (optional)",
+        help_text="Optional .py file. Contents are copied into Parameter Value (EvalPyFilter).",
+        widget=FilePickerWidget(attrs={"accept": ".py,text/x-python"}),
     )
 
     def __init__(self, *args, **kwargs):
@@ -238,15 +248,61 @@ class JasminFilterForm(BaseWorkspaceForm):
             self.fields['param_key'].initial = self.instance.param.get('key', '')
             self.fields['param_value'].initial = self.instance.param.get('value', '')
 
+    def clean_script_file(self):
+        uploaded = self.cleaned_data.get("script_file")
+        if uploaded and not uploaded.name.lower().endswith(".py"):
+            raise forms.ValidationError("Uploaded script must be a .py file")
+        return uploaded
+
     def clean(self):
         cleaned_data = super().clean()
         cleaned_data['workspace'] = self.workspace
 
-        # Validate that if either key or value is provided, both must be provided
-        param_key = cleaned_data.get('param_key')
-        param_value = cleaned_data.get('param_value')
+        filter_type = cleaned_data.get("filter_type")
+        param_key = (cleaned_data.get("param_key") or "").strip()
+        param_value = cleaned_data.get("param_value")
+        uploaded = cleaned_data.get("script_file")
 
-        if bool(param_key) != bool(param_value):
+        if uploaded and filter_type == "EvalPyFilter":
+            raw = uploaded.read()
+            if isinstance(raw, bytes):
+                raw = raw.decode("utf-8")
+            param_value = raw
+            if hasattr(uploaded, "seek"):
+                uploaded.seek(0)
+            cleaned_data["param_key"] = "pyCode"
+            param_key = "pyCode"
+
+        if isinstance(param_value, str):
+            # Keep EvalPy source as-stripped for storage; other params strip lightly
+            if filter_type == "EvalPyFilter":
+                param_value = param_value.strip()
+            else:
+                param_value = param_value.strip() if param_value else param_value
+
+        cleaned_data["param_key"] = param_key or None
+        cleaned_data["param_value"] = param_value or None
+
+        param_key = cleaned_data.get("param_key")
+        param_value = cleaned_data.get("param_value")
+
+        if filter_type == "EvalPyFilter":
+            if param_key and param_key != "pyCode":
+                self.add_error("param_key", "EvalPyFilter parameter key must be pyCode")
+            cleaned_data["param_key"] = "pyCode"
+            if not param_value:
+                self.add_error(
+                    "param_value",
+                    "Provide Python source, or upload a .py file to fill it",
+                )
+            else:
+                try:
+                    compile(param_value, "<EvalPyFilter>", "exec")
+                except SyntaxError as exc:
+                    self.add_error("param_value", f"Script has a syntax error: {exc}")
+                else:
+                    cleaned_data["param_value"] = param_value
+        elif bool(param_key) != bool(param_value):
             raise forms.ValidationError(
                 "Both parameter key and value must be provided together or left blank"
             )
@@ -260,7 +316,7 @@ class JasminFilterForm(BaseWorkspaceForm):
         param_key = self.cleaned_data.get('param_key')
         param_value = self.cleaned_data.get('param_value')
 
-        if param_key and param_value:
+        if param_key and param_value is not None and param_value != "":
             instance.param = {'key': param_key, 'value': param_value}
         else:
             instance.param = None
@@ -309,22 +365,165 @@ class JasminRouteForm(BaseWorkspaceForm):
 
 
 class JasminInterceptorForm(BaseWorkspaceForm):
+    """
+    Create form for MO/MT interceptors.
+
+    Script source of truth is stored in the DB (`script_source`). An optional
+    .py upload can prefill that textarea in the browser / on submit.
+    """
+    script_file = forms.FileField(
+        required=False,
+        label="Upload script (optional)",
+        help_text="Optional .py file. Its contents are copied into Script source below.",
+        widget=forms.ClearableFileInput(attrs={"accept": ".py,text/x-python"}),
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # Must conform to our workspace.
-        self.fields['filters'].queryset = JasminFilter.objects.filter(workspace=self.workspace)
+        self.fields["filters"].queryset = JasminFilter.objects.filter(workspace=self.workspace)
+        self.fields["filters"].required = False
+        self.fields["filters"].help_text = (
+            "Required for StaticMO/StaticMTInterceptor. Leave empty for DefaultInterceptor."
+        )
+        self.fields["script_source"].help_text = (
+            "Python 3 source stored in Joyce's database and sent to Jasmin as pyCode. "
+            "Re-save the interceptor after editing to refresh Jasmin's copy."
+        )
+        self.fields["script_source"].widget = TextareaWidget(attrs={
+            "rows": 12,
+            "placeholder": "# result = True  to accept / continue\n# result = False to reject\nresult = True\n",
+        })
+        self.fields["script_file"].widget = FilePickerWidget(attrs={
+            "accept": ".py,text/x-python",
+        })
+        self.fields["script_name"].required = False
+        self.fields["script_name"].help_text = "Optional label (auto-filled from an uploaded filename)."
+        self.fields["order"].required = False
+        self.fields["order"].help_text = (
+            "Unique order within this workspace and nature. "
+            "DefaultInterceptor is always order 0."
+        )
+
+    def clean_script_file(self):
+        uploaded = self.cleaned_data.get("script_file")
+        if uploaded and not uploaded.name.lower().endswith(".py"):
+            raise forms.ValidationError("Uploaded script must be a .py file")
+        return uploaded
+
+    def clean_script_source(self):
+        source = (self.cleaned_data.get("script_source") or "").strip()
+        return source
+
+    def clean(self):
+        cleaned_data = super().clean()
+        cleaned_data["workspace"] = self.workspace
+
+        nature = cleaned_data.get("nature")
+        interceptor_type = cleaned_data.get("interceptor_type")
+        filters = cleaned_data.get("filters")
+        order = cleaned_data.get("order")
+        uploaded = cleaned_data.get("script_file")
+        source = (cleaned_data.get("script_source") or "").strip()
+
+        if uploaded:
+            raw = uploaded.read()
+            if isinstance(raw, bytes):
+                raw = raw.decode("utf-8")
+            source = raw.strip()
+            if hasattr(uploaded, "seek"):
+                uploaded.seek(0)
+            if not cleaned_data.get("script_name"):
+                cleaned_data["script_name"] = uploaded.name.rsplit("/", 1)[-1]
+
+        if not source:
+            self.add_error(
+                "script_source",
+                "Provide script source, or upload a .py file to fill it",
+            )
+        else:
+            filename = cleaned_data.get("script_name") or "<interceptor>"
+            try:
+                compile(source, filename, "exec")
+            except SyntaxError as exc:
+                self.add_error("script_source", f"Script has a syntax error: {exc}")
+            else:
+                cleaned_data["script_source"] = source
+
+        if not nature or not interceptor_type:
+            return cleaned_data
+
+        if interceptor_type == "StaticMOInterceptor" and nature != "MO":
+            raise forms.ValidationError(
+                "StaticMOInterceptor can only be used with nature MO"
+            )
+        if interceptor_type == "StaticMTInterceptor" and nature != "MT":
+            raise forms.ValidationError(
+                "StaticMTInterceptor can only be used with nature MT"
+            )
+
+        if interceptor_type == "DefaultInterceptor":
+            cleaned_data["order"] = 0
+            if filters and filters.exists():
+                raise forms.ValidationError(
+                    "DefaultInterceptor does not accept filters "
+                    "(it is the fallback interceptor at order 0)"
+                )
+            cleaned_data["filters"] = JasminFilter.objects.none()
+        else:
+            if order is None:
+                self.add_error("order", "Order is required for Static interceptors")
+            elif order == 0:
+                self.add_error(
+                    "order",
+                    "Order 0 is reserved for DefaultInterceptor",
+                )
+            if not filters or not filters.exists():
+                self.add_error(
+                    "filters",
+                    f"{interceptor_type} requires at least one filter",
+                )
+            elif filters:
+                incompatible = filters.exclude(nature__in=[nature, "ALL"])
+                if incompatible.exists():
+                    fids = ", ".join(incompatible.values_list("fid", flat=True))
+                    self.add_error(
+                        "filters",
+                        f"These filters are not compatible with {nature} interceptors: {fids}",
+                    )
+
+        final_order = cleaned_data.get("order")
+        if nature is not None and final_order is not None:
+            qs = JasminInterceptor.objects.filter(
+                workspace=self.workspace,
+                nature=nature,
+                order=final_order,
+            )
+            if self.instance and self.instance.pk:
+                qs = qs.exclude(pk=self.instance.pk)
+            if qs.exists():
+                self.add_error(
+                    "order",
+                    f"An interceptor with order {final_order} already exists "
+                    f"for {nature} in this workspace",
+                )
+
+        return cleaned_data
 
     def save(self, commit=True):
         instance = super().save(commit=False)
-        # add workspace to instance
-        instance.workspace = self.cleaned_data['workspace']
-
+        instance.workspace = self.cleaned_data["workspace"]
         if commit:
             instance.save()
         return instance
 
     class Meta:
         model = JasminInterceptor
-        fields = ("nature", "interceptor_type", "order", "filters", "script")
+        fields = (
+            "nature",
+            "interceptor_type",
+            "order",
+            "filters",
+            "script_name",
+            "script_source",
+        )
