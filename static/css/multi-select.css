@@ -1,93 +1,122 @@
-.ms-container{
-  background: transparent url('../img/switch.png') no-repeat 50% 50%;
-  width: 370px;
+/*
+ * Joyce dual-list multiselect (jquery.multi-select)
+ * Left = available, right = selected. Click an item to move it.
+ */
+
+.joyce-multi-select-wrap {
+  width: 100%;
 }
 
-.ms-container:after{
-  content: ".";
-  display: block;
-  height: 0;
-  line-height: 0;
-  font-size: 0;
-  clear: both;
-  min-height: 0;
-  visibility: hidden;
-}
-
-.ms-container .ms-selectable, .ms-container .ms-selection{
-  background: #fff;
-  color: #555555;
-  float: left;
-  width: 45%;
-}
-.ms-container .ms-selection{
-  float: right;
-}
-
-.ms-container .ms-list{
-  -webkit-box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075);
-  -moz-box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075);
-  box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075);
-  -webkit-transition: border linear 0.2s, box-shadow linear 0.2s;
-  -moz-transition: border linear 0.2s, box-shadow linear 0.2s;
-  -ms-transition: border linear 0.2s, box-shadow linear 0.2s;
-  -o-transition: border linear 0.2s, box-shadow linear 0.2s;
-  transition: border linear 0.2s, box-shadow linear 0.2s;
-  border: 1px solid #ccc;
-  -webkit-border-radius: 3px;
-  -moz-border-radius: 3px;
-  border-radius: 3px;
+.ms-container.joyce-ms {
+  background: none;
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: stretch;
   position: relative;
-  height: 200px;
+}
+
+.ms-container.joyce-ms:after {
+  display: none;
+}
+
+.ms-container.joyce-ms .ms-selectable,
+.ms-container.joyce-ms .ms-selection {
+  float: none;
+  width: calc(50% - 0.25rem);
+  flex: 1 1 calc(50% - 0.25rem);
+  min-width: 140px;
+  background: #fff;
+  color: #171717;
+}
+
+.ms-container.joyce-ms .ms-header {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #525252;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid #171717;
+  border-bottom: none;
+  background: #f5f5f5;
+}
+
+.ms-container.joyce-ms .ms-list {
+  -webkit-box-shadow: none;
+  -moz-box-shadow: none;
+  box-shadow: none;
+  border: 1px solid #171717;
+  -webkit-border-radius: 0;
+  -moz-border-radius: 0;
+  border-radius: 0;
+  height: 180px;
   padding: 0;
   overflow-y: auto;
+  background: #fff;
 }
 
-.ms-container .ms-list.ms-focus{
-  border-color: rgba(82, 168, 236, 0.8);
-  -webkit-box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075), 0 0 8px rgba(82, 168, 236, 0.6);
-  -moz-box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075), 0 0 8px rgba(82, 168, 236, 0.6);
-  box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075), 0 0 8px rgba(82, 168, 236, 0.6);
+.ms-container.joyce-ms .ms-list.ms-focus {
+  border-color: #171717;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.15);
   outline: 0;
-  outline: thin dotted \9;
 }
 
-.ms-container ul{
+.ms-container.joyce-ms ul {
   margin: 0;
   list-style-type: none;
   padding: 0;
 }
 
-.ms-container .ms-optgroup-container{
-  width: 100%;
-}
-
-.ms-container .ms-optgroup-label{
+.ms-container.joyce-ms .ms-optgroup-label {
   margin: 0;
-  padding: 5px 0px 0px 5px;
+  padding: 5px 8px 2px;
   cursor: pointer;
-  color: #999;
+  color: #737373;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
 }
 
-.ms-container .ms-selectable li.ms-elem-selectable,
-.ms-container .ms-selection li.ms-elem-selection{
-  border-bottom: 1px #eee solid;
-  padding: 2px 10px;
-  color: #555;
-  font-size: 14px;
+.ms-container.joyce-ms .ms-selectable li.ms-elem-selectable,
+.ms-container.joyce-ms .ms-selection li.ms-elem-selection {
+  border-bottom: 1px solid #e5e5e5;
+  padding: 0.4rem 0.6rem;
+  color: #262626;
+  font-size: 0.8125rem;
+  line-height: 1.25;
 }
 
-.ms-container .ms-selectable li.ms-hover,
-.ms-container .ms-selection li.ms-hover{
+.ms-container.joyce-ms .ms-selectable li.ms-hover,
+.ms-container.joyce-ms .ms-selection li.ms-hover {
   cursor: pointer;
   color: #fff;
   text-decoration: none;
-  background-color: #08c;
+  background-color: #171717;
 }
 
-.ms-container .ms-selectable li.disabled,
-.ms-container .ms-selection li.disabled{
-  background-color: #eee;
-  color: #aaa;
-  cursor: text;
+.ms-container.joyce-ms .ms-selectable li.disabled,
+.ms-container.joyce-ms .ms-selection li.disabled {
+  background-color: #f5f5f5;
+  color: #a3a3a3;
+  cursor: default;
+}
+
+.ms-container.joyce-ms .ms-selection .ms-header {
+  background: #171717;
+  color: #fafafa;
+  border-color: #171717;
+}
+
+@media (max-width: 480px) {
+  .ms-container.joyce-ms .ms-selectable,
+  .ms-container.joyce-ms .ms-selection {
+    flex: 1 1 100%;
+    width: 100%;
+  }
+
+  .ms-container.joyce-ms .ms-list {
+    height: 140px;
+  }
 }

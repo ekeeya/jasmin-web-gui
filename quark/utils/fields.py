@@ -100,3 +100,7 @@ class SelectWidget(widgets.Select):
 class MultiSelectWidget(widgets.SelectMultiple):
     template_name = 'widgets/multi_select.html'
     allow_multiple_selected = True
+
+    class Media:
+        css = {"all": ("css/multi-select.css",)}
+        js = ("js/jquery.multi-select.js", "js/multi_select.js")

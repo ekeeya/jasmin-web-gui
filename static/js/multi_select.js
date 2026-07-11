@@ -4,42 +4,98 @@
  * By: Emmanuel Keeya
  * Email: ekeeya@thothcode.tech
  *
- * This project is licensed under the GNU General Public License v3.0. You may
- * redistribute it and/or modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This project is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
- * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
- * See the GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License along with this project.
- * If not, see <http://www.gnu.org/licenses/>.
- *
+ * Initializes dual-list multiselects: available (left) → selected (right).
  */
 
+(function (window, $) {
+    "use strict";
+
+    function scheduleRefresh() {
+        window.setTimeout(function () {
+            refreshJoyceMultiSelects(document);
+        }, 50);
+    }
+
+    function initJoyceMultiSelects(root) {
+        if (!$ || typeof $.fn.multiSelect !== "function") {
+            return;
+        }
+
+        $(root || document).find("select.joyce-multi-select, select[data-joyce-multiselect]").each(function () {
+            var $el = $(this);
+            if ($el.data("multiselect")) {
+                return;
+            }
+
+            $el.multiSelect({
+                keepOrder: true,
+                cssClass: "joyce-ms",
+                selectableHeader: '<div class="ms-header">Available</div>',
+                selectionHeader: '<div class="ms-header">Selected</div>',
+            });
+        });
+    }
+
+    function refreshJoyceMultiSelects(root) {
+        if (!$ || typeof $.fn.multiSelect !== "function") {
+            return;
+        }
+
+        $(root || document).find("select.joyce-multi-select, select[data-joyce-multiselect]").each(function () {
+            var $el = $(this);
+            if ($el.data("multiselect")) {
+                $el.multiSelect("refresh");
+            } else {
+                initJoyceMultiSelects($el.parent());
+            }
+        });
+    }
+
+    window.initJoyceMultiSelects = initJoyceMultiSelects;
+    window.refreshJoyceMultiSelects = refreshJoyceMultiSelects;
+
+    $(document).ready(function () {
+        initJoyceMultiSelects(document);
+
+        // Create modal open
+        $(document).on("click", "[data-modal-open]", scheduleRefresh);
+
+        // Update modal triggers: data-update-trigger-<id>
+        $(document).on("click", function (e) {
+            var node = e.target;
+            while (node && node !== document) {
+                if (node.attributes) {
+                    for (var i = 0; i < node.attributes.length; i++) {
+                        if (node.attributes[i].name.indexOf("data-update-trigger") === 0) {
+                            scheduleRefresh();
+                            return;
+                        }
+                    }
+                }
+                node = node.parentNode;
+            }
+        });
+    });
+})(window, window.jQuery);
+
+// Legacy helper used by older dual-<select> markup (move buttons)
 function initializeMultiSelect(availableSelector, selectedSelector) {
-    // Move selected items from available to selected
-    $(availableSelector).parent().find('.move-right').click(function() {
-        $(availableSelector + ' option:selected').each(function() {
+    $(availableSelector).parent().find(".move-right").click(function () {
+        $(availableSelector + " option:selected").each(function () {
             $(this).appendTo(selectedSelector);
         });
-        // Ensure all options in selected are marked as selected
-        $(selectedSelector + ' option').prop('selected', true);
+        $(selectedSelector + " option").prop("selected", true);
     });
 
-    // Move selected items from selected to available
-    $(selectedSelector).parent().find('.move-left').click(function() {
-        $(selectedSelector + ' option:selected').each(function() {
+    $(selectedSelector).parent().find(".move-left").click(function () {
+        $(selectedSelector + " option:selected").each(function () {
             $(this).appendTo(availableSelector);
         });
-        // Update selected options
-        $(selectedSelector + ' option').prop('selected', true);
+        $(selectedSelector + " option").prop("selected", true);
     });
 
-    // Ensure all options in selected are marked as selected before form submission
-    $('form').submit(function() {
-        $(selectedSelector + ' option').prop('selected', true);
-        $(availableSelector + ' option').prop('selected', false);
+    $("form").submit(function () {
+        $(selectedSelector + " option").prop("selected", true);
+        $(availableSelector + " option").prop("selected", false);
     });
 }

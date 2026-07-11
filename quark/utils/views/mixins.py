@@ -65,9 +65,12 @@ class FormMixin:
                 ),
         ):
             field.widget = InputTextWidget(attrs=attrs)
+        elif isinstance(field.widget, (forms.widgets.SelectMultiple,)):
+            field.widget = MultiSelectWidget(attrs=attrs)
+            field.widget.choices = field.choices
         elif isinstance(field.widget, (forms.widgets.Select,)):
-            if isinstance(field, (forms.models.ModelMultipleChoiceField,)):
-                field.widget = MultiSelectWidget(attrs)  # pragma: needs cover
+            if isinstance(field, (forms.models.ModelMultipleChoiceField, forms.MultipleChoiceField)):
+                field.widget = MultiSelectWidget(attrs=attrs)
             else:
                 field.widget = SelectWidget(attrs)
 

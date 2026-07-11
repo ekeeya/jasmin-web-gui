@@ -1,4 +1,4 @@
-<div class="mb-4">
+<div class="joyce-multi-select-wrap">
     {% if widget.attrs.label %}
         <label for="{{ widget.attrs.id }}" class="block text-sm font-medium text-gray-900 mb-1">
             {{ widget.attrs.label }}
@@ -9,13 +9,11 @@
         name="{{ widget.name }}"
         id="{{ widget.attrs.id }}"
         multiple
-        class="w-full px-4 py-2 bg-white shadow-sm focus:outline-none"
-        style="border: 1px solid #000000; {% if form.errors.name %}border: 1px solid #ef4444;{% endif %}"
-        onfocus="this.style.borderColor='#000000'; this.style.boxShadow='0 0 0 2px rgba(0, 0, 0, 0.2)'"
-        onblur="this.style.borderColor='{% if form.errors.name %}#ef4444{% else %}#000000{% endif %}'; this.style.boxShadow='none'"
+        class="joyce-multi-select"
+        data-joyce-multiselect
         {% if widget.attrs.required %}required{% endif %}
         {% for attr_name, attr_value in widget.attrs.items %}
-            {% if attr_name != 'id' and attr_name != 'label' and attr_name != 'required' %}
+            {% if attr_name != 'id' and attr_name != 'label' and attr_name != 'required' and attr_name != 'class' %}
                 {{ attr_name }}="{{ attr_value }}"
             {% endif %}
         {% endfor %}

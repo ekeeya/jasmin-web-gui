@@ -65,6 +65,7 @@
     <div class="grid grid-cols-1" id="show-args">
         <fieldset class="space-y-4">
             <legend class="text-lg font-medium text-gray-900">Filters</legend>
+            <p class="text-xs text-gray-500">Click an item to move it between Available (left) and Selected (right).</p>
             <div class="space-y-1">
                 <label for="{{ form.filters.id_for_label }}" class="block text-sm font-medium text-gray-700">
                     {{ form.filters.label }}
@@ -147,6 +148,9 @@
                     rateEl.prop("disabled", true)
                     $("#div_rate").hide();
                     httpConnectorDiv.show();
+                    if (typeof window.refreshJoyceMultiSelects === "function") {
+                        window.refreshJoyceMultiSelects(httpConnectorDiv);
+                    }
                     break;
                 case "MT":
                     alertDiv.html(mtAlert)

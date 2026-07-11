@@ -89,6 +89,9 @@
     <div id="div_filters" class="grid grid-cols-1">
         <fieldset class="space-y-2">
             <legend class="text-lg font-medium text-gray-900">Filters</legend>
+            <div role="alert" class="alert alert-dash alert-warning text-xs flex flex-row mb-2">
+                Click an item to move it between Available (left) and Selected (right).
+            </div>
             <div class="space-y-1">
                 <label for="{{ form.filters.id_for_label }}" class="block text-sm font-medium text-gray-700">
                     {{ form.filters.label }}
@@ -147,10 +150,16 @@
                 }
                 orderDiv.show();
                 filtersDiv.show();
+                if (typeof window.refreshJoyceMultiSelects === "function") {
+                    window.refreshJoyceMultiSelects(filtersDiv);
+                }
             } else {
                 orderInput.prop("disabled", false);
                 orderDiv.show();
                 filtersDiv.show();
+                if (typeof window.refreshJoyceMultiSelects === "function") {
+                    window.refreshJoyceMultiSelects(filtersDiv);
+                }
             }
         }
 

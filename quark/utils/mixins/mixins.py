@@ -103,9 +103,12 @@ class FormMixin:
                 (forms.widgets.TextInput, forms.widgets.EmailInput, forms.widgets.URLInput),
         ):
             field.widget = InputTextWidget(attrs=attrs)
+        elif isinstance(field.widget, (forms.widgets.SelectMultiple,)):
+            field.widget = MultiSelectWidget(attrs=attrs)
+            field.widget.choices = field.choices
         elif isinstance(field.widget, (forms.widgets.Select,)):
-            if isinstance(field, (forms.models.ModelMultipleChoiceWidget,)):
-                field.widget = MultiSelectWidget(attrs)
+            if isinstance(field, (forms.models.ModelMultipleChoiceField, forms.MultipleChoiceField)):
+                field.widget = MultiSelectWidget(attrs=attrs)
             else:
                 field.widget = SelectWidget(attrs)
 
