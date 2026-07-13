@@ -323,6 +323,11 @@ class WorkspaceCRUDL(SmartCRUDL):
                     or workspace.jasmin_http_api_url
                     or ""
                 ).rstrip("/"),
+                rest_api_url=(
+                    request.POST.get("jasmin_rest_api_url")
+                    or workspace.jasmin_rest_api_url
+                    or ""
+                ).rstrip("/"),
                 source="custom",
             )
             return connection, link
