@@ -18,7 +18,9 @@
             </span>
             <span class="flex flex-col">
                 <span class="font-display text-xl font-bold tracking-tight text-white leading-none">Joyce</span>
-                <span class="mt-1 font-mono text-[10px] uppercase tracking-[0.2em] text-neutral-500">for jasmin</span>
+                <span class="mt-1 font-mono text-[10px] uppercase tracking-[0.2em] text-neutral-500">
+                    {% if joyce_mode_operate %}operate{% else %}configure{% endif %}
+                </span>
             </span>
         </a>
     </div>
@@ -26,6 +28,64 @@
     <!-- ================= navigation ================= -->
     <div class="sidebar-nav relative flex-1 overflow-y-auto no-scrollbar px-3 py-5 space-y-7">
 
+        {% if joyce_mode_operate %}
+        {# -------- Operate: SMS + monitoring -------- #}
+        <nav class="nav-group">
+            <p class="nav-label">Overview</p>
+            <ul class="space-y-1">
+                <li>
+                    <a href="/dashboard" data-page="dashboard" class="nav-link menu-item">
+                        <span class="nav-icon icon-gauge"></span>
+                        <span class="nav-text">Dashboard</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+
+        <nav class="nav-group">
+            <p class="nav-label">Messaging</p>
+            <ul class="space-y-1">
+                <li>
+                    <a href="{% url 'messaging.send' %}" data-page="messaging/send" class="nav-link menu-item">
+                        <span class="nav-icon icon-paper-plane"></span>
+                        <span class="nav-text">Send SMS</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="{% url 'messaging.bulk_send' %}" data-page="messaging/bulk" class="nav-link menu-item">
+                        <span class="nav-icon icon-layers"></span>
+                        <span class="nav-text">Bulk send</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="{% url 'messaging.outboundmessage_list' %}" data-page="outboundmessage" class="nav-link menu-item">
+                        <span class="nav-icon icon-list"></span>
+                        <span class="nav-text">Message log</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="{% url 'messaging.balance' %}" data-page="messaging/balance" class="nav-link menu-item">
+                        <span class="nav-icon icon-credit-card"></span>
+                        <span class="nav-text">Balance &amp; rate</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+
+        <nav class="nav-group">
+            <p class="nav-label">System</p>
+            <ul class="space-y-1">
+                <li>
+                    <a href="https://docs.jasminsms.com/en/latest/apis/http-api/" target="_blank" rel="noopener" class="nav-link menu-item">
+                        <span class="nav-icon icon-help-with-circle"></span>
+                        <span class="nav-text">HTTP API docs</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+
+        {% else %}
+        {# -------- Configure: gateway setup -------- #}
         <nav class="nav-group">
             <p class="nav-label">Overview</p>
             <ul class="space-y-1">
@@ -114,6 +174,7 @@
                 </li>
             </ul>
         </nav>
+        {% endif %}
     </div>
 
     <!-- ================= footer ================= -->

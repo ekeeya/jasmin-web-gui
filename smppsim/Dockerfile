@@ -1,15 +1,15 @@
-FROM eclipse-temurin:17-jdk AS backend-builder
+FROM eclipse-temurin:17-jdk
 
 LABEL maintainer="ekeeya@thothcode.tech"
 
-# Copy entrypoint.sh into the container
-COPY entrypoint.sh /entrypoint.sh
+WORKDIR /
 
+COPY entrypoint.sh /entrypoint.sh
 COPY smppsim.jar /smppsim.jar
 COPY conf /conf
+# Manifest Class-Path expects these beside the jar (java -jar resolves relative to jar dir)
+COPY lib /lib
 
-# Make entrypoint.sh executable
 RUN chmod +x /entrypoint.sh
 
-# Set the entrypoint
 ENTRYPOINT ["/entrypoint.sh"]

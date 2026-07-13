@@ -1,4 +1,3 @@
-
 #
 #  Copyright (c) 2024
 #  File created on 2024/7/17
@@ -18,11 +17,13 @@
 #  If not, see <http://www.gnu.org/licenses/>.
 #
 
-from .views import SMSCallback, Home, profile, Landing
-from django.urls import path, re_path
+from django.urls import path
+
+from quark.messaging.views import DLRCallbackView
+from .views import Home, profile, Landing
 
 urlpatterns = [
-    path("dlr", SMSCallback.as_view(), name="dlr"),
+    path("dlr", DLRCallbackView.as_view(), name="dlr"),
     path("", Landing.as_view(), {}, "landing.page"),
     path("dashboard/", Home.as_view(), {}, "dashboard.dashboard_home"),
 ]

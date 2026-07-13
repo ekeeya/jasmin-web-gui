@@ -3,15 +3,15 @@
         <input
                 type="checkbox"
                 name="{{ widget.name }}"
-                id="{{ widget.attrs.id }}"
+                {% if widget.attrs.id %}id="{{ widget.attrs.id }}"{% endif %}
                 value="1"
-                {% if widget.value %}checked{% endif %}
+                {% if widget.attrs.checked %}checked{% endif %}
                 {% if widget.attrs.required %}required{% endif %}
-                        {% for attr_name, attr_value in widget.attrs.items %}
-                            {% if attr_name != 'id' and attr_name != 'label' and attr_name != 'required' %}
-                                {{ attr_name }}="{{ attr_value }}"
-                            {% endif %}
-                        {% endfor %}
+                {% for attr_name, attr_value in widget.attrs.items %}
+                    {% if attr_name != 'id' and attr_name != 'label' and attr_name != 'required' and attr_name != 'checked' %}
+                        {{ attr_name }}="{{ attr_value }}"
+                    {% endif %}
+                {% endfor %}
                 class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-black focus:ring-2 focus:ring-offset-0 focus:outline-none transition"
         />
         {% if widget.attrs.label %}

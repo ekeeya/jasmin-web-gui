@@ -1,0 +1,26 @@
+{% extends 'base/base.html' %}
+{% load smartmin %}
+
+{% block content %}
+<div class="mx-auto max-w-3xl space-y-6">
+    <div class="flex items-start justify-between gap-4">
+        <div>
+            <p class="font-mono text-[10px] uppercase tracking-[0.2em] text-neutral-400">Operate</p>
+            <h1 class="font-display text-2xl font-bold tracking-tight text-neutral-900">Message detail</h1>
+            <p class="mt-1 text-sm text-neutral-500">{{ object.to_addr }} · {{ object.status }}</p>
+        </div>
+        <a href="{% url 'messaging.outboundmessage_list' %}" class="btn btn-sm btn-outline border-neutral-300">Back to log</a>
+    </div>
+
+    <div class="border border-neutral-200 bg-white">
+        <dl class="divide-y divide-neutral-100">
+            {% for field in fields %}
+            <div class="grid grid-cols-1 gap-1 px-4 py-3 sm:grid-cols-3 sm:gap-4">
+                <dt class="text-xs font-mono uppercase tracking-wide text-neutral-400">{% get_label field %}</dt>
+                <dd class="sm:col-span-2 text-sm text-neutral-900 break-words whitespace-pre-wrap">{% get_value object field %}</dd>
+            </div>
+            {% endfor %}
+        </dl>
+    </div>
+</div>
+{% endblock %}

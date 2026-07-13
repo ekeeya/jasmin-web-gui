@@ -25,6 +25,12 @@ from rest_framework.response import Response
 from rest_framework import status
 from smartmin.views import SmartTemplateView
 
+from quark.messaging.views.views import (
+    CONSOLE_MODE_SESSION_KEY,
+    MODE_CONFIGURE,
+    MODE_OPERATE,
+)
+from quark.web.dashboard import configure_dashboard_stats, operate_dashboard_stats
 from quark.web.renderers.renderers import PlainTextRenderer, CustomPlainTextRenderer
 from quark.workspace.views.mixins import WorkspacePermsMixin
 
@@ -32,14 +38,15 @@ logger = logging.getLogger('main')
 
 
 class SMSCallback(APIView):
+    """Legacy stub kept for imports; /dlr now uses messaging.DLRCallbackView."""
+
     renderer_classes = [PlainTextRenderer, CustomPlainTextRenderer]
 
     def post(self, request, *args, **kwargs):
         try:
-            # Handle form-encoded data
             if request.content_type == 'application/x-www-form-urlencoded':
                 data = request.POST
-            else:  # Default to JSON data
+            else:
                 data = request.data
             logger.info(f"Received DLR: {data}")
 
@@ -50,22 +57,35 @@ class SMSCallback(APIView):
 
 
 class Home(WorkspacePermsMixin, SmartTemplateView):
-    """
-    The main dashboard view
-    """
+    """Mode-aware dashboard: Configure inventory or Operate SMS metrics."""
 
     title = "Dashboard"
     permission = "workspace.workspace_dashboard"
     template_name = "home/home.html"
 
-    def get(self, request, *args, **kwargs):
-        workspace = request.workspace or "Admin"
-        user = request.user
-        context = dict(
-            workspace=workspace,
-            user=user,
-        )
-        return self.render_to_response(context)
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        workspace = self.request.workspace
+        context["workspace"] = workspace
+        context["user"] = self.request.user
+
+        mode = self.request.session.get(CONSOLE_MODE_SESSION_KEY, MODE_CONFIGURE)
+        if mode not in (MODE_CONFIGURE, MODE_OPERATE):
+            mode = MODE_CONFIGURE
+        context["dashboard_mode"] = mode
+
+        if not workspace:
+            context["totals"] = {}
+            context["recent"] = []
+            context["config_counts"] = {}
+            context["checklist"] = []
+            return context
+
+        if mode == MODE_OPERATE:
+            context.update(operate_dashboard_stats(workspace))
+        else:
+            context.update(configure_dashboard_stats(workspace))
+        return context
 
 
 class Landing(SmartTemplateView):

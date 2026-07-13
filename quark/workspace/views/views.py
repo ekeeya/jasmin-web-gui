@@ -18,6 +18,7 @@
 from datetime import timedelta
 
 from django.conf import settings
+from django.contrib import messages
 from django.contrib.auth import login, logout
 from django.http import HttpResponseRedirect
 from django.urls import reverse
@@ -64,7 +65,7 @@ class LoginView(AuthLoginView):
         # this could be a valid login by a user
         if user:
             # incorrect password?  create a failed login token
-            valid_password = user.check_password(form.cleaned_data.get("password"))
+            valid_password = user.check_password(form.cleaned_data.get("password") or "")
 
         if not user or not valid_password:
             FailedLogin.objects.create(username=username)
@@ -77,8 +78,20 @@ class LoginView(AuthLoginView):
             failures = failures.filter(failed_on__gt=bad_interval)
 
         # if there are too many failed logins, take them to the failed page
-        if len(failures) >= failed_login_limit:
+        if failures.count() >= failed_login_limit:
+            # Correct password still clears the lockout so a legitimate user
+            # is not stuck after a burst of bad attempts (e.g. forgotten pwd).
+            if user and valid_password and form_is_valid:
+                FailedLogin.objects.filter(username__iexact=username).delete()
+                return self.form_valid(form)
+
             logout(request)
+            minutes = lockout_timeout if lockout_timeout > 0 else 10
+            messages.error(
+                request,
+                f"Too many failed sign-in attempts. Try again in about {minutes} minutes, "
+                f"or ask an admin to clear the lockout.",
+            )
             return HttpResponseRedirect(reverse("workspace.login"))
 
         # pass through the normal login process

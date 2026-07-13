@@ -35,6 +35,8 @@ java -Djava.net.preferIPv4Stack=true \
 ## ⚙️ Integration with Jasmin
 Everything is automated. Just make sure your test Jasmin smppccm connector is mapped correctly to the smppsim server.
 
+**Important:** from Jasmin (Docker), the connector host must be the compose service name `smppsim`, not `localhost`.
+
 Here's an example setup for the connector:
 
 ```bash
@@ -54,3 +56,6 @@ smppccm -a
 > submit_throughput 110
 > ok
 ```
+
+### Dependencies
+`smppsim.jar` expects `lib/jakarta-regexp-1.5.jar` (and stubs for `junit.jar` / `smpp.jar`) on the classpath. The Dockerfile copies `smppsim/lib/` into the image for this.

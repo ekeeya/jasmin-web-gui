@@ -143,10 +143,12 @@ class ModalFormMixin(ReactorErrorFormMixin):
     def form_valid(self, form):
         message = "Action executed successfully"
         if form.instance is not None:
-            if form.instance.pk is None:  # only if it has not been saved
-                form.instance.modified_by = self.request.user
+            # Create and update both must persist — previously updates were skipped
+            # when pk was already set, so Jasmin never received credential changes.
+            if form.instance.pk is None:
                 form.instance.created_by = self.request.user
-                form.save()  # lets manual save updates
+            form.instance.modified_by = self.request.user
+            form.save()
         if "HTTP_X_AJAX_MODAL" in self.request.META:
             response = dict(success=True, message=message, redirect_to=self.get_success_url())
             return JsonResponse(response, safe=False)

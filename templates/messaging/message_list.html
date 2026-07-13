@@ -1,0 +1,81 @@
+{% extends "base/base.html" %}
+{% load static smartmin i18n %}
+
+{% block content %}
+    <div class="bg-white w-full mb-1 p-2">
+        <label class="font-bold uppercase">Message log</label>
+        <div role="alertdialog" class="alert alert-info alert-outline">
+            <span class="icon-info text-lg"></span>
+            <span class="text-xs">
+                Outbound messages submitted through Joyce, with delivery status updated from Jasmin DLR callbacks.
+            </span>
+        </div>
+        {% if status_counts %}
+        <div class="mt-2 flex flex-wrap gap-2 text-xs font-mono uppercase tracking-wide text-neutral-500">
+            {% for status, count in status_counts.items %}
+                <span class="border border-neutral-200 px-2 py-1">{{ status }}: {{ count }}</span>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="flex flex-row justify-between items-center mb-4 bg-white shadow-mb p-2">
+        {% if view.search_fields %}
+            <form method="get" action="{{ request.path }}" id="search-form">
+                <div class="join">
+                    <div>
+                        <label class="input validator search-item">
+                            <input type="text" name="search" value="{{ search }}" placeholder="Search to, id, batch…" />
+                        </label>
+                    </div>
+                    <button type="submit" class="btn bg-[#0E3B43] btn-neutral search-item">
+                        <span class="icon-search text-xl text-white"></span>
+                    </button>
+                </div>
+            </form>
+        {% else %}
+            <div></div>
+        {% endif %}
+        <div class="join">
+            <a href="{% url 'messaging.send' %}" class="btn btn-sm text-white bg-black join-item">Send SMS</a>
+            <a href="{% url 'messaging.bulk_send' %}" class="btn btn-sm btn-outline join-item">Bulk</a>
+        </div>
+    </div>
+
+    <div class="flex-grow overflow-y-auto bg-white shadow-md">
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm text-left border border-gray-200 rounded-lg">
+                <thead class="text-xs font-semibold uppercase bg-gray-800 text-gray-100">
+                <tr>
+                    {% for field in fields %}
+                        <th class="px-3 py-2 border-b border-r border-gray-200 last:border-r-0 {% if view|field_orderable:field %}cursor-pointer hover:bg-gray-700{% endif %}"
+                            scope="col"
+                            {% if view|field_orderable:field %}onclick="orderBy('{{ field }}')"{% endif %}>
+                            {% get_label field %}
+                        </th>
+                    {% endfor %}
+                </tr>
+                </thead>
+                <tbody class="bg-white">
+                {% for obj in object_list %}
+                    <tr class="border-b border-gray-200 hover:bg-gray-50 {% cycle 'bg-gray-50' 'bg-white' %}">
+                        {% for field in fields %}
+                            <td class="px-3 py-2 border-r border-gray-200 last:border-r-0 text-gray-900 {% if forloop.first %}hover:underline cursor-pointer{% endif %}"
+                                {% if forloop.first %}onclick="window.location='{% url 'messaging.outboundmessage_read' obj.pk %}'"{% endif %}>
+                                {% get_value obj field %}
+                            </td>
+                        {% endfor %}
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="{{ fields|length }}" class="text-center py-4 text-gray-500 border-b border-gray-200">
+                            {% trans "No messages yet" %}
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% include 'includes/pagination.html' %}
+    </div>
+{% endblock %}

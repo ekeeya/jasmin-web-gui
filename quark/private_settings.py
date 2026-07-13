@@ -32,3 +32,16 @@ JASMIN_SMPP_PB_HOST = os.getenv("JASMIN_SMPP_PB_HOST", "127.0.0.1")
 JASMIN_SMPP_PB_PORT = int(os.getenv("JASMIN_SMPP_PB_PORT", "8989"))
 JASMIN_SMPP_PB_USERNAME = os.getenv("JASMIN_SMPP_PB_USERNAME", "cmadmin")
 JASMIN_SMPP_PB_PASSWORD = os.getenv("JASMIN_SMPP_PB_PASSWORD", "cmpwd")
+
+# HTTP API (send / balance / rate). Override if Jasmin listens elsewhere.
+JASMIN_HTTP_API_URL = os.getenv("JASMIN_HTTP_API_URL", f"http://{JASMIN_HOST}:1401")
+JASMIN_HTTP_API_TIMEOUT = float(os.getenv("JASMIN_HTTP_API_TIMEOUT", "15"))
+
+# URL Jasmin's DLRThrower will POST/GET to. Must be reachable FROM the Jasmin
+# process (often a Docker container). localhost is wrong when Jasmin is
+# containerised — use host.docker.internal for Joyce on the Docker host.
+JOYCE_PUBLIC_BASE_URL = os.getenv(
+    "JOYCE_PUBLIC_BASE_URL",
+    "http://host.docker.internal:8000",
+)
+JOYCE_DLR_CALLBACK_URL = os.getenv("JOYCE_DLR_CALLBACK_URL", "")

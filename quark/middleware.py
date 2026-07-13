@@ -29,7 +29,7 @@ class WorkspaceMiddleware:
     session_key = "workspace_id"
     header_name = "X-Joyce-Workspace"
     service_header_name = "X-Joyce-Service-Workspace"
-    select_related = ("parent",)
+    select_related = ("created_by",)
 
     def __init__(self, get_response=None):
         self.get_response = get_response

@@ -59,6 +59,7 @@ INSTALLED_APPS = [
     'smartmin.users',  # provides the FailedLogin model used by the login view
     'quark.web',
     'quark.jasmin',
+    'quark.messaging',
     'quark.api',
     'quark.utils',
     'quark.workspace',
@@ -129,6 +130,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'quark.messaging.context_processors.console_mode',
             ],
         },
     },
@@ -198,6 +200,21 @@ JASMIN_PERSIST = True
 # to complete before giving up with an error.
 JASMIN_PB_TIMEOUT = int(os.getenv("JASMIN_PB_TIMEOUT", "30"))
 
+# Jasmin HTTP API (default port 1401) used for /send, /balance, /rate
+JASMIN_HTTP_API_URL = os.getenv(
+    "JASMIN_HTTP_API_URL",
+    f"http://{os.getenv('JASMIN_HOST', '127.0.0.1')}:1401",
+)
+JASMIN_HTTP_API_TIMEOUT = float(os.getenv("JASMIN_HTTP_API_TIMEOUT", "15"))
+
+# Public base URL Joyce advertises to Jasmin for DLR callbacks.
+# When Jasmin runs in Docker and Joyce on the host, use host.docker.internal.
+JOYCE_PUBLIC_BASE_URL = os.getenv(
+    "JOYCE_PUBLIC_BASE_URL",
+    "http://host.docker.internal:8000",
+)
+JOYCE_DLR_CALLBACK_URL = os.getenv("JOYCE_DLR_CALLBACK_URL", "")
+
 CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0")
 CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", "redis://localhost:6379/0")
 
@@ -224,6 +241,7 @@ PERMISSIONS = {
     "jasmin.jasminuser": ("activate", "deactivate"),
     "jasmin.jasminsmppconnector": ("start", "stop", "configure"),
     "jasmin.jasminhttpconnector": ("configure", ),
+    "messaging.outboundmessage": ("list", "read", "send"),
 }
 
 GROUP_PERMISSIONS = {
@@ -265,9 +283,15 @@ GROUP_PERMISSIONS = {
         "jasmin.jasmininterceptor_update",
         "jasmin.jasmininterceptor_delete",
         "jasmin.jasmininterceptor_list",
-
+        "messaging.outboundmessage_list",
+        "messaging.outboundmessage_read",
+        "messaging.outboundmessage_send",
     )
 }
 
 LOGIN_REDIRECT_URL = "/"
 LOGIN_URL = "login/"
+
+# Soften lockout for local/dev use (defaults were 5 failures / 10 minutes)
+USER_FAILED_LOGIN_LIMIT = int(os.getenv("USER_FAILED_LOGIN_LIMIT", "50"))
+USER_LOCKOUT_TIMEOUT = int(os.getenv("USER_LOCKOUT_TIMEOUT", "5"))  # minutes; 0 = never auto-expire

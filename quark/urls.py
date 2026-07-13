@@ -49,6 +49,7 @@ urlpatterns = [
 urlpatterns +=[
     re_path(r"^", include("quark.workspace.urls")),
     re_path(r"^", include("quark.jasmin.urls")),
+    re_path(r"^", include("quark.messaging.urls")),
 ]
 
 

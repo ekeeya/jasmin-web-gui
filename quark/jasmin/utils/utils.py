@@ -38,11 +38,34 @@ class StructuredJSONField(models.JSONField):
                     'Param "key" must be a string and "value" must be a string, number, boolean or null')
 
 
+def _coerce_mt_quota(key, value):
+    """
+    Jasmin decrements balance/throughput with floats (route rates).
+    If balance is stored as int, updateQuota raises:
+      Type mismatch, cannot update an int with a float value
+    """
+    if value is None:
+        return None
+    if key in ("balance", "http_throughput", "smpps_throughput"):
+        return float(value)
+    if key in ("submit_sm_count", "early_decrement_balance_percent"):
+        return int(value)
+    return value
+
+
 def to_jsmin_mt_creds(creds: dict, is_new: bool) -> MtMessagingCredential:
+    """
+    Build MtMessagingCredential for RouterPB user_add.
+
+    Always use setQuota for absolute values. Jasmin's updateQuota() *increments*
+    a quota (billing delta) and is wrong when replacing a user via user_add.
+    ``is_new`` is kept for call-site compatibility.
+    """
     jasmin_mt_creds = MtMessagingCredential()
-    for key, value in creds.items():
-        iterator = creds[key].items()
-        for k, v in iterator:
+    for key, section in (creds or {}).items():
+        if not isinstance(section, dict):
+            continue
+        for k, v in section.items():
             if key == "authorizations":
                 jasmin_mt_creds.setAuthorization(k, v)
             elif key == "value_filters":
@@ -50,19 +73,21 @@ def to_jsmin_mt_creds(creds: dict, is_new: bool) -> MtMessagingCredential:
             elif key == "defaults":
                 jasmin_mt_creds.setDefaultValue(k, v)
             else:
-                jasmin_mt_creds.setQuota(k, v) if is_new else jasmin_mt_creds.updateQuota(k, v)
+                jasmin_mt_creds.setQuota(k, _coerce_mt_quota(k, v))
     return jasmin_mt_creds
 
 
 def to_jasmin_smpp_creds(creds: dict, is_new: bool) -> SmppsCredential:
+    """Build SmppsCredential for RouterPB user_add (absolute quotas via setQuota)."""
     jasmin_smpp_creds = SmppsCredential()
-    for key, value in creds.items():
-        iterator = creds[key].items()
-        for k, v in iterator:
+    for key, section in (creds or {}).items():
+        if not isinstance(section, dict):
+            continue
+        for k, v in section.items():
             if key == "authorizations":
                 jasmin_smpp_creds.setAuthorization(k, v)
             else:
-                jasmin_smpp_creds.setQuota(k, v) if is_new else jasmin_smpp_creds.updateQuota(k, v)
+                jasmin_smpp_creds.setQuota(k, v)
     return jasmin_smpp_creds
 
 

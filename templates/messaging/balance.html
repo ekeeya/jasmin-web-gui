@@ -1,0 +1,47 @@
+{% extends 'base/base.html' %}
+
+{% block content %}
+<div class="mx-auto max-w-2xl space-y-6">
+    <div>
+        <p class="font-mono text-[10px] uppercase tracking-[0.2em] text-neutral-400">Operate</p>
+        <h1 class="font-display text-2xl font-bold tracking-tight text-neutral-900">Balance &amp; rate</h1>
+        <p class="mt-1 text-sm text-neutral-500">Query Jasmin HTTP API <code class="font-mono text-xs">/balance</code> and <code class="font-mono text-xs">/rate</code> for a gateway user.</p>
+    </div>
+
+    {% if not jasmin_users %}
+        <div role="alert" class="alert alert-warning text-sm">
+            No enabled Jasmin users in this workspace. Create one under Configure → Users first.
+        </div>
+    {% else %}
+        <form method="get" class="border border-neutral-200 bg-white p-5 space-y-4">
+            <input type="hidden" name="check" value="1" />
+            <div>
+                <label for="id_user" class="block text-sm font-medium text-neutral-800 mb-1">Jasmin user</label>
+                <select name="user" id="id_user" class="w-full border border-black px-4 py-2 bg-white">
+                    {% for u in jasmin_users %}
+                        <option value="{{ u.pk }}" {% if selected_user and selected_user.pk == u.pk %}selected{% endif %}>{{ u.username }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button type="submit" class="btn btn-sm bg-neutral-950 text-white border-0 hover:bg-neutral-800">Check balance &amp; rate</button>
+        </form>
+
+        {% if lookup_error %}
+            <div role="alert" class="alert alert-error text-sm">{{ lookup_error }}</div>
+        {% endif %}
+
+        {% if balance_text or rate_text %}
+        <div class="grid gap-3 sm:grid-cols-2">
+            <div class="border border-neutral-200 bg-white p-4">
+                <p class="font-mono text-[10px] uppercase tracking-widest text-neutral-400">Balance</p>
+                <pre class="mt-2 font-mono text-sm whitespace-pre-wrap">{{ balance_text|default:"—" }}</pre>
+            </div>
+            <div class="border border-neutral-200 bg-white p-4">
+                <p class="font-mono text-[10px] uppercase tracking-widest text-neutral-400">Rate</p>
+                <pre class="mt-2 font-mono text-sm whitespace-pre-wrap">{{ rate_text|default:"—" }}</pre>
+            </div>
+        </div>
+        {% endif %}
+    {% endif %}
+</div>
+{% endblock %}

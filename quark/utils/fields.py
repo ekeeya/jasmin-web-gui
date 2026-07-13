@@ -85,6 +85,18 @@ class CheckboxInputWidget(JoyceWidgetMixin, widgets.CheckboxInput):
     template_name = 'widgets/checkbox.html'
     is_annotated = True
 
+    def get_context(self, name, value, attrs):
+        context = super().get_context(name, value, attrs)
+        # Drop boolean attrs that are False — HTML treats checked="False" as checked
+        cleaned = {
+            key: val
+            for key, val in context["widget"]["attrs"].items()
+            if val is not False and val is not None
+        }
+        context["widget"]["attrs"] = cleaned
+        context["widget"]["type"] = "checkbox"
+        return context
+
 
 class RadioSelectWidget(widgets.RadioSelect):
     template_name = 'widgets/radiobutton.html'

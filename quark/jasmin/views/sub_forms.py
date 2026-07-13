@@ -101,12 +101,18 @@ class MessagingDefaultsForm(forms.Form):
 
 
 class MessagingQuotasForm(forms.Form):
-    balance = forms.IntegerField(
-
+    balance = forms.FloatField(
         required=False,
         label="Balance",
         initial=None,
-        widget=NumberInputTextWidget(attrs={'placeholder': 'Enter integer or leave blank', 'type': 'number'})
+        widget=NumberInputTextWidget(
+            attrs={
+                "placeholder": "e.g. 1000 or 1000.0 — leave blank for unlimited",
+                "type": "number",
+                "step": "any",
+            }
+        ),
+        help_text="Must be a float-compatible value; Jasmin bills route rates as floats.",
     )
     early_decrement_balance_percent = forms.IntegerField(
         required=False,
@@ -120,17 +126,21 @@ class MessagingQuotasForm(forms.Form):
         initial="10",
         widget=NumberInputTextWidget(attrs={'placeholder': 'Enter integer or leave blank', 'type': 'number'})
     )
-    http_throughput = forms.IntegerField(
+    http_throughput = forms.FloatField(
         required=False,
         label="HTTP Throughput",
-        initial="100",
-        widget=NumberInputTextWidget(attrs={'placeholder': 'Enter integer or leave blank', 'type': 'number'})
+        initial=100.0,
+        widget=NumberInputTextWidget(
+            attrs={'placeholder': 'Enter number or leave blank', 'type': 'number', 'step': 'any'}
+        ),
     )
-    smpps_throughput = forms.IntegerField(
+    smpps_throughput = forms.FloatField(
         required=False,
         label="SMPPS Throughput",
-        initial="100",
-        widget=NumberInputTextWidget(attrs={'placeholder': 'Enter integer or leave blank', 'type': 'number'})
+        initial=100.0,
+        widget=NumberInputTextWidget(
+            attrs={'placeholder': 'Enter number or leave blank', 'type': 'number', 'step': 'any'}
+        ),
     )
 
     def clean(self):

@@ -24,7 +24,7 @@ from quark.jasmin.models import JasminGroup, JasminUser, JasminSMPPConnector, Ja
     JasminInterceptor, JasminHTTPConnector
 from quark.jasmin.views.sub_forms import MessagingAuthorizationsForm, MessagingValueFiltersForm, MessagingDefaultsForm, \
     MessagingQuotasForm, SMPPAuthorizationsForm, SMPPQuotasForm
-from quark.utils.fields import SelectWidget, TextareaWidget, FilePickerWidget
+from quark.utils.fields import SelectWidget, TextareaWidget, FilePickerWidget, CheckboxInputWidget
 from quark.workspace.views.forms import BaseWorkspaceForm
 
 
@@ -74,6 +74,13 @@ class UpdateJasminGroupForm(BaseWorkspaceForm):
 
 
 class JasminUserForm(BaseWorkspaceForm):
+    enabled = forms.BooleanField(
+        required=False,
+        initial=True,
+        label="Enabled",
+        widget=CheckboxInputWidget(),
+    )
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -169,7 +176,8 @@ class JasminUserForm(BaseWorkspaceForm):
 
     class Meta:
         model = JasminUser
-        fields = ('username', 'password', 'group', 'mt_credential', 'smpps_credential')
+        # mt_credential / smpps_credential are assembled from subforms in save()
+        fields = ('username', 'password', 'group', 'enabled')
 
 
 class JasminSPPConnectorForm(BaseWorkspaceForm):

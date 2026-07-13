@@ -125,6 +125,16 @@
                 <p class="mt-2 text-neutral-500">{% trans "Sign in to manage your SMS gateway." %}</p>
             </div>
 
+            {% if messages %}
+                <div class="mt-6 space-y-2">
+                    {% for message in messages %}
+                        <div class="border border-neutral-900 bg-neutral-50 rounded-lg p-4 text-sm text-neutral-800">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
             <form method="post" id="login-form" class="mt-8 space-y-5">
                 {% csrf_token %}
 

@@ -138,7 +138,12 @@ class InjectModalFormMixin(FormMixin):
         update_forms = []
         if self.update_form:
             for item in items:
-                form = self.update_form(instance=item, workspace=workspace)
+                # Unique auto_id per row so checkboxes/labels don't collide across modals
+                form = self.update_form(
+                    instance=item,
+                    workspace=workspace,
+                    auto_id=f"id_upd_{item.id}_%s",
+                )
                 # convert to tailwind widgets
                 form = self.update_form_use_tailwind(form)
                 update_url = reverse(self.post_url, args=[item.id])

@@ -142,6 +142,10 @@ services:
       JASMIN_SMPP_PB_HOST: jasmin
       JASMIN_SMPP_PB_PORT: "8989"
 
+      # Reachable from the jasmin container (compose DNS → nginx)
+      JOYCE_PUBLIC_BASE_URL: "http://nginx"
+      JASMIN_HTTP_API_URL: "http://jasmin:1401"
+
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/0
 
