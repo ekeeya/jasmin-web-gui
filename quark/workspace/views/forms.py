@@ -34,6 +34,7 @@ from django_countries.fields import CountryField
 from timezone_field import TimeZoneFormField
 
 from quark.workspace.models import User, WorkSpace
+from quark.utils.fields import NumberInputTextWidget
 
 
 class BaseWorkspaceForm(forms.ModelForm):
@@ -48,6 +49,23 @@ class BaseWorkspaceForm(forms.ModelForm):
         self.cleaned_data['workspace'] = self.workspace
 
         return self.cleaned_data
+
+
+class WorkspaceSettingsForm(forms.ModelForm):
+    jasmin_user_sync_interval_mins = forms.IntegerField(
+        min_value=0,
+        required=True,
+        label="Jasmin user sync interval (minutes)",
+        help_text=(
+            "How often to pull live Jasmin user quotas/credentials into Django. "
+            "0 disables automatic sync. The scheduler checks about once a minute."
+        ),
+        widget=NumberInputTextWidget(attrs={"type": "number", "min": "0"}),
+    )
+
+    class Meta:
+        model = WorkSpace
+        fields = ("jasmin_user_sync_interval_mins",)
 
 
 class SignupForm(forms.ModelForm):

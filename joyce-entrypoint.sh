@@ -32,6 +32,11 @@ done
 
 python manage.py migrate --noinput
 
+# Worker / beat / other commands: skip collectstatic + runserver
+if [ "$#" -gt 0 ]; then
+  exec "$@"
+fi
+
 # Collect static files for Django.
 python manage.py collectstatic --noinput
 

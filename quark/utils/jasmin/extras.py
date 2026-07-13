@@ -122,9 +122,14 @@ class BaseJasminModel(models.Model):
         try:
             result = run_in_reactor(method, *args, **kwargs)
             # Jasmin PB signals rejection by returning False instead of raising.
-            # For removes, False means "not found" which is the desired end state,
-            # so treat it as success to allow cleaning up out-of-sync rows.
-            if result is False and operation not in self.REMOVE_OPERATIONS:
+            # Exceptions:
+            #   - removes: False = "not found" (desired end state)
+            #   - connector_status: False = "stopped / not running" (a valid status)
+            if (
+                result is False
+                and operation not in self.REMOVE_OPERATIONS
+                and operation not in self.READ_OPERATIONS
+            ):
                 raise JasminOperationError(
                     f"Jasmin rejected operation '{operation.value}', check jasmin logs for details"
                 )

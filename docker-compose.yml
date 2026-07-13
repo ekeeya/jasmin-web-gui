@@ -1,3 +1,36 @@
+# Shared Joyce env for web + celery worker/beat (not a service).
+x-joyce-environment: &joyce-environment
+  # Postgres on the Docker host's localhost
+  DB_HOST: host.docker.internal
+  DB_PORT: "5432"
+  DB_NAME: joyce
+  DB_USER: ekeeya
+  DB_PASSWORD: postgres
+
+  # Talk to other services on the compose network
+  JASMIN_HOST: jasmin
+  JASMIN_PORT: "8990"
+  JASMIN_ROUTER_PB_HOST: jasmin
+  JASMIN_JCLI_USERNAME: "jcliadmin"
+  JASMIN_JCLI_PASSWORD: "jclipwd"
+  JASMIN_ROUTER_PB_USERNAME: "radmin"
+  JASMIN_ROUTER_PB_PASSWORD: "rpwd"
+  JASMIN_SMPP_PB_USERNAME: "cmadmin"
+  JASMIN_SMPP_PB_PASSWORD: "cmpwd"
+  JASMIN_ROUTER_PB_PORT: "8988"
+  JASMIN_SMPP_PB_HOST: jasmin
+  JASMIN_SMPP_PB_PORT: "8989"
+
+  # Reachable from the jasmin container (compose DNS → nginx)
+  JOYCE_PUBLIC_BASE_URL: "http://nginx"
+  JASMIN_HTTP_API_URL: "http://jasmin:1401"
+
+  CELERY_BROKER_URL: redis://redis:6379/0
+  CELERY_RESULT_BACKEND: redis://redis:6379/0
+
+  # Optional
+  DEBUG: "False"
+
 services:
 
   redis:
@@ -54,6 +87,7 @@ services:
     security_opt:
       - no-new-privileges:true
 
+  # Jasmin REST API worker only — do not reuse for Joyce (different Celery app + broker).
   jasmin_celery:
     image: jookies/jasmin:0.10
     restart: unless-stopped
@@ -121,36 +155,46 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     environment:
-      # Postgres on the Docker host's localhost
-      DB_HOST: host.docker.internal
-      DB_PORT: "5432"
-      DB_NAME: joyce
-      DB_USER: postgres
-      DB_PASSWORD: postgres
+      <<: *joyce-environment
 
-      # Talk to other services on the compose network
-      JASMIN_HOST: jasmin
-      JASMIN_PORT: "8990"
-      JASMIN_ROUTER_PB_HOST: jasmin
-      JASMIN_JCLI_USERNAME: "jcliadmin"
-      JASMIN_JCLI_PASSWORD: "jclipwd"
-      JASMIN_ROUTER_PB_USERNAME: "radmin"
-      JASMIN_ROUTER_PB_PASSWORD: "rpwd"
-      JASMIN_SMPP_PB_USERNAME: "cmadmin"
-      JASMIN_SMPP_PB_PASSWORD: "cmpwd"
-      JASMIN_ROUTER_PB_PORT: "8988"
-      JASMIN_SMPP_PB_HOST: jasmin
-      JASMIN_SMPP_PB_PORT: "8989"
+  joyce_celery:
+    container_name: joyce_celery
+    restart: unless-stopped
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      redis:
+        condition: service_healthy
+      joyce:
+        condition: service_started
+      jasmin:
+        condition: service_started
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      <<: *joyce-environment
+    # Same image/entrypoint as joyce; command runs Celery instead of runserver
+    command: ["celery", "-A", "quark", "worker", "-l", "INFO"]
 
-      # Reachable from the jasmin container (compose DNS → nginx)
-      JOYCE_PUBLIC_BASE_URL: "http://nginx"
-      JASMIN_HTTP_API_URL: "http://jasmin:1401"
-
-      CELERY_BROKER_URL: redis://redis:6379/0
-      CELERY_RESULT_BACKEND: redis://redis:6379/0
-
-      # Optional
-      DEBUG: "False"
+  joyce_celery_beat:
+    container_name: joyce_celery_beat
+    restart: unless-stopped
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      redis:
+        condition: service_healthy
+      joyce:
+        condition: service_started
+      joyce_celery:
+        condition: service_started
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      <<: *joyce-environment
+    command: ["celery", "-A", "quark", "beat", "-l", "INFO"]
 
   nginx:
     image: nginx:alpine

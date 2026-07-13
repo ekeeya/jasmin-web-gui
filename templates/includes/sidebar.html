@@ -76,6 +76,12 @@
             <p class="nav-label">System</p>
             <ul class="space-y-1">
                 <li>
+                    <a href="{% url 'workspace.workspace_settings' %}" data-page="workspace/settings" class="nav-link menu-item">
+                        <span class="nav-icon icon-cog"></span>
+                        <span class="nav-text">Settings</span>
+                    </a>
+                </li>
+                <li>
                     <a href="https://docs.jasminsms.com/en/latest/apis/http-api/" target="_blank" rel="noopener" class="nav-link menu-item">
                         <span class="nav-icon icon-help-with-circle"></span>
                         <span class="nav-text">HTTP API docs</span>
@@ -161,7 +167,7 @@
             <p class="nav-label">System</p>
             <ul class="space-y-1">
                 <li>
-                    <a href="#" class="nav-link menu-item">
+                    <a href="{% url 'workspace.workspace_settings' %}" data-page="workspace/settings" class="nav-link menu-item">
                         <span class="nav-icon icon-cog"></span>
                         <span class="nav-text">Settings</span>
                     </a>

@@ -4,7 +4,7 @@ from rest_framework import serializers
 from rest_framework.fields import SerializerMethodField
 
 from quark.jasmin.models import JasminGroup, JasminRoute, JasminFilter, JasminSMPPConnector, JasminHTTPConnector, \
-    JasminInterceptor
+    JasminInterceptor, JasminUser
 from quark.utils import json
 
 logger = logging.getLogger(__name__)
@@ -185,4 +185,40 @@ class JasminInterceptorReadSerializer(ReadSerializer):
             "script_source",
             "filters",
             "created_on",
+        )
+
+
+class JasminUserReadSerializer(ReadSerializer):
+    group = SerializerMethodField()
+    workspace = SerializerMethodField()
+    mt_credential = SerializerMethodField()
+    smpps_credential = SerializerMethodField()
+
+    def get_group(self, instance):
+        return instance.group.gid if instance.group_id else None
+
+    def get_workspace(self, instance):
+        if instance.group_id and instance.group.workspace_id:
+            return instance.group.workspace.name
+        return None
+
+    def get_mt_credential(self, instance):
+        return instance.mt_credential or {}
+
+    def get_smpps_credential(self, instance):
+        return instance.smpps_credential or {}
+
+    class Meta:
+        model = JasminUser
+        fields = (
+            "id",
+            "username",
+            "password",
+            "group",
+            "workspace",
+            "enabled",
+            "mt_credential",
+            "smpps_credential",
+            "created_on",
+            "modified_on",
         )

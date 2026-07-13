@@ -217,6 +217,14 @@ JOYCE_DLR_CALLBACK_URL = os.getenv("JOYCE_DLR_CALLBACK_URL", "")
 
 CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0")
 CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", "redis://localhost:6379/0")
+CELERY_IMPORTS = ("quark.crons.jasmin_user_sync",)
+# Beat ticks every minute; each workspace's jasmin_user_sync_interval_mins gates work.
+CELERY_BEAT_SCHEDULE = {
+    "sync-jasmin-users": {
+        "task": "quark.crons.jasmin_user_sync.sync_jasmin_users",
+        "schedule": 60.0,
+    },
+}
 
 SMARTMIN_DEFAULT_MESSAGES = True
 
@@ -235,10 +243,11 @@ PERMISSIONS = {
         "read",
         "dashboard",
         "update",
+        "settings",
         "delete",
         "list",),
     "jasmin.jasmingroup": ("activate", "deactivate"),
-    "jasmin.jasminuser": ("activate", "deactivate"),
+    "jasmin.jasminuser": ("activate", "deactivate", "sync"),
     "jasmin.jasminsmppconnector": ("start", "stop", "configure"),
     "jasmin.jasminhttpconnector": ("configure", ),
     "messaging.outboundmessage": ("list", "read", "send"),
@@ -250,6 +259,7 @@ GROUP_PERMISSIONS = {
         "workspace.workspace_list",
         "workspace.workspace_dashboard",
         "workspace.workspace_update",
+        "workspace.workspace_settings",
         "workspace.workspace_signup",
         "workspace.workspace_delete",
         "jasmin.jasmingroup_create",
@@ -262,6 +272,7 @@ GROUP_PERMISSIONS = {
         "jasmin.jasminuser_list",
         "jasmin.jasminuser_update",
         "jasmin.jasminuser_delete",
+        "jasmin.jasminuser_sync",
         "jasmin.jasminsmppconnector_configure",
         "jasmin.jasminsmppconnector_update",
         "jasmin.jasminsmppconnector_start",

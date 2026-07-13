@@ -27,11 +27,13 @@ from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 from smartmin.mixins import NonAtomicMixin
 from smartmin.users.models import FailedLogin
-from smartmin.views import SmartCRUDL, SmartCreateView
+from smartmin.views import SmartCRUDL, SmartCreateView, SmartUpdateView
 from django.contrib.auth.views import LoginView as AuthLoginView
 
+from quark.utils.views.mixins import FormMixin
 from quark.workspace.models import WorkSpace, User
-from quark.workspace.views.forms import SignupForm
+from quark.workspace.views.forms import SignupForm, WorkspaceSettingsForm
+from quark.workspace.views.mixins import WorkspacePermsMixin
 
 
 def switch_to_workspace(request, workspace: WorkSpace):
@@ -135,7 +137,7 @@ class LogoutView(View):
 class WorkspaceCRUDL(SmartCRUDL):
     model = WorkSpace
 
-    actions = ("signup", "create", "list",)
+    actions = ("signup", "create", "list", "settings",)
 
     class Signup(NonAtomicMixin, SmartCreateView):
         title = "Register Workspace"
@@ -162,3 +164,28 @@ class WorkspaceCRUDL(SmartCRUDL):
             switch_to_workspace(self.request, obj)
             login(self.request, new_user)  # log the user in
             return obj
+
+    class Settings(FormMixin, WorkspacePermsMixin, SmartUpdateView):
+        permission = "workspace.workspace_update"
+        form_class = WorkspaceSettingsForm
+        template_name = "workspace/settings.html"
+        title = "Workspace settings"
+        success_message = "Workspace settings saved."
+        fields = ("jasmin_user_sync_interval_mins",)
+
+        @classmethod
+        def derive_url_pattern(cls, path, action):
+            return r"^workspace/settings/$"
+
+        def get_object(self, queryset=None):
+            return self.derive_workspace()
+
+        def get_success_url(self):
+            return reverse("workspace.workspace_settings")
+
+        def get_context_data(self, **kwargs):
+            context = super().get_context_data(**kwargs)
+            workspace = self.derive_workspace()
+            context["workspace"] = workspace
+            context["last_synced_at"] = workspace.jasmin_user_last_synced_at
+            return context

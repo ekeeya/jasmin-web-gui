@@ -43,11 +43,17 @@
             </thead>
             <tbody class="bg-white">
             {% for obj in object_list %}
-                <tr data-row-{{ obj.id }}="{{ obj.gid }}" class="border-b border-gray-200 hover:bg-gray-50 {% cycle 'bg-gray-50' 'bg-white' %} {% if not obj.is_active and obj|is_smartobject %}opacity-60{% endif %}">
+                <tr data-pk="{{ obj.id }}" data-row-{{ obj.id }}="{{ obj.username }}" class="border-b border-gray-200 hover:bg-gray-50 {% cycle 'bg-gray-50' 'bg-white' %} {% if not obj.is_active and obj|is_smartobject %}opacity-60{% endif %}">
                     {% for field in fields %}
-                        <td class="px-3 py-2 border-r border-gray-200 last:border-r-0 text-gray-900 {% if field in link_fields %}hover:underline cursor-pointer{% endif %}"
-                            {% if field in link_fields %}onclick="window.location='{% get_field_link field obj %}'"{% endif %}>
-                            {% get_value obj field %}
+                        <td class="px-3 py-2 border-r border-gray-200 last:border-r-0 text-gray-900">
+                            {% get_value obj field as result %}
+                            {% if field == 'username' %}
+                                <a class="text-blue-600 underline font-medium" data-user-details-open href="javascript:void(0)">
+                                    {{ result|safe }}
+                                </a>
+                            {% else %}
+                                {{ result|safe }}
+                            {% endif %}
                         </td>
                     {% endfor %}
                     {% if actions %}
@@ -64,5 +70,6 @@
             {% endfor %}
             </tbody>
         </table>
+        {% include 'includes/user_details.html' %}
     </div>
 {% endblock %}

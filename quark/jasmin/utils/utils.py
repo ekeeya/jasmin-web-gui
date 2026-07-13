@@ -91,6 +91,56 @@ def to_jasmin_smpp_creds(creds: dict, is_new: bool) -> SmppsCredential:
     return jasmin_smpp_creds
 
 
+def _pattern_to_str(value_filter) -> str:
+    """Normalize Jasmin compiled regex / pattern to a form-friendly string."""
+    if value_filter is None:
+        return ".*"
+    pattern = getattr(value_filter, "pattern", value_filter)
+    if isinstance(pattern, bytes):
+        return pattern.decode("utf-8", errors="replace")
+    return str(pattern)
+
+
+def from_jasmin_mt_creds(mt_cred: MtMessagingCredential) -> dict:
+    """Convert a live Jasmin MtMessagingCredential into Django mt_credential JSON."""
+    authorizations = {
+        key: mt_cred.getAuthorization(key) for key in mt_cred.authorizations.keys()
+    }
+    value_filters = {
+        key: _pattern_to_str(mt_cred.getValueFilter(key))
+        for key in mt_cred.value_filters.keys()
+    }
+    defaults = {
+        key: mt_cred.getDefaultValue(key) for key in mt_cred.defaults.keys()
+    }
+    # Skip internal bookkeeping keys (e.g. quotas_updated) — only real quotas.
+    quotas = {
+        key: mt_cred.getQuota(key)
+        for key in mt_cred.quotas.keys()
+        if key != "quotas_updated"
+    }
+    return {
+        "authorizations": authorizations,
+        "value_filters": value_filters,
+        "defaults": defaults,
+        "quotas": quotas,
+    }
+
+
+def from_jasmin_smpp_creds(smpp_cred: SmppsCredential) -> dict:
+    """Convert a live Jasmin SmppsCredential into Django smpps_credential JSON."""
+    authorizations = {
+        key: smpp_cred.getAuthorization(key) for key in smpp_cred.authorizations.keys()
+    }
+    quotas = {
+        key: smpp_cred.getQuota(key) for key in smpp_cred.quotas.keys()
+    }
+    return {
+        "authorizations": authorizations,
+        "quotas": quotas,
+    }
+
+
 TON_VALUES = {
     "0": AddrTon.UNKNOWN,
     "1": AddrTon.INTERNATIONAL,

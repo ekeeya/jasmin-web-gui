@@ -39,6 +39,7 @@ from smpp.pdu.pdu_types import RegisteredDelivery
 
 from quark.jasmin.utils import PRIORITY_VALUES, TON_VALUES, NPI_VALUES, REGISTERED_DELIVERY_VALUES, \
     REPLACE_IF_PRESENT_VALUES
+from quark.jasmin.utils.utils import from_jasmin_mt_creds, from_jasmin_smpp_creds
 from quark.jasmin.utils.connectors import BaseJasminConnector
 from quark.jasmin.utils.filters import (
     JasminBaseFilter, MO, MoFilters, MTFilters, MT, AllFilters, validate_py_script,
@@ -218,6 +219,67 @@ class JasminUser(SmartModel, BaseJasminModel):
             self.jasmin_remove_user()
         else:
             super().delete(*args, **kwargs)
+
+    def apply_jasmin_user(self, jasmin_user, *, save: bool = True):
+        """
+        Copy live credentials (and enabled flag) from a Jasmin User into this row.
+        Always saves with run_on_reactor=False so we do not push stale values back.
+        """
+        self.mt_credential = from_jasmin_mt_creds(jasmin_user.mt_credential)
+        self.smpps_credential = from_jasmin_smpp_creds(jasmin_user.smpps_credential)
+        if hasattr(jasmin_user, "enabled"):
+            self.enabled = bool(jasmin_user.enabled)
+        if save:
+            self.save(run_on_reactor=False)
+        return self
+
+    def sync_from_jasmin(self, *, save: bool = True):
+        """Fetch this username from Jasmin and refresh local credential JSON."""
+        from quark.jasmin.reactor import run_in_reactor
+        from quark.jasmin.router_pb import RouterPBInterface
+
+        jasmin_user = run_in_reactor(RouterPBInterface().get_user, self.username)
+        if jasmin_user is None:
+            logger.warning("Jasmin user %s not found during sync", self.username)
+            return None
+        return self.apply_jasmin_user(jasmin_user, save=save)
+
+    @classmethod
+    def sync_many_from_jasmin(cls, users=None):
+        """
+        Bulk-refresh Django users from one user_get_all call.
+
+        ``users`` may be an iterable of JasminUser instances (preferred: updates
+        those objects in-place so list/edit forms see fresh data) or omitted to
+        sync every local row. Failures are logged and do not raise.
+        """
+        from quark.jasmin.reactor import run_in_reactor
+        from quark.jasmin.router_pb import RouterPBInterface
+
+        try:
+            remote_users = run_in_reactor(RouterPBInterface().get_all_users) or []
+        except Exception as e:
+            logger.error("Failed to fetch Jasmin users for sync: %s", e)
+            return []
+
+        by_uid = {
+            getattr(u, "uid", None) or getattr(u, "username", None): u
+            for u in remote_users
+        }
+
+        if users is None:
+            locals_list = list(cls.objects.all())
+        else:
+            locals_list = list(users)
+
+        updated = []
+        for local in locals_list:
+            remote = by_uid.get(local.username)
+            if remote is None:
+                continue
+            local.apply_jasmin_user(remote, save=True)
+            updated.append(local)
+        return updated
 
     def __str__(self):
         return self.username

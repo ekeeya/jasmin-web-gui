@@ -1,0 +1,137 @@
+<div data-user-details-backdrop class="fixed inset-0 bg-black/60 bg-opacity-30 z-40 backdrop-transition opacity-0 pointer-events-none"></div>
+
+<div data-user-details class="fixed top-0 right-0 h-auto w-full max-w-lg modal-transition modal-hidden z-50 p-4">
+    <div class="bg-white border rounded shadow-2xl flex flex-col overflow-hidden mt-4 h-[90vh]">
+        <div class="bg-black px-4 py-2 border-b border-gray-200 flex justify-between items-center shrink-0">
+            <h2 class="text-lg font-semibold text-white">User Details</h2>
+            <button data-user-details-close class="text-gray-500 hover:text-gray-700 focus:outline-none">
+                <span class="icon-cross text-xl text-white"></span>
+            </button>
+        </div>
+
+        <div class="flex-1 overflow-hidden flex flex-col">
+            <div id="user-loading" class="flex-grow flex flex-col items-center justify-center hidden">
+                <div class="inline-block animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-blue-500"></div>
+                <p class="mt-2 text-sm text-gray-600">Loading details...</p>
+            </div>
+
+            <div id="user-modal-content" class="overflow-y-auto flex-grow p-3 space-y-3 text-sm">
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    $(document).ready(function () {
+        function openModal() {
+            $('[data-user-details-backdrop]').removeClass('opacity-0 pointer-events-none').addClass('opacity-100');
+            $('[data-user-details]').removeClass('modal-hidden');
+        }
+
+        function closeModal() {
+            $('[data-user-details-backdrop]').removeClass('opacity-100').addClass('opacity-0 pointer-events-none');
+            $('[data-user-details]').addClass('modal-hidden');
+        }
+
+        $('[data-user-details-open]').on('click', function (e) {
+            const userId = $(this).closest("tr").data("pk");
+            fetchUserDetails(userId);
+            e.preventDefault();
+            openModal();
+        });
+
+        $('[data-user-details-close]').on('click', function (e) {
+            e.preventDefault();
+            closeModal();
+        });
+
+        $('[data-user-details-backdrop]').on('click', function (e) {
+            if (e.target === this) {
+                closeModal();
+            }
+        });
+
+        const labelize = (key) => String(key || '').replace(/_/g, ' ');
+
+        const formatValue = (value) => {
+            if (value === null || value === undefined || value === '') return '—';
+            if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+            return value;
+        };
+
+        const dictSection = (title, data, emptyText) => {
+            const entries = Object.entries(data || {});
+            if (!entries.length) {
+                return `
+                    <div>
+                        <h3 class="font-semibold border-b pb-1 text-base">${title}</h3>
+                        <p class="mt-1 text-sm text-neutral-500">${emptyText || 'None set'}</p>
+                    </div>
+                `;
+            }
+            return `
+                <div>
+                    <h3 class="font-semibold border-b pb-1 text-base">${title}</h3>
+                    <div class="mt-1 divide-y border rounded">
+                        ${entries.map(([key, value]) => `
+                            <div class="flex justify-between gap-3 px-2 py-1.5 text-sm">
+                                <span class="font-medium text-neutral-700">${labelize(key)}</span>
+                                <span class="text-right font-mono text-xs text-neutral-900 break-all">${formatValue(value)}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        };
+
+        const fetchUserDetails = async (userId) => {
+            $('#user-loading').removeClass('hidden');
+            $('#user-modal-content').empty();
+
+            try {
+                const response = await fetch(`/jasminuser/${userId}/`);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const data = await response.json();
+                $('#user-loading').addClass('hidden');
+                displayUserDetails(data.object);
+            } catch (error) {
+                console.error('Error fetching user details:', error);
+                $('#user-loading').addClass('hidden');
+                $('#user-modal-content').html(`
+                    <div class="bg-red-100 border border-red-400 text-red-700 px-3 py-2 rounded text-sm" role="alert">
+                        <strong>Error!</strong> Failed to load user details.
+                    </div>
+                `);
+            }
+        };
+
+        const displayUserDetails = (user) => {
+            const mt = user.mt_credential || {};
+            const smpps = user.smpps_credential || {};
+            const content = `
+                <div class="space-y-3">
+                    <div>
+                        <h3 class="font-semibold border-b pb-1 text-base">Basic Information</h3>
+                        <div class="grid grid-cols-2 gap-1 mt-1 text-sm">
+                            <div><span class="font-medium">Username:</span> ${formatValue(user.username)}</div>
+                            <div><span class="font-medium">Enabled:</span> ${formatValue(user.enabled)}</div>
+                            <div><span class="font-medium">Group:</span> ${formatValue(user.group)}</div>
+                            <div><span class="font-medium">Workspace:</span> ${formatValue(user.workspace)}</div>
+                            <div class="col-span-2"><span class="font-medium">Password:</span>
+                                <span class="font-mono text-xs">${formatValue(user.password)}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    ${dictSection('MT Authorizations', mt.authorizations)}
+                    ${dictSection('MT Value Filters', mt.value_filters)}
+                    ${dictSection('MT Defaults', mt.defaults)}
+                    ${dictSection('MT Quotas', mt.quotas, 'Unlimited / not set')}
+                    ${dictSection('SMPP Authorizations', smpps.authorizations)}
+                    ${dictSection('SMPP Quotas', smpps.quotas, 'Unlimited / not set')}
+                </div>
+            `;
+            $('#user-modal-content').html(content);
+        };
+    });
+</script>

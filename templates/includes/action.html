@@ -50,6 +50,20 @@
             },
             error: function(xhr) {
                 console.error('Action failed:', xhr.status, xhr.responseText);
+                let msg = 'Action failed';
+                try {
+                    const data = JSON.parse(xhr.responseText);
+                    if (data && data.message) msg = data.message;
+                } catch (err) {
+                    if (xhr.responseText) msg = xhr.responseText.slice(0, 200);
+                }
+                $.alert({
+                    title: 'Error',
+                    content: msg,
+                    type: 'red',
+                    boxWidth: '30%',
+                    useBootstrap: false,
+                });
             }
         });
     }

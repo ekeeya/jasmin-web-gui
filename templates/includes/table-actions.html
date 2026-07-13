@@ -9,11 +9,20 @@
                     </a>
                 </div>
 
+            {% elif action == 'sync' %}
+                <div class="tooltip" data-tip="Sync credentials from Jasmin">
+                    <a data-action="sync" href="javascript:void(0)"
+                       data-url="sync/"
+                       class="group btn btn-xs btn-square btn-outline btn-neutral">
+                        <span class="icon-refresh text-neutral-700 group-hover:text-white"></span>
+                    </a>
+                </div>
+
             {% elif action == 'status' %}
                 <div class="tooltip"
                      data-tip="{% if obj.is_active %} Stop connector {% else %} Start connector {% endif %}">
                     <a data-action="{% if obj.is_active %}stop{% else %}start{% endif %}" href="javascript:void(0)"
-                       data-url="{% if obj.is_active %}stop/ {% else %}start/{% endif %}"
+                       data-url="{% if obj.is_active %}stop/{% else %}start/{% endif %}"
                        class="group btn btn-xs btn-square btn-outline {% if obj.is_active %}btn-error {% else %} btn-success {% endif %}">
                         {% if obj.is_active %}
                             <span class="icon-portable_wifi_off  text-red-600 group-hover:text-white"></span>

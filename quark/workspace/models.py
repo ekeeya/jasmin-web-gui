@@ -178,6 +178,19 @@ class WorkSpace(SmartModel):
     is_flagged = models.BooleanField(default=False, help_text="Whether this workspace is currently flagged.")
     is_suspended = models.BooleanField(default=False, help_text="Whether this workspace is currently suspended.")
 
+    jasmin_user_sync_interval_mins = models.PositiveIntegerField(
+        default=5,
+        help_text=(
+            "How often (minutes) to pull live Jasmin user credentials/quotas into Django. "
+            "Set to 0 to disable automatic sync for this workspace."
+        ),
+    )
+    jasmin_user_last_synced_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When Jasmin user credentials were last synced into Django for this workspace.",
+    )
+
     suspended_on = models.DateTimeField(null=True, blank=True)
     released_on = models.DateTimeField(null=True, blank=True)
     deleted_on = models.DateTimeField(null=True, blank=True)

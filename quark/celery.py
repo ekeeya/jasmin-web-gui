@@ -6,7 +6,6 @@ from celery import Celery
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'quark.settings')
 
 app = Celery('quark')
-app.conf.broker_url = 'redis://localhost:6379/0'
 
 # Using a string here means the worker doesn't have to serialize
 # the configuration object to child processes.
@@ -14,5 +13,11 @@ app.conf.broker_url = 'redis://localhost:6379/0'
 #   should have a `CELERY_` prefix.
 app.config_from_object('django.conf:settings', namespace='CELERY')
 
-# Load task modules from all registered Django apps.
+# Load task modules from all registered Django apps + explicit cron imports.
 app.autodiscover_tasks()
+app.conf.imports = tuple(
+    dict.fromkeys(
+        tuple(getattr(app.conf, "imports", ()) or ())
+        + ("quark.crons.jasmin_user_sync",)
+    )
+)

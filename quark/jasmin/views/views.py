@@ -15,6 +15,8 @@
 #  You should have received a copy of the GNU General Public License along with this project.
 #  If not, see <http://www.gnu.org/licenses/>.
 #
+import logging
+
 from django import forms
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
@@ -25,7 +27,8 @@ from smartmin.mixins import NonAtomicMixin
 from smartmin.views import SmartCRUDL, SmartCreateView, SmartUpdateView, SmartDeleteView, \
     SmartModelActionView, SmartFormView, SmartReadView
 
-from quark.api.v1.serializers import JasminRouterReadSerializer, JasminInterceptorReadSerializer
+from quark.api.v1.serializers import JasminRouterReadSerializer, JasminInterceptorReadSerializer, \
+    JasminUserReadSerializer
 from quark.jasmin.models import JasminGroup, JasminUser, JasminSMPPConnector, JasminFilter, JasminRoute, \
     JasminInterceptor, JasminHTTPConnector
 from quark.jasmin.views.forms import JasminGroupForm, UpdateJasminGroupForm, JasminUserForm, JasminSPPConnectorForm, \
@@ -120,7 +123,7 @@ class JasminGroupCRUDL(SmartCRUDL):
 
 
 class JasminUserCRUDL(SmartCRUDL):
-    actions = ("create", "list", "update", "delete",)
+    actions = ("create", "list", "update", "delete", "sync", "Read",)
     model = JasminUser
 
     class Create(FormMixin, ModalFormMixin, WorkspacePermsMixin, NonAtomicMixin, SmartCreateView):
@@ -141,15 +144,74 @@ class JasminUserCRUDL(SmartCRUDL):
             kwargs["workspace"] = self.derive_workspace()
             return kwargs
 
+    class Sync(WorkspacePermsMixin, SmartFormView, SmartModelActionView):
+        class SyncForm(forms.Form):
+            pass
+
+        permission = "jasmin.jasminuser_sync"
+        success_url = "@jasmin.jasminuser_list"
+        success_message = "User credentials synced from Jasmin."
+        slug_url_kwarg = "id"
+        form_class = SyncForm
+
+        def execute_action(self):
+            try:
+                result = self.object.sync_from_jasmin()
+            except Exception as e:
+                raise forms.ValidationError(f"Sync failed: {e}")
+            if result is None:
+                raise forms.ValidationError(
+                    f"User '{self.object.username}' was not found on Jasmin"
+                )
+
+        def form_invalid(self, form):
+            # Action buttons POST via AJAX — return JSON so the UI can show the error
+            message = "; ".join(form.non_field_errors()) or "Sync failed"
+            return JsonResponse({"message": message}, status=400)
+
+        def form_valid(self, form):
+            try:
+                self.execute_action()
+            except forms.ValidationError as e:
+                error_messages = e.messages if hasattr(e, "messages") else [str(e)]
+                return JsonResponse({"message": "; ".join(error_messages)}, status=400)
+            return JsonResponse({"message": self.derive_success_message()})
+
+    class Read(WorkspacePermsMixin, SmartReadView):
+        permission = "jasmin.jasminuser_list"
+        slug_url_kwarg = "id"
+
+        def get_context_data(self, **kwargs):
+            context = super().get_context_data(**kwargs)
+            serializer = JasminUserReadSerializer(self.object)
+            context["object"] = serializer.data
+            return context
+
+        def get(self, request, *args, **kwargs):
+            self.object = self.get_object()
+            context = self.get_context_data()
+            return JsonResponse(
+                dict(fields=context.get("fields", []), object=context["object"]),
+                safe=False,
+            )
+
+        @classmethod
+        def derive_url_pattern(cls, path, action):
+            return r"^%s/(?P<pk>[^/]+)/$" % path.lower()
+
+        def derive_queryset(self):
+            return super().derive_queryset().filter(group__workspace=self.derive_workspace())
+
     class List(InjectModalFormMixin, BaseListView):
         permission = "jasmin.jasminuser_list"
         fields = ("username", "group", 'enabled', 'created_on')
         template_name = "jasmin/users/user_list.html"
+        actions = ["sync", "edit", "delete"]
 
-        title = "Jasmin Groups"
+        title = "Jasmin Users"
         ordering = ("-created_on",)
         paginate_by = 10
-        search_fields = ("gid",)
+        search_fields = ("username",)
         modal_form = JasminUserForm
         update_form = JasminUserForm
 
@@ -169,7 +231,6 @@ class JasminUserCRUDL(SmartCRUDL):
 
         def get_context_data(self, **kwargs):
             context = super().get_context_data(**kwargs)
-            # set delete url
             context["delete_url"] = "jasmin.jasminuser_delete"
             return context
 

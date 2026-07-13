@@ -131,11 +131,24 @@ class RouterPBInterface(RouterPBProxy):
             self.disconnect()
 
     @defer.inlineCallbacks
-    def get_all_users(self):
+    def get_all_users(self, gid: str = None):
         try:
             yield self.pb_connect()
-            users = yield self.user_get_all()
+            users = yield self.user_get_all(gid)
             defer.returnValue(pickle.loads(users))
+        finally:
+            self.disconnect()
+
+    @defer.inlineCallbacks
+    def get_user(self, uid: str):
+        """Return a single User by uid, or None. Jasmin only exposes user_get_all."""
+        try:
+            yield self.pb_connect()
+            users = pickle.loads((yield self.user_get_all()))
+            for user in users or []:
+                if getattr(user, "uid", None) == uid or getattr(user, "username", None) == uid:
+                    defer.returnValue(user)
+            defer.returnValue(None)
         finally:
             self.disconnect()
 

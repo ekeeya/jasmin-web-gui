@@ -123,8 +123,17 @@ class MessagingQuotasForm(forms.Form):
     submit_sm_count = forms.IntegerField(
         required=False,
         label="SMS Count",
-        initial="10",
-        widget=NumberInputTextWidget(attrs={'placeholder': 'Enter integer or leave blank', 'type': 'number'})
+        initial=None,
+        widget=NumberInputTextWidget(
+            attrs={
+                "placeholder": "Leave blank for unlimited; 0 blocks sending",
+                "type": "number",
+            }
+        ),
+        help_text=(
+            "Remaining submit_sm quota (shown as sms_count on /balance). "
+            "Blank = unlimited. Each send decrements by 1 when set."
+        ),
     )
     http_throughput = forms.FloatField(
         required=False,
