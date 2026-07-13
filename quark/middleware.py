@@ -1,7 +1,9 @@
 import traceback
 
 from django.conf import settings
-from django.http import HttpResponseForbidden
+from django.contrib import messages
+from django.http import HttpResponseForbidden, HttpResponseRedirect
+from django.urls import reverse
 from django.utils import timezone
 
 from quark.workspace.models import WorkSpace, User
@@ -81,6 +83,51 @@ class WorkspaceMiddleware:
             return user_workspaces[0]
 
         return None
+
+
+class JasminConnectionGateMiddleware:
+    """
+    Force workspaces that have not chosen demo/custom Jasmin onto the workspace
+    settings page until they are ready.
+    """
+
+    ALLOW_PREFIXES = (
+        "/static/",
+        "/media/",
+        "/admin/",
+        "/login/",
+        "/users/logout/",
+        "/workspace/settings/",
+        "/workspace/signup/",
+        "/api/",
+        "/dlr",
+    )
+
+    def __init__(self, get_response=None):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        user = getattr(request, "user", None)
+        workspace = getattr(request, "workspace", None)
+        if not user or not user.is_authenticated or not workspace:
+            return self.get_response(request)
+
+        if workspace.is_jasmin_ready():
+            return self.get_response(request)
+
+        path = request.path or "/"
+        if path == "/" or any(path.startswith(p) for p in self.ALLOW_PREFIXES):
+            return self.get_response(request)
+
+        settings_url = reverse("workspace.workspace_settings")
+        if path.rstrip("/") == settings_url.rstrip("/"):
+            return self.get_response(request)
+
+        messages.info(
+            request,
+            "Choose Local demo Jasmin or connect your own Jasmin before using the console.",
+        )
+        return HttpResponseRedirect(settings_url)
 
 
 class TimezoneMiddleware:

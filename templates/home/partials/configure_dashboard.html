@@ -7,129 +7,108 @@
             <h1 class="font-display text-2xl font-bold tracking-tight text-neutral-900">Gateway overview</h1>
             <p class="mt-1 text-sm text-neutral-500">Inventory and readiness for {{ workspace.name }}.</p>
         </div>
-        {% if config_ready %}
-            <span class="inline-flex items-center gap-2 self-start border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-emerald-800">
-                <span class="h-1.5 w-1.5 rounded-full bg-emerald-600"></span>
-                Ready to route
-            </span>
-        {% else %}
-            <span class="inline-flex items-center gap-2 self-start border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-amber-900">
-                <span class="h-1.5 w-1.5 rounded-full bg-amber-500"></span>
-                Setup {{ checklist_progress.done }}/{{ checklist_progress.total }}
-            </span>
-        {% endif %}
+        <div class="flex flex-wrap items-center gap-2">
+            {% if config_ready %}
+                <span class="inline-flex items-center gap-2 border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-emerald-800">
+                    <span class="h-1.5 w-1.5 rounded-full bg-emerald-600"></span>
+                    Ready to route
+                </span>
+            {% else %}
+                <span class="inline-flex items-center gap-2 border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-amber-900">
+                    <span class="h-1.5 w-1.5 rounded-full bg-amber-500"></span>
+                    Setup {{ checklist_progress.done }}/{{ checklist_progress.total }}
+                </span>
+            {% endif %}
+            <button type="button" data-setup-open
+                    class="inline-flex items-center gap-2 border border-neutral-300 bg-white px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-neutral-800 hover:border-neutral-900 hover:bg-neutral-50 transition-colors">
+                <span class="icon-list text-sm"></span>
+                Setup steps
+            </button>
+        </div>
     </div>
 
-    <div class="grid grid-cols-2 gap-3 lg:grid-cols-4 xl:grid-cols-7">
-        <a href="/jasmingroup/" class="border border-neutral-200 bg-white p-4 hover:border-neutral-400 transition-colors">
+    <div class="grid grid-cols-4 gap-3">
+        <a href="/jasmingroup/" class="border border-neutral-200 bg-white p-3 hover:border-neutral-400 transition-colors">
             <p class="font-mono text-[10px] uppercase tracking-widest text-neutral-400">Groups</p>
-            <p class="mt-1 font-display text-2xl font-bold tabular-nums">{{ config_counts.groups|default:0 }}</p>
-            <p class="mt-1 text-xs text-neutral-500">{{ config_counts.groups_active|default:0 }} active</p>
+            <p class="mt-1 font-display text-xl font-bold tabular-nums">{{ config_counts.groups|default:0 }}</p>
+            <p class="mt-0.5 text-xs text-neutral-500">{{ config_counts.groups_active|default:0 }} active</p>
         </a>
-        <a href="/jasminuser/" class="border border-neutral-200 bg-white p-4 hover:border-neutral-400 transition-colors">
+        <a href="/jasminuser/" class="border border-neutral-200 bg-white p-3 hover:border-neutral-400 transition-colors">
             <p class="font-mono text-[10px] uppercase tracking-widest text-neutral-400">Users</p>
-            <p class="mt-1 font-display text-2xl font-bold tabular-nums">{{ config_counts.users|default:0 }}</p>
-            <p class="mt-1 text-xs text-neutral-500">{{ config_counts.users_enabled|default:0 }} enabled</p>
+            <p class="mt-1 font-display text-xl font-bold tabular-nums">{{ config_counts.users|default:0 }}</p>
+            <p class="mt-0.5 text-xs text-neutral-500">{{ config_counts.users_enabled|default:0 }} enabled</p>
         </a>
-        <a href="/jasminsmppconnector/" class="border border-neutral-200 bg-white p-4 hover:border-neutral-400 transition-colors">
+        <a href="/jasminsmppconnector/" class="border border-neutral-200 bg-white p-3 hover:border-neutral-400 transition-colors">
             <p class="font-mono text-[10px] uppercase tracking-widest text-neutral-400">SMPP</p>
-            <p class="mt-1 font-display text-2xl font-bold tabular-nums">{{ config_counts.smpp|default:0 }}</p>
-            <p class="mt-1 text-xs text-neutral-500">
+            <p class="mt-1 font-display text-xl font-bold tabular-nums">{{ config_counts.smpp|default:0 }}</p>
+            <p class="mt-0.5 text-xs text-neutral-500">
                 <span class="text-emerald-700">{{ config_counts.smpp_started|default:0 }} up</span>
                 · {{ config_counts.smpp_stopped|default:0 }} down
             </p>
         </a>
-        <a href="/jasminhttpconnector/" class="border border-neutral-200 bg-white p-4 hover:border-neutral-400 transition-colors">
+        <a href="/jasminhttpconnector/" class="border border-neutral-200 bg-white p-3 hover:border-neutral-400 transition-colors">
             <p class="font-mono text-[10px] uppercase tracking-widest text-neutral-400">HTTP</p>
-            <p class="mt-1 font-display text-2xl font-bold tabular-nums">{{ config_counts.http|default:0 }}</p>
-            <p class="mt-1 text-xs text-neutral-500">MO connectors</p>
+            <p class="mt-1 font-display text-xl font-bold tabular-nums">{{ config_counts.http|default:0 }}</p>
+            <p class="mt-0.5 text-xs text-neutral-500">MO connectors</p>
         </a>
-        <a href="/jasminfilter/" class="border border-neutral-200 bg-white p-4 hover:border-neutral-400 transition-colors">
+        <a href="/jasminfilter/" class="border border-neutral-200 bg-white p-3 hover:border-neutral-400 transition-colors">
             <p class="font-mono text-[10px] uppercase tracking-widest text-neutral-400">Filters</p>
-            <p class="mt-1 font-display text-2xl font-bold tabular-nums">{{ config_counts.filters|default:0 }}</p>
+            <p class="mt-1 font-display text-xl font-bold tabular-nums">{{ config_counts.filters|default:0 }}</p>
         </a>
-        <a href="/jasminroute/" class="border border-neutral-200 bg-white p-4 hover:border-neutral-400 transition-colors">
+        <a href="/jasminroute/" class="border border-neutral-200 bg-white p-3 hover:border-neutral-400 transition-colors">
             <p class="font-mono text-[10px] uppercase tracking-widest text-neutral-400">Routes</p>
-            <p class="mt-1 font-display text-2xl font-bold tabular-nums">{{ config_counts.routes|default:0 }}</p>
-            <p class="mt-1 text-xs text-neutral-500">MT {{ config_counts.routes_mt|default:0 }} · MO {{ config_counts.routes_mo|default:0 }}</p>
+            <p class="mt-1 font-display text-xl font-bold tabular-nums">{{ config_counts.routes|default:0 }}</p>
+            <p class="mt-0.5 text-xs text-neutral-500">MT {{ config_counts.routes_mt|default:0 }} · MO {{ config_counts.routes_mo|default:0 }}</p>
         </a>
-        <a href="/jasmininterceptor/" class="border border-neutral-200 bg-white p-4 hover:border-neutral-400 transition-colors">
+        <a href="/jasmininterceptor/" class="border border-neutral-200 bg-white p-3 hover:border-neutral-400 transition-colors">
             <p class="font-mono text-[10px] uppercase tracking-widest text-neutral-400">Intercept</p>
-            <p class="mt-1 font-display text-2xl font-bold tabular-nums">{{ config_counts.interceptors|default:0 }}</p>
+            <p class="mt-1 font-display text-xl font-bold tabular-nums">{{ config_counts.interceptors|default:0 }}</p>
         </a>
     </div>
 
-    <div class="grid gap-4 lg:grid-cols-5">
-        <div class="border border-neutral-200 bg-white lg:col-span-2">
-            <div class="border-b border-neutral-100 px-4 py-3">
-                <h2 class="font-display text-sm font-semibold text-neutral-900">Setup checklist</h2>
-                <p class="mt-0.5 text-xs text-neutral-500">Minimum path to a working gateway.</p>
-            </div>
-            <ul class="divide-y divide-neutral-100">
-                {% for item in checklist %}
-                <li class="flex items-start gap-3 px-4 py-3">
-                    {% if item.done %}
-                        <span class="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-[10px] font-bold text-white">✓</span>
-                    {% else %}
-                        <span class="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-neutral-300 text-[10px] text-neutral-400">{{ forloop.counter }}</span>
-                    {% endif %}
-                    <div class="min-w-0 flex-1">
-                        <a href="{{ item.href }}" class="text-sm font-medium text-neutral-900 hover:underline {% if item.done %}text-neutral-500{% endif %}">
-                            {{ item.label }}
-                        </a>
-                        {% if item.optional and not item.done %}
-                            <p class="text-xs text-neutral-400">Optional</p>
-                        {% endif %}
-                    </div>
-                </li>
-                {% endfor %}
-            </ul>
+    <div class="border border-neutral-200 bg-white">
+        <div class="flex items-center justify-between border-b border-neutral-100 px-4 py-3">
+            <h2 class="font-display text-sm font-semibold text-neutral-900">SMPP connectors</h2>
+            <a href="/jasminsmppconnector/" class="text-xs font-medium text-neutral-500 hover:text-neutral-900">Manage</a>
         </div>
-
-        <div class="border border-neutral-200 bg-white lg:col-span-3">
-            <div class="flex items-center justify-between border-b border-neutral-100 px-4 py-3">
-                <h2 class="font-display text-sm font-semibold text-neutral-900">SMPP connectors</h2>
-                <a href="/jasminsmppconnector/" class="text-xs font-medium text-neutral-500 hover:text-neutral-900">Manage</a>
-            </div>
-            <div class="overflow-x-auto">
-                <table class="w-full text-sm text-left">
-                    <thead class="text-xs uppercase bg-neutral-900 text-neutral-100">
-                        <tr>
-                            <th class="px-3 py-2">CID</th>
-                            <th class="px-3 py-2">Host</th>
-                            <th class="px-3 py-2">Session</th>
-                            <th class="px-3 py-2">Updated</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for c in recent_smpp %}
-                        <tr class="border-b border-neutral-100 hover:bg-neutral-50">
-                            <td class="px-3 py-2 font-mono text-xs">{{ c.cid }}</td>
-                            <td class="px-3 py-2 text-neutral-600">{{ c.host }}:{{ c.port }}</td>
-                            <td class="px-3 py-2">
-                                {% if c.is_active %}
-                                    <span class="inline-flex items-center gap-1.5 font-mono text-xs uppercase tracking-wide text-emerald-700">
-                                        <span class="h-1.5 w-1.5 rounded-full bg-emerald-600"></span> Started
-                                    </span>
-                                {% else %}
-                                    <span class="inline-flex items-center gap-1.5 font-mono text-xs uppercase tracking-wide text-neutral-500">
-                                        <span class="h-1.5 w-1.5 rounded-full bg-neutral-400"></span> Stopped
-                                    </span>
-                                {% endif %}
-                            </td>
-                            <td class="px-3 py-2 text-neutral-500">{{ c.modified_on|date:"Y-m-d H:i" }}</td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="4" class="px-3 py-8 text-center text-neutral-500">
-                                No SMPP connectors yet.
-                                <a href="/jasminsmppconnector/" class="underline">Add one</a>.
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm text-left">
+                <thead class="text-xs uppercase bg-neutral-900 text-neutral-100">
+                    <tr>
+                        <th class="px-3 py-2">CID</th>
+                        <th class="px-3 py-2">Host</th>
+                        <th class="px-3 py-2">Session</th>
+                        <th class="px-3 py-2">Updated</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for c in recent_smpp %}
+                    <tr class="border-b border-neutral-100 hover:bg-neutral-50">
+                        <td class="px-3 py-2 font-mono text-xs">{{ c.cid }}</td>
+                        <td class="px-3 py-2 text-neutral-600">{{ c.host }}:{{ c.port }}</td>
+                        <td class="px-3 py-2">
+                            {% if c.is_active %}
+                                <span class="inline-flex items-center gap-1.5 font-mono text-xs uppercase tracking-wide text-emerald-700">
+                                    <span class="h-1.5 w-1.5 rounded-full bg-emerald-600"></span> Started
+                                </span>
+                            {% else %}
+                                <span class="inline-flex items-center gap-1.5 font-mono text-xs uppercase tracking-wide text-neutral-500">
+                                    <span class="h-1.5 w-1.5 rounded-full bg-neutral-400"></span> Stopped
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td class="px-3 py-2 text-neutral-500">{{ c.modified_on|date:"Y-m-d H:i" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="px-3 py-8 text-center text-neutral-500">
+                            No SMPP connectors yet.
+                            <a href="/jasminsmppconnector/" class="underline">Add one</a>.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     </div>
 
@@ -210,3 +189,76 @@
         <a href="{% url 'messaging.console_mode' %}?mode=operate" class="btn btn-sm btn-ghost">Switch to Operate →</a>
     </div>
 </div>
+
+{# Setup checklist modal #}
+<div data-setup-backdrop class="fixed inset-0 z-40 bg-black/50 backdrop-transition opacity-0 pointer-events-none"></div>
+<div data-setup-modal class="fixed top-0 right-0 z-50 flex h-full w-full max-w-md flex-col bg-white shadow-2xl modal-transition modal-hidden">
+    <div class="flex items-center justify-between border-b border-neutral-200 bg-neutral-950 px-4 py-3 shrink-0">
+        <div>
+            <h2 class="font-display text-base font-semibold text-white">Setup checklist</h2>
+            <p class="mt-0.5 text-xs text-neutral-400">
+                {{ checklist_progress.done }}/{{ checklist_progress.total }} required steps
+                {% if config_ready %}· ready{% endif %}
+            </p>
+        </div>
+        <button type="button" data-setup-close class="text-neutral-400 hover:text-white focus:outline-none">
+            <span class="icon-cross text-xl"></span>
+        </button>
+    </div>
+    <div class="flex-1 overflow-y-auto">
+        <p class="border-b border-neutral-100 px-4 py-3 text-xs text-neutral-500">
+            Minimum path to a working gateway. Click a step to open that area.
+        </p>
+        <ul class="divide-y divide-neutral-100">
+            {% for item in checklist %}
+            <li>
+                <a href="{{ item.href }}"
+                   class="flex items-start gap-3 px-4 py-3.5 hover:bg-neutral-50 transition-colors {% if item.done %}opacity-70{% endif %}">
+                    {% if item.done %}
+                        <span class="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-[10px] font-bold text-white">✓</span>
+                    {% else %}
+                        <span class="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-neutral-300 text-[10px] text-neutral-400">{{ forloop.counter }}</span>
+                    {% endif %}
+                    <div class="min-w-0 flex-1">
+                        <span class="text-sm font-medium text-neutral-900">{{ item.label }}</span>
+                        {% if item.optional and not item.done %}
+                            <p class="mt-0.5 text-xs text-neutral-400">Optional</p>
+                        {% endif %}
+                    </div>
+                    <span class="mt-1 text-neutral-300 text-xs">→</span>
+                </a>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+</div>
+
+<script>
+    $(document).ready(function () {
+        const $backdrop = $('[data-setup-backdrop]');
+        const $modal = $('[data-setup-modal]');
+
+        function openSetup() {
+            $backdrop.removeClass('opacity-0 pointer-events-none').addClass('opacity-100');
+            $modal.removeClass('modal-hidden');
+        }
+
+        function closeSetup() {
+            $backdrop.addClass('opacity-0 pointer-events-none').removeClass('opacity-100');
+            $modal.addClass('modal-hidden');
+        }
+
+        $('[data-setup-open]').on('click', function (e) {
+            e.preventDefault();
+            openSetup();
+        });
+        $('[data-setup-close]').on('click', function (e) {
+            e.preventDefault();
+            closeSetup();
+        });
+        $backdrop.on('click', closeSetup);
+        $(document).on('keydown.setupChecklist', function (e) {
+            if (e.key === 'Escape') closeSetup();
+        });
+    });
+</script>

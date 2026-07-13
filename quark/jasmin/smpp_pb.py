@@ -37,14 +37,23 @@ class SmppPBAdapter(SMPPClientManagerPBProxy):
     the reactor thread via quark.jasmin.reactor.run_in_reactor().
     """
 
-    host = settings.JASMIN_SMPP_PB_HOST
-    port = settings.JASMIN_SMPP_PB_PORT
-    username = settings.JASMIN_SMPP_PB_USERNAME
-    password = settings.JASMIN_SMPP_PB_PASSWORD
+    def __init__(self, connection=None, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if connection is not None:
+            endpoint = connection.smpp_pb
+            self.host = endpoint.host
+            self.port = int(endpoint.port)
+            self.username = endpoint.username
+            self.password = endpoint.password
+        else:
+            self.host = settings.JASMIN_SMPP_PB_HOST
+            self.port = settings.JASMIN_SMPP_PB_PORT
+            self.username = settings.JASMIN_SMPP_PB_USERNAME
+            self.password = settings.JASMIN_SMPP_PB_PASSWORD
 
     @defer.inlineCallbacks
     def pb_connect(self):
-        logger.debug("Establishing a connection to jasmin SMPPClientManagerPB")
+        logger.debug("Establishing a connection to jasmin SMPPClientManagerPB at %s:%s", self.host, self.port)
         yield super().connect(self.host, self.port, self.username, self.password)
 
     @defer.inlineCallbacks
@@ -129,5 +138,57 @@ class SmppPBAdapter(SMPPClientManagerPBProxy):
             yield self.pb_connect()
             session = yield self.session_state(cid)
             defer.returnValue(session)
+        finally:
+            self.disconnect()
+
+    @defer.inlineCallbacks
+    def list_connectors(self):
+        """Return connector detail dicts (id, service_status, session_state, …)."""
+        try:
+            yield self.pb_connect()
+            listed = yield self.connector_list()
+            defer.returnValue(listed or [])
+        finally:
+            self.disconnect()
+
+    @defer.inlineCallbacks
+    def get_connector_config(self, cid: str):
+        """Return unpickled SMPPClientConfig for cid, or None if missing."""
+        try:
+            yield self.pb_connect()
+            raw = yield self.connector_config(cid)
+            if raw is False or raw is None:
+                defer.returnValue(None)
+            defer.returnValue(pickle.loads(raw))
+        finally:
+            self.disconnect()
+
+    @defer.inlineCallbacks
+    def snapshot_for_import(self):
+        """
+        One SMPP PB session: list connectors and load full config + running flag each.
+        """
+        try:
+            yield self.pb_connect()
+            listed = yield self.connector_list()
+            connectors = []
+            for details in listed or []:
+                if not details:
+                    continue
+                cid = details.get("id")
+                if not cid:
+                    continue
+                raw = yield self.connector_config(cid)
+                if raw is False or raw is None:
+                    continue
+                config = pickle.loads(raw)
+                status = yield self.service_status(cid)
+                connectors.append({
+                    "cid": str(cid),
+                    "details": details,
+                    "config": config,
+                    "running": status == 1,
+                })
+            defer.returnValue(connectors)
         finally:
             self.disconnect()

@@ -1,48 +1,384 @@
 {% extends 'base/base.html' %}
+{% load static %}
 
 {% block content %}
-<div class="mx-auto max-w-2xl space-y-6">
+<div class="w-full px-10 space-y-6">
     <div>
-        <p class="font-mono text-[10px] uppercase tracking-[0.2em] text-neutral-400">System</p>
-        <h1 class="font-display text-2xl font-bold tracking-tight text-neutral-900">Workspace settings</h1>
-        <p class="mt-1 text-sm text-neutral-500">
-            Configure how Joyce keeps local Jasmin user data in sync with the gateway.
+        <p class="font-mono text-[10px] uppercase tracking-[0.2em] text-neutral-400">
+            {% if setup_mode %}Setup{% else %}System{% endif %}
+        </p>
+        <h1 class="font-display text-2xl font-bold tracking-tight text-neutral-900">
+            {% if setup_mode %}Connect Jasmin{% else %}Workspace settings{% endif %}
+        </h1>
+        <p class="mt-1 text-sm text-neutral-500 leading-relaxed">
+            {% if setup_mode %}
+                Pick how this workspace talks to Jasmin. You can explore with the local demo gateway,
+                or point Joyce at your own instance.
+            {% else %}
+                Connection, sync, and import for {{ workspace.name }}.
+            {% endif %}
         </p>
     </div>
 
-    <form method="post" class="border border-neutral-200 bg-white p-5 space-y-5">
-        {% csrf_token %}
-        {% if form.non_field_errors %}
-            <div role="alert" class="alert alert-error text-sm">{{ form.non_field_errors }}</div>
-        {% endif %}
-
-        <div>
-            <label for="{{ form.jasmin_user_sync_interval_mins.id_for_label }}" class="block text-sm font-medium text-neutral-800 mb-1">
-                {{ form.jasmin_user_sync_interval_mins.label }}
-            </label>
-            {{ form.jasmin_user_sync_interval_mins }}
-            {% if form.jasmin_user_sync_interval_mins.help_text %}
-                <p class="mt-1 text-xs text-neutral-500">{{ form.jasmin_user_sync_interval_mins.help_text }}</p>
-            {% endif %}
-            {% if form.jasmin_user_sync_interval_mins.errors %}
-                <p class="mt-1 text-xs text-red-600">{{ form.jasmin_user_sync_interval_mins.errors|striptags }}</p>
-            {% endif %}
-        </div>
-
-        <div class="border-t border-neutral-100 pt-4">
-            <p class="font-mono text-[10px] uppercase tracking-widest text-neutral-400">Last synced</p>
-            <p class="mt-1 text-sm text-neutral-700">
-                {% if last_synced_at %}
-                    {{ last_synced_at }}
-                {% else %}
-                    Never
-                {% endif %}
+    {% if setup_mode %}
+        <div class="border-l-2 border-neutral-900 bg-neutral-50 px-4 py-3">
+            <p class="font-mono text-[10px] uppercase tracking-[0.18em] text-neutral-400">Required</p>
+            <p class="mt-1 text-sm text-neutral-700 leading-relaxed">
+                Choose a connection below and save before using Configure or Operate.
             </p>
         </div>
+    {% endif %}
 
-        <button type="submit" class="btn btn-sm bg-neutral-950 text-white border-0 hover:bg-neutral-800">
-            Save settings
-        </button>
+    <form method="post" id="workspace-settings-form" class="space-y-6">
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+            <div class="border-l-2 border-neutral-900 bg-neutral-50 px-4 py-3 text-sm text-neutral-800">
+                {{ form.non_field_errors }}
+            </div>
+        {% endif %}
+
+        {# Mode cards #}
+        <section class="space-y-3">
+            <div class="flex items-baseline justify-between gap-3">
+                <p class="font-mono text-[10px] uppercase tracking-widest text-neutral-400">Jasmin connection</p>
+                {% if not credentials_key_configured %}
+                    <p class="text-[11px] text-neutral-500">Custom passwords need <code class="font-mono">JOYCE_CREDENTIALS_KEY</code></p>
+                {% endif %}
+            </div>
+
+            <div class="grid gap-3 sm:grid-cols-2" role="radiogroup" aria-label="Jasmin connection">
+                {% for radio in form.jasmin_link %}
+                    <label class="jasmin-mode-card relative flex cursor-pointer flex-col gap-2 border border-neutral-200 bg-white p-4 transition hover:border-neutral-400">
+                        {{ radio.tag }}
+                        <span class="jasmin-mode-indicator absolute right-3 top-3 flex h-4 w-4 items-center justify-center border border-neutral-300">
+                            <span class="jasmin-mode-dot h-1.5 w-1.5 bg-white opacity-0"></span>
+                        </span>
+                        <span class="pr-6 font-display text-base font-semibold text-neutral-900">{{ radio.choice_label }}</span>
+                        {% if radio.data.value == 'demo' %}
+                            <span class="text-xs leading-relaxed text-neutral-500">
+                                Use this Joyce server's bundled Jasmin, best for exploring the UI.
+                            </span>
+                        {% else %}
+                            <span class="text-xs leading-relaxed text-neutral-500">
+                                Connect Router PB, SMPP Client Manager PB, and the HTTP API on your gateway.
+                                Passwords are encrypted at rest.
+                            </span>
+                        {% endif %}
+                    </label>
+                {% endfor %}
+            </div>
+            {% if form.jasmin_link.errors %}
+                <p class="text-xs text-red-600">{{ form.jasmin_link.errors|striptags }}</p>
+            {% endif %}
+        </section>
+
+        {# Custom connection panels #}
+        <div id="custom-jasmin-fields" class="space-y-4 {% if form.jasmin_link.value != 'custom' and workspace.jasmin_link != 'custom' %}hidden{% endif %}">
+            <div class="border border-neutral-300 bg-neutral-100 px-5 py-4">
+                <p class="font-mono text-[10px] uppercase tracking-[0.18em] text-neutral-500">About Import from Jasmin</p>
+                <p class="mt-2 text-sm text-neutral-900 leading-relaxed">
+                    Joyce can pull groups, users, SMPP connectors, routes, and interceptors from your gateway.
+                    Filters are different: Jasmin does not expose them as their own list. They only exist on the
+                    <span class="font-medium">active Jasmin session</span>, attached to routes and interceptors.
+                </p>
+                <p class="mt-2 text-sm text-neutral-900 leading-relaxed">
+                    When you import, Joyce will try to <span class="font-medium">derive filters</span> from those
+                    routes and interceptors. If that fails for a filter, it cannot be loaded into Joyce.
+                </p>
+                <p class="mt-2 text-xs text-neutral-600 leading-relaxed">
+                    Also: HTTP connectors come from MO routes only (no HTTP PB). User passwords cannot be recovered
+                    from Jasmin (MD5 hashes).
+                </p>
+            </div>
+
+            <div class="flex flex-wrap items-center justify-between gap-2">
+                <p class="font-mono text-[10px] uppercase tracking-widest text-neutral-400">Your Jasmin endpoints</p>
+                {% if workspace.jasmin_link == 'custom' %}
+                    <button type="button" id="clear-jasmin-connection"
+                            class="text-xs text-neutral-500 underline underline-offset-2 hover:text-neutral-900">
+                        Clear &amp; use demo
+                    </button>
+                {% endif %}
+            </div>
+
+            <div class="grid gap-4 lg:grid-cols-2">
+                <section class="border border-neutral-200 bg-white p-4 space-y-3">
+                    <div>
+                        <p class="font-mono text-[10px] uppercase tracking-widest text-neutral-400">Router PB</p>
+                        <p class="mt-0.5 text-xs text-neutral-500">Users, groups, routes, filters, interceptors. Default port 8988.</p>
+                    </div>
+                    <div class="grid gap-3 sm:grid-cols-2">
+                        <div class="sm:col-span-2">
+                            <label for="{{ form.jasmin_router_pb_host.id_for_label }}" class="mb-1 block text-xs font-medium text-neutral-700">{{ form.jasmin_router_pb_host.label }}</label>
+                            {{ form.jasmin_router_pb_host }}
+                            {% if form.jasmin_router_pb_host.errors %}<p class="mt-1 text-xs text-red-600">{{ form.jasmin_router_pb_host.errors|striptags }}</p>{% endif %}
+                        </div>
+                        <div>
+                            <label for="{{ form.jasmin_router_pb_port.id_for_label }}" class="mb-1 block text-xs font-medium text-neutral-700">{{ form.jasmin_router_pb_port.label }}</label>
+                            {{ form.jasmin_router_pb_port }}
+                            {% if form.jasmin_router_pb_port.errors %}<p class="mt-1 text-xs text-red-600">{{ form.jasmin_router_pb_port.errors|striptags }}</p>{% endif %}
+                        </div>
+                        <div>
+                            <label for="{{ form.jasmin_router_pb_username.id_for_label }}" class="mb-1 block text-xs font-medium text-neutral-700">{{ form.jasmin_router_pb_username.label }}</label>
+                            {{ form.jasmin_router_pb_username }}
+                            {% if form.jasmin_router_pb_username.errors %}<p class="mt-1 text-xs text-red-600">{{ form.jasmin_router_pb_username.errors|striptags }}</p>{% endif %}
+                        </div>
+                        <div class="sm:col-span-2">
+                            <label for="{{ form.jasmin_router_pb_password.id_for_label }}" class="mb-1 block text-xs font-medium text-neutral-700">{{ form.jasmin_router_pb_password.label }}</label>
+                            {{ form.jasmin_router_pb_password }}
+                            {% if form.jasmin_router_pb_password.help_text %}<p class="mt-1 text-[11px] text-neutral-500">{{ form.jasmin_router_pb_password.help_text }}</p>{% endif %}
+                            {% if form.jasmin_router_pb_password.errors %}<p class="mt-1 text-xs text-red-600">{{ form.jasmin_router_pb_password.errors|striptags }}</p>{% endif %}
+                        </div>
+                    </div>
+                </section>
+
+                <section class="border border-neutral-200 bg-white p-4 space-y-3">
+                    <div>
+                        <p class="font-mono text-[10px] uppercase tracking-widest text-neutral-400">SMPP Client Manager PB</p>
+                        <p class="mt-0.5 text-xs text-neutral-500">SMPP connectors. Default port 8989.</p>
+                    </div>
+                    <div class="grid gap-3 sm:grid-cols-2">
+                        <div class="sm:col-span-2">
+                            <label for="{{ form.jasmin_smpp_pb_host.id_for_label }}" class="mb-1 block text-xs font-medium text-neutral-700">{{ form.jasmin_smpp_pb_host.label }}</label>
+                            {{ form.jasmin_smpp_pb_host }}
+                            {% if form.jasmin_smpp_pb_host.errors %}<p class="mt-1 text-xs text-red-600">{{ form.jasmin_smpp_pb_host.errors|striptags }}</p>{% endif %}
+                        </div>
+                        <div>
+                            <label for="{{ form.jasmin_smpp_pb_port.id_for_label }}" class="mb-1 block text-xs font-medium text-neutral-700">{{ form.jasmin_smpp_pb_port.label }}</label>
+                            {{ form.jasmin_smpp_pb_port }}
+                            {% if form.jasmin_smpp_pb_port.errors %}<p class="mt-1 text-xs text-red-600">{{ form.jasmin_smpp_pb_port.errors|striptags }}</p>{% endif %}
+                        </div>
+                        <div>
+                            <label for="{{ form.jasmin_smpp_pb_username.id_for_label }}" class="mb-1 block text-xs font-medium text-neutral-700">{{ form.jasmin_smpp_pb_username.label }}</label>
+                            {{ form.jasmin_smpp_pb_username }}
+                            {% if form.jasmin_smpp_pb_username.errors %}<p class="mt-1 text-xs text-red-600">{{ form.jasmin_smpp_pb_username.errors|striptags }}</p>{% endif %}
+                        </div>
+                        <div class="sm:col-span-2">
+                            <label for="{{ form.jasmin_smpp_pb_password.id_for_label }}" class="mb-1 block text-xs font-medium text-neutral-700">{{ form.jasmin_smpp_pb_password.label }}</label>
+                            {{ form.jasmin_smpp_pb_password }}
+                            {% if form.jasmin_smpp_pb_password.help_text %}<p class="mt-1 text-[11px] text-neutral-500">{{ form.jasmin_smpp_pb_password.help_text }}</p>{% endif %}
+                            {% if form.jasmin_smpp_pb_password.errors %}<p class="mt-1 text-xs text-red-600">{{ form.jasmin_smpp_pb_password.errors|striptags }}</p>{% endif %}
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <section class="border border-neutral-200 bg-white p-4 space-y-3">
+                <div>
+                    <p class="font-mono text-[10px] uppercase tracking-widest text-neutral-400">HTTP API</p>
+                    <p class="mt-0.5 text-xs text-neutral-500">Messaging: send, balance, rate. Default port 1401.</p>
+                </div>
+                <div>
+                    <label for="{{ form.jasmin_http_api_url.id_for_label }}" class="mb-1 block text-xs font-medium text-neutral-700">{{ form.jasmin_http_api_url.label }}</label>
+                    {{ form.jasmin_http_api_url }}
+                    {% if form.jasmin_http_api_url.help_text %}<p class="mt-1 text-[11px] text-neutral-500">{{ form.jasmin_http_api_url.help_text }}</p>{% endif %}
+                    {% if form.jasmin_http_api_url.errors %}<p class="mt-1 text-xs text-red-600">{{ form.jasmin_http_api_url.errors|striptags }}</p>{% endif %}
+                </div>
+            </section>
+        </div>
+
+        {# Sync #}
+        <section class="border border-neutral-200 bg-white p-4 space-y-3">
+            <p class="font-mono text-[10px] uppercase tracking-widest text-neutral-400">Sync</p>
+            <div class="max-w-xs">
+                <label for="{{ form.jasmin_user_sync_interval_mins.id_for_label }}" class="mb-1 block text-xs font-medium text-neutral-700">
+                    {{ form.jasmin_user_sync_interval_mins.label }}
+                </label>
+                {{ form.jasmin_user_sync_interval_mins }}
+                {% if form.jasmin_user_sync_interval_mins.help_text %}
+                    <p class="mt-1 text-[11px] text-neutral-500">{{ form.jasmin_user_sync_interval_mins.help_text }}</p>
+                {% endif %}
+                {% if form.jasmin_user_sync_interval_mins.errors %}
+                    <p class="mt-1 text-xs text-red-600">{{ form.jasmin_user_sync_interval_mins.errors|striptags }}</p>
+                {% endif %}
+            </div>
+            <div class="grid gap-3 border-t border-neutral-100 pt-3 sm:grid-cols-3">
+                <div>
+                    <p class="font-mono text-[10px] uppercase tracking-widest text-neutral-400">Last synced</p>
+                    <p class="mt-1 text-sm text-neutral-700">{% if last_synced_at %}{{ last_synced_at }}{% else %}Never{% endif %}</p>
+                </div>
+                <div>
+                    <p class="font-mono text-[10px] uppercase tracking-widest text-neutral-400">Connection tested</p>
+                    <p class="mt-1 text-sm text-neutral-700" id="connection-tested-at">{% if connection_tested_at %}{{ connection_tested_at }}{% else %}Never{% endif %}</p>
+                </div>
+                <div>
+                    <p class="font-mono text-[10px] uppercase tracking-widest text-neutral-400">Config imported</p>
+                    <p class="mt-1 text-sm text-neutral-700" id="config-imported-at">{% if config_imported_at %}{{ config_imported_at }}{% else %}Never{% endif %}</p>
+                </div>
+            </div>
+        </section>
+
+        <div class="flex flex-wrap items-center gap-2">
+            <button type="submit" class="btn btn-sm bg-neutral-950 text-white border-0 hover:bg-neutral-800">
+                {% if setup_mode %}Continue{% else %}Save settings{% endif %}
+            </button>
+            <button type="button" id="test-jasmin-connection" class="btn btn-sm btn-outline">
+                Test connection
+            </button>
+            {% if jasmin_ready %}
+                <button type="button" id="import-jasmin-config" class="btn btn-sm btn-outline">
+                    Import from Jasmin
+                </button>
+            {% endif %}
+        </div>
+        <p id="test-connection-result" class="text-sm hidden"></p>
+        <p id="import-config-result" class="text-sm hidden"></p>
     </form>
 </div>
+
+<style>
+    .jasmin-mode-card > input[type="radio"] {
+        position: absolute;
+        opacity: 0;
+        width: 1px;
+        height: 1px;
+    }
+    .jasmin-mode-card:has(input:checked) {
+        border-color: #171717;
+        box-shadow: inset 0 0 0 1px #171717;
+    }
+    .jasmin-mode-card:has(input:checked) .jasmin-mode-indicator {
+        border-color: #171717;
+        background: #171717;
+    }
+    .jasmin-mode-card:has(input:checked) .jasmin-mode-dot {
+        opacity: 1;
+    }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script type="text/javascript" src="{% static 'js/jquery-confirm.min.js' %}"></script>
+<script>
+(function () {
+    const form = document.getElementById('workspace-settings-form');
+    if (!form) return;
+
+    const customBox = document.getElementById('custom-jasmin-fields');
+    const radios = form.querySelectorAll('input[name="jasmin_link"]');
+
+    function syncCustomVisibility() {
+        const selected = form.querySelector('input[name="jasmin_link"]:checked');
+        if (!customBox) return;
+        customBox.classList.toggle('hidden', !(selected && selected.value === 'custom'));
+    }
+    radios.forEach(r => r.addEventListener('change', syncCustomVisibility));
+    syncCustomVisibility();
+
+    function postAction(action, resultEl, onOk) {
+        resultEl.classList.remove('hidden', 'text-neutral-500', 'text-neutral-800', 'text-neutral-600');
+        resultEl.textContent = action === 'import_from_jasmin' ? 'Importing…' : 'Testing…';
+        resultEl.classList.add('text-neutral-500');
+        const data = new FormData(form);
+        data.set('action', action);
+        return fetch(form.getAttribute('action') || window.location.pathname, {
+            method: 'POST',
+            headers: {'X-Requested-With': 'XMLHttpRequest'},
+            body: data,
+        }).then(async (resp) => {
+            const json = await resp.json();
+            resultEl.classList.remove('text-neutral-500');
+            if (json.ok) {
+                resultEl.classList.add('text-neutral-800');
+                resultEl.textContent = json.message || 'OK';
+                if (onOk) onOk(json);
+            } else {
+                resultEl.classList.add('text-neutral-600');
+                resultEl.textContent = json.message || 'Request failed';
+            }
+        }).catch(() => {
+            resultEl.classList.remove('text-neutral-500');
+            resultEl.classList.add('text-neutral-600');
+            resultEl.textContent = 'Request failed';
+        });
+    }
+
+    const testBtn = document.getElementById('test-jasmin-connection');
+    const testResult = document.getElementById('test-connection-result');
+    if (testBtn && testResult) {
+        testBtn.addEventListener('click', function () {
+            postAction('test_connection', testResult, function (json) {
+                if (json.tested_at) {
+                    document.getElementById('connection-tested-at').textContent = json.tested_at;
+                }
+            });
+        });
+    }
+
+    const clearBtn = document.getElementById('clear-jasmin-connection');
+    if (clearBtn) {
+        clearBtn.addEventListener('click', function () {
+            $.confirm({
+                title: 'Clear custom Jasmin connection?',
+                content: 'This workspace will switch to Local demo Jasmin. Stored custom endpoints and passwords will be removed.',
+                type: 'orange',
+                typeAnimated: true,
+                boxWidth: '30%',
+                useBootstrap: false,
+                buttons: {
+                    tryAgain: {
+                        text: 'CLEAR',
+                        btnClass: 'btn-orange',
+                        action: function () {
+                            const data = new FormData(form);
+                            data.set('settings_action', 'clear_jasmin_connection');
+                            // Native submit so the server can redirect
+                            const input = document.createElement('input');
+                            input.type = 'hidden';
+                            input.name = 'settings_action';
+                            input.value = 'clear_jasmin_connection';
+                            form.appendChild(input);
+                            form.submit();
+                        }
+                    },
+                    close: function () {}
+                }
+            });
+        });
+    }
+
+    const importBtn = document.getElementById('import-jasmin-config');
+    const importResult = document.getElementById('import-config-result');
+    if (importBtn && importResult) {
+        importBtn.addEventListener('click', function () {
+            $.confirm({
+                title: 'Import from Jasmin?',
+                content: (
+                    'Pull groups, users, SMPP connectors, routes, and interceptors into Joyce. '
+                    + 'Existing matching rows in this workspace will be updated. Jasmin itself will not be changed.'
+                    + '<br><br>'
+                    + '<b>Filters:</b> Jasmin does not expose filters as their own list; they only exist '
+                    + 'on the active session, attached to routes and interceptors. '
+                    + 'Joyce will try to derive them from those. If that fails, those filters cannot be loaded.'
+                ),
+                type: 'orange',
+                typeAnimated: true,
+                boxWidth: '40%',
+                useBootstrap: false,
+                buttons: {
+                    tryAgain: {
+                        text: 'IMPORT',
+                        btnClass: 'btn-orange',
+                        action: function () {
+                            importBtn.disabled = true;
+                            postAction('import_from_jasmin', importResult, function (json) {
+                                if (json.imported_at) {
+                                    document.getElementById('config-imported-at').textContent = json.imported_at;
+                                }
+                                if (json.stats && json.stats.notes && json.stats.notes.length) {
+                                    const note = json.stats.notes[0];
+                                    importResult.textContent = (json.message || 'OK') + ' ' + note;
+                                }
+                            }).finally(function () {
+                                importBtn.disabled = false;
+                            });
+                        }
+                    },
+                    close: function () {}
+                }
+            });
+        });
+    }
+})();
+</script>
 {% endblock %}

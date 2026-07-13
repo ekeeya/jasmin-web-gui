@@ -153,9 +153,12 @@
     function handleFormErrors(response) {
         if (response.errors) {
             $.each(response.errors, function(fieldName, errors) {
-                const errorDiv = $(`#${fieldName}`);
-                const field = $(`[name="${fieldName}"]`);
-                const formGroup = field.closest('.form-group');
+                let errorDiv = form.find(`[data-modal-error="${fieldName}"]`);
+                if (!errorDiv.length) {
+                    errorDiv = form.find(`#${fieldName}`);
+                }
+                const field = form.find(`[name="${fieldName}"]`);
+                const formGroup = field.closest('.form-group, .space-y-1');
                 formGroup.addClass('has-error');
                 errorDiv.removeClass('hidden').empty();
                 $.each(errors, function(_, error) {

@@ -6,6 +6,7 @@ import uuid
 from django.utils import timezone
 
 from quark.jasmin.models import JasminUser
+from quark.jasmin.connection import resolve_jasmin_connection
 from quark.messaging.clients import JasminHttpClient
 from quark.messaging.models import OutboundMessage, dlr_callback_url
 
@@ -41,7 +42,8 @@ def submit_outbound_message(
     )
     message.save()
 
-    client = JasminHttpClient()
+    connection = resolve_jasmin_connection(workspace)
+    client = JasminHttpClient(base_url=connection.http_api_url)
     result = client.send(
         username=jasmin_user.username,
         password=jasmin_user.password,

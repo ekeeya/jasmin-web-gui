@@ -21,14 +21,23 @@ class RouterPBInterface(RouterPBProxy):
     the reactor thread via quark.jasmin.reactor.run_in_reactor().
     """
 
-    host = settings.JASMIN_ROUTER_PB_HOST
-    port = settings.JASMIN_ROUTER_PB_PORT
-    username = settings.JASMIN_ROUTER_PB_USERNAME
-    password = settings.JASMIN_ROUTER_PB_PASSWORD
+    def __init__(self, connection=None, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if connection is not None:
+            endpoint = connection.router_pb
+            self.host = endpoint.host
+            self.port = int(endpoint.port)
+            self.username = endpoint.username
+            self.password = endpoint.password
+        else:
+            self.host = settings.JASMIN_ROUTER_PB_HOST
+            self.port = settings.JASMIN_ROUTER_PB_PORT
+            self.username = settings.JASMIN_ROUTER_PB_USERNAME
+            self.password = settings.JASMIN_ROUTER_PB_PASSWORD
 
     @defer.inlineCallbacks
     def pb_connect(self):
-        logger.debug("Establishing a connection to jasmin RouterPB")
+        logger.debug("Establishing a connection to jasmin RouterPB at %s:%s", self.host, self.port)
         yield super().connect(self.host, self.port, self.username, self.password)
 
     @defer.inlineCallbacks
@@ -158,6 +167,67 @@ class RouterPBInterface(RouterPBProxy):
             yield self.pb_connect()
             groups = yield self.group_get_all()
             defer.returnValue(pickle.loads(groups))
+        finally:
+            self.disconnect()
+
+    @defer.inlineCallbacks
+    def get_all_mt_routes(self):
+        try:
+            yield self.pb_connect()
+            routes = yield self.mtroute_get_all()
+            defer.returnValue(pickle.loads(routes))
+        finally:
+            self.disconnect()
+
+    @defer.inlineCallbacks
+    def get_all_mo_routes(self):
+        try:
+            yield self.pb_connect()
+            routes = yield self.moroute_get_all()
+            defer.returnValue(pickle.loads(routes))
+        finally:
+            self.disconnect()
+
+    @defer.inlineCallbacks
+    def get_all_mt_interceptors(self):
+        try:
+            yield self.pb_connect()
+            interceptors = yield self.mtinterceptor_get_all()
+            defer.returnValue(pickle.loads(interceptors))
+        finally:
+            self.disconnect()
+
+    @defer.inlineCallbacks
+    def get_all_mo_interceptors(self):
+        try:
+            yield self.pb_connect()
+            interceptors = yield self.mointerceptor_get_all()
+            defer.returnValue(pickle.loads(interceptors))
+        finally:
+            self.disconnect()
+
+    @defer.inlineCallbacks
+    def snapshot_for_import(self):
+        """
+        One Router PB session: groups, users, MT/MO routes, MT/MO interceptors.
+        Returns plain Python objects suitable for Django-side upsert (no PB writes).
+        """
+        try:
+            yield self.pb_connect()
+            groups = pickle.loads((yield self.group_get_all()))
+            users = pickle.loads((yield self.user_get_all()))
+            mt_routes = pickle.loads((yield self.mtroute_get_all()))
+            mo_routes = pickle.loads((yield self.moroute_get_all()))
+            mt_interceptors = pickle.loads((yield self.mtinterceptor_get_all()))
+            mo_interceptors = pickle.loads((yield self.mointerceptor_get_all()))
+            defer.returnValue({
+                "groups": groups or [],
+                "users": users or [],
+                "mt_routes": mt_routes or [],
+                "mo_routes": mo_routes or [],
+                "mt_interceptors": mt_interceptors or [],
+                "mo_interceptors": mo_interceptors or [],
+            })
         finally:
             self.disconnect()
 

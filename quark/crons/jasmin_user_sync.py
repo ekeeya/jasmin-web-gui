@@ -9,6 +9,7 @@ Celery beat ticks this task frequently; each workspace's
 from __future__ import annotations
 
 import logging
+from collections import defaultdict
 from datetime import timedelta
 
 from celery import shared_task
@@ -26,6 +27,8 @@ def _workspaces_due_for_sync(*, now=None):
     )
     due = []
     for workspace in qs.iterator():
+        if not workspace.is_jasmin_ready():
+            continue
         interval = int(workspace.jasmin_user_sync_interval_mins or 0)
         if interval <= 0:
             continue
@@ -40,9 +43,10 @@ def sync_jasmin_users():
     """
     Sync Jasmin user MT/SMPP credentials into Django for workspaces that are due.
 
-    Uses a single RouterPB ``user_get_all`` call per run, then updates local rows
-    for each due workspace. Does not push anything back to Jasmin.
+    Fetches ``user_get_all`` once per distinct Jasmin endpoint, then updates
+    local rows for each due workspace on that endpoint.
     """
+    from quark.jasmin.connection import JasminNotConfigured, resolve_jasmin_connection
     from quark.jasmin.models import JasminUser
     from quark.jasmin.reactor import run_in_reactor
     from quark.jasmin.router_pb import RouterPBInterface
@@ -54,34 +58,50 @@ def sync_jasmin_users():
         logger.debug("Jasmin user sync: no workspaces due")
         return {"synced_workspaces": 0, "synced_users": 0}
 
-    try:
-        remote_users = run_in_reactor(RouterPBInterface().get_all_users) or []
-    except Exception as exc:
-        logger.error("Jasmin user sync failed to fetch users: %s", exc)
-        raise
-
-    by_uid = {
-        getattr(u, "uid", None) or getattr(u, "username", None): u
-        for u in remote_users
-    }
+    by_endpoint = defaultdict(list)
+    connections = {}
+    for workspace in due:
+        try:
+            connection = resolve_jasmin_connection(workspace)
+        except JasminNotConfigured as exc:
+            logger.warning("Skipping workspace %s: %s", workspace.pk, exc)
+            continue
+        key = connection.endpoint_key
+        connections[key] = connection
+        by_endpoint[key].append(workspace)
 
     synced_users = 0
-    for workspace in due:
-        locals_qs = JasminUser.objects.filter(group__workspace=workspace)
-        for local in locals_qs.iterator():
-            remote = by_uid.get(local.username)
-            if remote is None:
-                continue
-            local.apply_jasmin_user(remote, save=True)
-            synced_users += 1
+    synced_workspaces = 0
+    for key, workspaces in by_endpoint.items():
+        connection = connections[key]
+        try:
+            remote_users = run_in_reactor(RouterPBInterface(connection).get_all_users) or []
+        except Exception as exc:
+            logger.error("Jasmin user sync failed for endpoint %s: %s", key, exc)
+            continue
 
-        WorkSpace.objects.filter(pk=workspace.pk).update(jasmin_user_last_synced_at=now)
-        logger.info(
-            "Synced Jasmin users for workspace %s (%s)",
-            workspace.prefix or workspace.pk,
-            workspace.name,
-        )
+        by_uid = {
+            getattr(u, "uid", None) or getattr(u, "username", None): u
+            for u in remote_users
+        }
 
-    result = {"synced_workspaces": len(due), "synced_users": synced_users}
+        for workspace in workspaces:
+            locals_qs = JasminUser.objects.filter(group__workspace=workspace)
+            for local in locals_qs.iterator():
+                remote = by_uid.get(local.username)
+                if remote is None:
+                    continue
+                local.apply_jasmin_user(remote, save=True)
+                synced_users += 1
+
+            WorkSpace.objects.filter(pk=workspace.pk).update(jasmin_user_last_synced_at=now)
+            synced_workspaces += 1
+            logger.info(
+                "Synced Jasmin users for workspace %s (%s)",
+                workspace.prefix or workspace.pk,
+                workspace.name,
+            )
+
+    result = {"synced_workspaces": synced_workspaces, "synced_users": synced_users}
     logger.info("Jasmin user sync finished: %s", result)
     return result

@@ -74,6 +74,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     "quark.middleware.WorkspaceMiddleware",
+    "quark.middleware.JasminConnectionGateMiddleware",
     "quark.middleware.TimezoneMiddleware",
 ]
 
@@ -214,6 +215,24 @@ JOYCE_PUBLIC_BASE_URL = os.getenv(
     "http://host.docker.internal:8000",
 )
 JOYCE_DLR_CALLBACK_URL = os.getenv("JOYCE_DLR_CALLBACK_URL", "")
+
+# Fernet key for encrypting workspace Jasmin PB passwords at rest.
+# python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+JOYCE_CREDENTIALS_KEY = os.getenv("JOYCE_CREDENTIALS_KEY", "").strip()
+if not JOYCE_CREDENTIALS_KEY:
+    # Persist a local key so custom connections survive restarts (dev / single-node).
+    _cred_key_path = Path(BASE_DIR) / ".joyce_credentials_key"
+    try:
+        if _cred_key_path.exists():
+            JOYCE_CREDENTIALS_KEY = _cred_key_path.read_text(encoding="utf-8").strip()
+        if not JOYCE_CREDENTIALS_KEY:
+            from cryptography.fernet import Fernet
+
+            JOYCE_CREDENTIALS_KEY = Fernet.generate_key().decode()
+            _cred_key_path.write_text(JOYCE_CREDENTIALS_KEY + "\n", encoding="utf-8")
+    except OSError:
+        # Fall through — custom password saves will fail with a clear form error.
+        pass
 
 CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0")
 CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", "redis://localhost:6379/0")

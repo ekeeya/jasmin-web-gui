@@ -357,6 +357,26 @@ class JasminRouteForm(BaseWorkspaceForm):
         self.fields['filters'].required = False
         self.fields['smpp_connectors'].required = False
         self.fields['http_connectors'].required = False
+        self.fields['rate'].required = False
+
+    def clean(self):
+        cleaned_data = super().clean()
+        nature = cleaned_data.get("nature")
+        order = cleaned_data.get("order")
+        if nature is not None and order is not None:
+            qs = JasminRoute.objects.filter(
+                workspace=self.workspace,
+                nature=nature,
+                order=order,
+            )
+            if self.instance and self.instance.pk:
+                qs = qs.exclude(pk=self.instance.pk)
+            if qs.exists():
+                self.add_error(
+                    "order",
+                    f"A route with order {order} already exists for {nature} in this workspace",
+                )
+        return cleaned_data
 
     def save(self, commit=True):
         instance = super().save(commit=False)

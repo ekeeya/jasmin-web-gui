@@ -20,7 +20,7 @@ from datetime import timedelta
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import login, logout
-from django.http import HttpResponseRedirect
+from django.http import HttpResponseRedirect, JsonResponse
 from django.urls import reverse
 from django.utils import timezone
 from django.views import View
@@ -30,7 +30,6 @@ from smartmin.users.models import FailedLogin
 from smartmin.views import SmartCRUDL, SmartCreateView, SmartUpdateView
 from django.contrib.auth.views import LoginView as AuthLoginView
 
-from quark.utils.views.mixins import FormMixin
 from quark.workspace.models import WorkSpace, User
 from quark.workspace.views.forms import SignupForm, WorkspaceSettingsForm
 from quark.workspace.views.mixins import WorkspacePermsMixin
@@ -145,7 +144,7 @@ class WorkspaceCRUDL(SmartCRUDL):
         permission = None
 
         def get_success_url(self):
-            return "/dashboard"
+            return reverse("workspace.workspace_settings")
 
         def save(self, obj):
             new_user = User.create(
@@ -156,22 +155,36 @@ class WorkspaceCRUDL(SmartCRUDL):
                 self.form.cleaned_data["password"]
             )
 
-            WorkSpace.create(new_user,
-                             self.form.cleaned_data["country"],
-                             self.form.cleaned_data["name"],
-                             self.form.cleaned_data["timezone"])
+            workspace = WorkSpace.create(
+                new_user,
+                self.form.cleaned_data["country"],
+                self.form.cleaned_data["name"],
+                self.form.cleaned_data["timezone"],
+            )
 
-            switch_to_workspace(self.request, obj)
+            switch_to_workspace(self.request, workspace)
             login(self.request, new_user)  # log the user in
-            return obj
+            return workspace
 
-    class Settings(FormMixin, WorkspacePermsMixin, SmartUpdateView):
+    class Settings(WorkspacePermsMixin, SmartUpdateView):
         permission = "workspace.workspace_update"
         form_class = WorkspaceSettingsForm
         template_name = "workspace/settings.html"
         title = "Workspace settings"
         success_message = "Workspace settings saved."
-        fields = ("jasmin_user_sync_interval_mins",)
+        fields = (
+            "jasmin_link",
+            "jasmin_router_pb_host",
+            "jasmin_router_pb_port",
+            "jasmin_router_pb_username",
+            "jasmin_router_pb_password",
+            "jasmin_smpp_pb_host",
+            "jasmin_smpp_pb_port",
+            "jasmin_smpp_pb_username",
+            "jasmin_smpp_pb_password",
+            "jasmin_http_api_url",
+            "jasmin_user_sync_interval_mins",
+        )
 
         @classmethod
         def derive_url_pattern(cls, path, action):
@@ -188,4 +201,157 @@ class WorkspaceCRUDL(SmartCRUDL):
             workspace = self.derive_workspace()
             context["workspace"] = workspace
             context["last_synced_at"] = workspace.jasmin_user_last_synced_at
+            context["connection_tested_at"] = workspace.jasmin_connection_tested_at
+            context["config_imported_at"] = workspace.jasmin_config_last_imported_at
+            context["jasmin_ready"] = workspace.is_jasmin_ready() if workspace else False
+            context["setup_mode"] = not context["jasmin_ready"]
+            context["credentials_key_configured"] = bool(
+                getattr(settings, "JOYCE_CREDENTIALS_KEY", "")
+            )
             return context
+
+        def post(self, request, *args, **kwargs):
+            action = request.POST.get("action") or request.POST.get("settings_action")
+            if action == "test_connection":
+                return self.test_connection(request)
+            if action == "import_from_jasmin":
+                return self.import_from_jasmin(request)
+            if action == "clear_jasmin_connection":
+                return self.clear_jasmin_connection(request)
+            return super().post(request, *args, **kwargs)
+
+        def _connection_from_request(self, request, workspace):
+            """Build a JasminConnection from posted settings or saved workspace fields."""
+            from quark.jasmin.connection import JasminConnection, JasminEndpoint, _demo_connection
+            from quark.utils.crypto import decrypt_secret, looks_encrypted
+
+            link = request.POST.get("jasmin_link") or workspace.jasmin_link or WorkSpace.JASMIN_LINK_DEMO
+            if link != WorkSpace.JASMIN_LINK_CUSTOM:
+                return _demo_connection(), link
+
+            router_password = request.POST.get("jasmin_router_pb_password") or ""
+            if not router_password:
+                router_password = decrypt_secret(workspace.jasmin_router_pb_password)
+            elif looks_encrypted(router_password):
+                router_password = decrypt_secret(router_password)
+
+            smpp_password = request.POST.get("jasmin_smpp_pb_password") or ""
+            if not smpp_password:
+                smpp_password = decrypt_secret(workspace.jasmin_smpp_pb_password)
+            elif looks_encrypted(smpp_password):
+                smpp_password = decrypt_secret(smpp_password)
+
+            connection = JasminConnection(
+                router_pb=JasminEndpoint(
+                    host=request.POST.get("jasmin_router_pb_host") or workspace.jasmin_router_pb_host,
+                    port=int(
+                        request.POST.get("jasmin_router_pb_port")
+                        or workspace.jasmin_router_pb_port
+                        or 0
+                    ),
+                    username=(
+                        request.POST.get("jasmin_router_pb_username")
+                        or workspace.jasmin_router_pb_username
+                    ),
+                    password=router_password,
+                ),
+                smpp_pb=JasminEndpoint(
+                    host=request.POST.get("jasmin_smpp_pb_host") or workspace.jasmin_smpp_pb_host,
+                    port=int(
+                        request.POST.get("jasmin_smpp_pb_port")
+                        or workspace.jasmin_smpp_pb_port
+                        or 0
+                    ),
+                    username=(
+                        request.POST.get("jasmin_smpp_pb_username")
+                        or workspace.jasmin_smpp_pb_username
+                    ),
+                    password=smpp_password,
+                ),
+                http_api_url=(
+                    request.POST.get("jasmin_http_api_url")
+                    or workspace.jasmin_http_api_url
+                    or ""
+                ).rstrip("/"),
+                source="custom",
+            )
+            return connection, link
+
+        def test_connection(self, request):
+            """AJAX: verify Router PB and SMPP Client Manager PB are reachable."""
+            from quark.jasmin.reactor import run_in_reactor
+            from quark.jasmin.router_pb import RouterPBInterface
+            from quark.jasmin.smpp_pb import SmppPBAdapter
+
+            self.object = self.get_object()
+            workspace = self.object
+
+            try:
+                connection, _link = self._connection_from_request(request, workspace)
+            except Exception as exc:
+                return JsonResponse({"ok": False, "message": str(exc)}, status=400)
+
+            parts = []
+            errors = []
+
+            try:
+                groups = run_in_reactor(RouterPBInterface(connection).get_all_groups) or []
+                parts.append(f"Router PB OK ({len(groups)} group(s))")
+            except Exception as exc:
+                errors.append(f"Router PB: {exc}")
+
+            try:
+                connectors = run_in_reactor(SmppPBAdapter(connection).list_connectors) or []
+                parts.append(f"SMPP PB OK ({len(connectors)} connector(s))")
+            except Exception as exc:
+                errors.append(f"SMPP PB: {exc}")
+
+            if errors:
+                detail = "; ".join(parts + errors) if parts else "; ".join(errors)
+                return JsonResponse({"ok": False, "message": detail}, status=400)
+
+            workspace.jasmin_connection_tested_at = timezone.now()
+            workspace.save(update_fields=["jasmin_connection_tested_at", "modified_on"])
+            return JsonResponse({
+                "ok": True,
+                "message": "; ".join(parts),
+                "tested_at": workspace.jasmin_connection_tested_at.isoformat(),
+            })
+
+
+        def import_from_jasmin(self, request):
+            """AJAX: pull groups/users/connectors/routes/filters/interceptors into Django."""
+            from quark.jasmin.import_config import import_workspace_config
+
+            self.object = self.get_object()
+            workspace = self.object
+
+            try:
+                connection, _link = self._connection_from_request(request, workspace)
+                stats = import_workspace_config(workspace, connection, user=request.user)
+                workspace.refresh_from_db(fields=["jasmin_config_last_imported_at"])
+                return JsonResponse({
+                    "ok": True,
+                    "message": stats.summary_message(),
+                    "stats": stats.as_dict(),
+                    "imported_at": (
+                        workspace.jasmin_config_last_imported_at.isoformat()
+                        if workspace.jasmin_config_last_imported_at
+                        else None
+                    ),
+                })
+            except Exception as exc:
+                return JsonResponse({"ok": False, "message": str(exc)}, status=400)
+
+        def clear_jasmin_connection(self, request):
+            """Clear custom Jasmin fields and switch the workspace to Local demo Jasmin."""
+            self.object = self.get_object()
+            workspace = self.object
+            workspace.jasmin_link = WorkSpace.JASMIN_LINK_DEMO
+            workspace.clear_jasmin_custom_connection(save=False)
+            workspace.save()
+            messages.success(
+                request,
+                "Custom Jasmin connection cleared. Workspace is on Local demo Jasmin.",
+            )
+            return HttpResponseRedirect(self.get_success_url())

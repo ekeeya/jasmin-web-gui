@@ -10,15 +10,14 @@
                 <span class="icon-cross text-xl text-white"></span>
             </button>
         </div>
-        
+
         <div class="flex-1 overflow-hidden flex flex-col">
             <div id="loading-indicator" class="flex-grow flex flex-col items-center justify-center hidden">
                 <div class="inline-block animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-blue-500"></div>
                 <p class="mt-2 text-sm text-gray-600">Loading details...</p>
             </div>
-            
+
             <div id="modal-content" class="overflow-y-auto flex-grow p-3 space-y-3 text-sm">
-                <!-- Content will be dynamically inserted by JavaScript -->
             </div>
         </div>
     </div>
@@ -26,6 +25,25 @@
 
 <script>
     $(document).ready(function(){
+        const ROUTE_DESCRIPTIONS = {
+            DefaultRoute: "Fallback route with no filters. Use the lowest order.",
+            StaticMTRoute: "MT route with filters and one SMPP connector.",
+            RandomRoundrobinMTRoute: "MT load-balancer: filters plus many SMPP connectors; picks one at random.",
+            FailoverMTRoute: "MT failover: filters plus many connectors; prefers a connected connector.",
+            StaticMORoute: "MO route with filters and one connector (HTTP or SMPP).",
+            RandomRoundrobinMORoute: "MO load-balancer: filters plus many connectors; picks one at random.",
+            FailoverMORoute: "MO failover: filters plus many connectors; prefers an available connector."
+        };
+
+        function escapeHtml(value) {
+            if (value === null || value === undefined) return "";
+            return String(value)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;");
+        }
+
         function openModal() {
             $('[data-details-backdrop]').removeClass('opacity-0 pointer-events-none').addClass('opacity-100');
             $('[data-details]').removeClass('modal-hidden');
@@ -35,7 +53,7 @@
             $('[data-details-backdrop]').removeClass('opacity-100').addClass('opacity-0 pointer-events-none');
             $('[data-details]').addClass('modal-hidden');
         }
-        
+
         $('[data-details-open]').on('click', function(e) {
             const routerId = $(this).closest("tr").data("pk");
             fetchRouterDetails(routerId);
@@ -53,11 +71,11 @@
                 closeModal();
             }
         });
-        
+
         const fetchRouterDetails = async (routerId) => {
             $('#loading-indicator').removeClass('hidden');
             $('#modal-content').empty();
-            
+
             try {
                 const response = await fetch(`/jasminroute/${routerId}`);
                 const data = await response.json();
@@ -73,112 +91,149 @@
                 `);
             }
         };
-        
+
         const displayRouterDetails = (router) => {
-            const content = `
-                <div class="space-y-3">
-                    <div>
-                        <h3 class="font-semibold border-b pb-1 text-base">Basic Information</h3>
-                        <div class="grid grid-cols-2 gap-1 mt-1 text-sm">
-                            <div><span class="font-medium">ID:</span> ${router.id}</div>
-                            <div><span class="font-medium">Nature:</span> ${router.nature}</div>
-                            <div><span class="font-medium">Order:</span> ${router.order}</div>
-                            <div><span class="font-medium">Rate:</span> ${router.rate}</div>
-                            <div><span class="font-medium">Type:</span> ${router.router_type}</div>
-                        </div>
-                    </div>
-                    
-                    ${router.filters.length ? `
+            const typeDesc = ROUTE_DESCRIPTIONS[router.router_type] || "";
+            const rateLabel = router.rate === null || router.rate === undefined || router.rate === ""
+                ? "—"
+                : escapeHtml(router.rate);
+
+            const filtersHtml = (router.filters && router.filters.length)
+                ? `
                     <div>
                         <h3 class="font-semibold border-b pb-1 text-base">Filters (${router.filters.length})</h3>
                         <div class="space-y-1 mt-1">
                             ${router.filters.map(filter => `
                                 <div class="border rounded p-1.5 text-sm">
-                                    <div class="font-medium">Filter ID: ${filter.id}</div>
-                                    <div>Type: ${filter.filter_type}</div>
-                                    <div>Nature: ${filter.nature}</div>
-                                    ${filter.param ? `
-                                    <div class="mt-0.5">
-                                        <span class="font-medium">Parameter:</span> 
-                                        ${filter.param.key} = ${filter.param.value}
+                                    <div class="font-medium">${escapeHtml(filter.fid || filter.id)} · ${escapeHtml(filter.filter_type)}</div>
+                                    <div class="text-neutral-600">Nature: ${escapeHtml(filter.nature)}</div>
+                                    ${filter.param && (filter.param.key || filter.param.value) ? `
+                                    <div class="mt-0.5 text-neutral-700">
+                                        <span class="font-medium">Parameter:</span>
+                                        ${escapeHtml(filter.param.key)} = ${escapeHtml(filter.param.value)}
                                     </div>
                                     ` : ''}
                                 </div>
                             `).join('')}
                         </div>
                     </div>
-                    ` : ''}
-                    
-                    ${router.smpp_connectors.length ? `
+                `
+                : `
+                    <div>
+                        <h3 class="font-semibold border-b pb-1 text-base">Filters</h3>
+                        <p class="mt-1 text-sm text-neutral-500">No filters (DefaultRoute / fallback).</p>
+                    </div>
+                `;
+
+            const smppHtml = (router.smpp_connectors && router.smpp_connectors.length)
+                ? `
                     <div>
                         <h3 class="font-semibold border-b pb-1 text-base">SMPP Connectors (${router.smpp_connectors.length})</h3>
                         <div class="space-y-2 mt-1">
                             ${router.smpp_connectors.map(connector => `
                                 <div class="border rounded p-1.5 text-sm">
-                                    <div class="grid grid-cols-2 gap-1">
-                                        <div><span class="font-medium">ID:</span> ${connector.id}</div>
-                                        <div><span class="font-medium">CID:</span> ${connector.cid}</div>
-                                        <div><span class="font-medium">Host:</span> ${connector.host}</div>
-                                        <div><span class="font-medium">Port:</span> ${connector.port}</div>
-                                        <div><span class="font-medium">Username:</span> ${connector.username}</div>
+                                    <div class="font-medium">${escapeHtml(connector.cid)}</div>
+                                    <div class="grid grid-cols-2 gap-1 mt-1 text-neutral-700">
+                                        <div><span class="font-medium text-neutral-900">Host:</span> ${escapeHtml(connector.host || "—")}</div>
+                                        <div><span class="font-medium text-neutral-900">Port:</span> ${escapeHtml(connector.port || "—")}</div>
+                                        <div><span class="font-medium text-neutral-900">Username:</span> ${escapeHtml(connector.username || "—")}</div>
+                                        <div><span class="font-medium text-neutral-900">Type:</span> ${escapeHtml(connector.connector_type || "SMPP")}</div>
                                     </div>
                                     <div class="mt-1">
-                                        <button class="toggle-config text-blue-600 text-xs font-medium" data-target="config-${connector.id}">
+                                        <button type="button" class="toggle-config text-blue-600 text-xs font-medium" data-target="config-${connector.id}">
                                             Show Configuration
                                         </button>
                                         <div id="config-${connector.id}" class="hidden mt-1 bg-gray-50 p-1 rounded text-xs overflow-x-auto">
-                                            <pre class="text-xs">${JSON.stringify(connector.config, null, 2)}</pre>
+                                            <pre class="text-xs whitespace-pre-wrap">${escapeHtml(JSON.stringify(connector.config || connector, null, 2))}</pre>
                                         </div>
                                     </div>
                                 </div>
                             `).join('')}
                         </div>
                     </div>
-                    ` : ''}
-                    
-                    ${router.http_connectors.length ? `
+                `
+                : "";
+
+            const httpHtml = (router.http_connectors && router.http_connectors.length)
+                ? `
                     <div>
                         <h3 class="font-semibold border-b pb-1 text-base">HTTP Connectors (${router.http_connectors.length})</h3>
                         <div class="space-y-2 mt-1">
-                            ${router.http_connectors.map(connector => `
+                            ${router.http_connectors.map(connector => {
+                                const httpJson = {
+                                    id: connector.id,
+                                    cid: connector.cid,
+                                    connector_type: connector.connector_type,
+                                    base_url: connector.base_url,
+                                    method: connector.method,
+                                    description: connector.description
+                                };
+                                return `
                                 <div class="border rounded p-1.5 text-sm">
-                                    <div class="grid grid-cols-2 gap-1">
-                                        <div><span class="font-medium">ID:</span> ${connector.id}</div>
-                                        <div><span class="font-medium">CID:</span> ${connector.cid}</div>
-                                        <div><span class="font-medium">Method:</span> ${connector.method}</div>
-                                        <div><span class="font-medium">URL:</span> ${connector.base_url}</div>
+                                    <div class="font-medium">${escapeHtml(connector.cid)}</div>
+                                    <div class="grid grid-cols-2 gap-1 mt-1 text-neutral-700">
+                                        <div><span class="font-medium text-neutral-900">Method:</span> ${escapeHtml(connector.method || "—")}</div>
+                                        <div class="col-span-2"><span class="font-medium text-neutral-900">URL:</span> ${escapeHtml(connector.base_url || "—")}</div>
+                                        ${connector.description ? `
+                                        <div class="col-span-2"><span class="font-medium text-neutral-900">Description:</span> ${escapeHtml(connector.description)}</div>
+                                        ` : ""}
                                     </div>
-                                    ${connector.description ? `
                                     <div class="mt-1">
-                                        <span class="font-medium">Description:</span> 
-                                        ${connector.description}
-                                    </div>
-                                    ` : ''}
-                                    <div class="mt-1">
-                                        <button class="toggle-config text-blue-600 text-xs font-medium" data-target="http-config-${connector.id}">
+                                        <button type="button" class="toggle-config text-blue-600 text-xs font-medium" data-target="http-config-${connector.id}">
                                             Show Details
                                         </button>
                                         <div id="http-config-${connector.id}" class="hidden mt-1 bg-gray-50 p-1 rounded text-xs overflow-x-auto">
-                                            <pre class="text-xs">${JSON.stringify(connector, ['id', 'cid', 'connector_type', 'base_url', 'method', 'description'], 2)}</pre>
+                                            <pre class="text-xs whitespace-pre-wrap">${escapeHtml(JSON.stringify(httpJson, null, 2))}</pre>
                                         </div>
                                     </div>
                                 </div>
-                            `).join('')}
+                            `}).join('')}
                         </div>
                     </div>
-                    ` : ''}
+                `
+                : "";
+
+            const connectorsEmpty = !smppHtml && !httpHtml
+                ? `
+                    <div>
+                        <h3 class="font-semibold border-b pb-1 text-base">Connectors</h3>
+                        <p class="mt-1 text-sm text-neutral-500">No connectors attached.</p>
+                    </div>
+                `
+                : "";
+
+            const content = `
+                <div class="space-y-3">
+                    <div>
+                        <h3 class="font-semibold border-b pb-1 text-base">Basic Information</h3>
+                        <div class="grid grid-cols-2 gap-1 mt-1 text-sm">
+                            <div><span class="font-medium">Nature:</span> ${escapeHtml(router.nature)}</div>
+                            <div><span class="font-medium">Order:</span> ${escapeHtml(router.order)}</div>
+                            <div><span class="font-medium">Rate:</span> ${rateLabel}</div>
+                            <div><span class="font-medium">Type:</span> ${escapeHtml(router.router_type)}</div>
+                            ${typeDesc ? `
+                            <div class="col-span-2 text-xs text-neutral-500 mt-1">${escapeHtml(typeDesc)}</div>
+                            ` : ""}
+                        </div>
+                    </div>
+
+                    ${filtersHtml}
+                    ${smppHtml}
+                    ${httpHtml}
+                    ${connectorsEmpty}
                 </div>
             `;
-            
+
             $('#modal-content').html(content);
-            
-            $('.toggle-config').on('click', function() {
+
+            $('#modal-content .toggle-config').on('click', function () {
                 const target = $(this).data('target');
                 $(`#${target}`).toggleClass('hidden');
-                $(this).text(function(i, text) {
-                    return text === "Show Configuration" || text === "Show Details" 
-                        ? (text.includes("Configuration") ? "Hide Configuration" : "Hide Details")
-                        : (text.includes("Configuration") ? "Show Configuration" : "Show Details");
+                $(this).text(function (_, text) {
+                    if (text === "Show Configuration") return "Hide Configuration";
+                    if (text === "Hide Configuration") return "Show Configuration";
+                    if (text === "Show Details") return "Hide Details";
+                    return "Show Details";
                 });
             });
         };

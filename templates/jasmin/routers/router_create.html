@@ -1,4 +1,4 @@
-<div class="p-2 overflow-y-auto space-y-2">
+<div class="p-2 overflow-y-auto space-y-2 joyce-route-form">
     <div class="grid grid-cols-1">
         <div class="space-y-1">
             <label for="{{ form.nature.id_for_label }}" class="block text-sm font-medium text-gray-700">
@@ -13,7 +13,7 @@
             <div style="font-size: 6pt !important;" data-modal-error="{{ form.nature.name }}"
                  class="hidden text-red-600"></div>
 
-            <div id="nature-alert" role="alert" class="hidden alert alert-dash alert-info text-xs flex flex-row"></div>
+            <div class="nature-alert hidden alert alert-dash alert-info text-xs flex flex-row" role="alert"></div>
         </div>
 
         <div class="space-y-1">
@@ -28,7 +28,7 @@
 
             <div style="font-size: 6pt !important;" data-modal-error="{{ form.router_type.name }}"
                  class="hidden text-red-600"></div>
-        <div id="router-alert" role="alert" class="hidden alert alert-dash alert-info text-xs flex flex-row"></div>
+            <div class="router-alert hidden alert alert-dash alert-info text-xs flex flex-row" role="alert"></div>
         </div>
     </div>
     <div class="grid grid-cols-1 gap-4">
@@ -46,7 +46,7 @@
                  class="hidden text-red-600"></div>
         </div>
 
-        <div id="div_rate" class="space-y-1">
+        <div class="div-rate space-y-1">
             <label for="{{ form.rate.id_for_label }}" class="block text-sm font-medium text-gray-700">
                 {{ form.rate.label }}
                 {% if form.rate.field.required %}<span class="text-red-500">*</span>{% endif %}
@@ -62,7 +62,7 @@
     </div>
 
 
-    <div class="grid grid-cols-1" id="show-args">
+    <div class="grid grid-cols-1">
         <fieldset class="space-y-4">
             <legend class="text-lg font-medium text-gray-900">Filters</legend>
             <p class="text-xs text-gray-500">Click an item to move it between Available (left) and Selected (right).</p>
@@ -81,7 +81,7 @@
             </div>
         </fieldset>
     </div>
-    <div class="grid grid-cols-1" id="show-args">
+    <div class="grid grid-cols-1">
         <fieldset class="space-y-4">
             <legend class="text-lg font-medium text-gray-900">Connectors</legend>
             <div class="space-y-1">
@@ -98,7 +98,7 @@
                 <div style="font-size: 6pt !important;" data-modal-error="{{ form.smpp_connectors.name }}"
                      class="hidden text-red-600"></div>
             </div>
-            <div id="div_http_connectors" class="space-y-1">
+            <div class="div-http-connectors space-y-1">
                 <label for="{{ form.http_connectors.id_for_label }}" class="block text-sm font-medium text-gray-700">
                     {{ form.http_connectors.label }}
                     {% if form.http_connectors.field.required %}<span class="text-red-500">*</span>{% endif %}
@@ -117,76 +117,98 @@
 </div>
 <script>
     $(document).ready(function () {
-        const routerTypeEl = $("#id_router_type")
-        routerTypeEl.empty() // prep it for the future
         const mtRoutes = [
             ["DefaultRoute", "A route without a filter, this one can only set with the lowest order to be a default/fallback route"],
             ["StaticMTRoute", "A basic route with Filters and one SMPP Connector"],
             ["RandomRoundrobinMTRoute", "A route with Filters and many SMPP Connectors, will return a random Connector if its Filters are matched, can be used as a load balancer route."],
             ["FailoverMTRoute", "A route with Filters and many Connectors, will return an available (connected) Connector if its Filters are matched"]
-        ]
+        ];
         const moRoutes = [
             ["DefaultRoute", "A route without a filter, this one can only set with the lowest order to be a default/fallback route"],
             ["StaticMORoute", "A basic route with Filters and one Connector"],
             ["RandomRoundrobinMORoute", "A route with Filters and many Connectors, will return a random Connector if its Filters are matched, can be used as a load balancer route."],
             ["FailoverMORoute", "A route with Filters and many Connectors, will return an available (connected) Connector if its Filters are matched"]
-        ]
-        const moAlert = "MO Route is used to route inbound messages (SMS MO) through two possible channels: http and smpps (SMPP Server)."
-        const mtAlert = "MT Route is used to route outbound messages (SMS MT) through one channel: smppc (SMPP Client)."
-        let applyRoutes = []
-        $("#id_nature").on("change", function(e){
-            const nature =  e.target.value
-            const alertDiv = $("#nature-alert")
-            const rateEl = $("#id_rate");
-            const httpConnectorDiv = $("#div_http_connectors")
-            alertDiv.show("slow");
-            switch (nature){
-                case "MO":
-                    alertDiv.html(moAlert);
-                    applyRoutes = moRoutes;
-                    // disable it so we do not send it to backend
-                    rateEl.prop("disabled", true)
-                    $("#div_rate").hide();
-                    httpConnectorDiv.show();
-                    if (typeof window.refreshJoyceMultiSelects === "function") {
-                        window.refreshJoyceMultiSelects(httpConnectorDiv);
-                    }
-                    break;
-                case "MT":
-                    alertDiv.html(mtAlert)
-                    applyRoutes = mtRoutes;
-                    rateEl.prop("disabled", false)
-                    $("#div_rate").show()
-                    httpConnectorDiv.hide(); // we do not need http client connectors for MT
-                    break;
-                default:
-                    alertDiv.html("")
-                    alertDiv.hide("slow");
-                    applyRoutes = []
-                    break;
+        ];
+        const moAlert = "MO Route is used to route inbound messages (SMS MO) through two possible channels: http and smpps (SMPP Server).";
+        const mtAlert = "MT Route is used to route outbound messages (SMS MT) through one channel: smppc (SMPP Client).";
+
+        function wireRouteForm($root) {
+            if ($root.data("joyce-route-wired")) {
+                return;
             }
-            setRouteOptions();
-        })
-        let selectedRoute = null
-        routerTypeEl.on("change", function (e){
-                const selectedOption = $(this).find('option:selected');
-                const index = selectedOption.data("index");
-                const routeAlert = $("#router-alert")
-                if(index > -1){
-                    selectedRoute = applyRoutes[index]
-                    routeAlert.html(selectedRoute[1])
-                    routeAlert.show("slow")
-                }else{
-                     routeAlert.hide("slow")
-                    routeAlert.html("")
+            $root.data("joyce-route-wired", true);
+
+            const $nature = $root.find('[name="nature"]');
+            const $routerType = $root.find('[name="router_type"]');
+            const $rate = $root.find('[name="rate"]');
+            const $rateDiv = $root.find(".div-rate");
+            const $httpConnectorDiv = $root.find(".div-http-connectors");
+            const $natureAlert = $root.find(".nature-alert");
+            const $routerAlert = $root.find(".router-alert");
+            const initialType = $routerType.val();
+            let applyRoutes = [];
+
+            function setRouteOptions(preferred) {
+                let options = '<option value="">----Select Route----</option>';
+                applyRoutes.forEach((route, index) => {
+                    const selected = preferred && preferred === route[0] ? " selected" : "";
+                    options += `<option data-index="${index}" value="${route[0]}"${selected}>${route[0]}</option>`;
+                });
+                $routerType.html(options);
+                if (preferred) {
+                    $routerType.val(preferred);
                 }
-            })
-        function setRouteOptions() {
-           let options = "<option>----Select Route----</option>"
-            applyRoutes.forEach((route, index) => {
-                options += `<option data-index="${index}"value="${route[0]}">${route[0]}</option>`
-            })
-            routerTypeEl.html(options)
+                $routerType.trigger("change");
+            }
+
+            function applyNature(nature, preferredType) {
+                switch (nature) {
+                    case "MO":
+                        $natureAlert.removeClass("hidden").html(moAlert);
+                        applyRoutes = moRoutes;
+                        $rate.prop("disabled", true);
+                        $rateDiv.hide();
+                        $httpConnectorDiv.show();
+                        if (typeof window.refreshJoyceMultiSelects === "function") {
+                            window.refreshJoyceMultiSelects($httpConnectorDiv);
+                        }
+                        break;
+                    case "MT":
+                        $natureAlert.removeClass("hidden").html(mtAlert);
+                        applyRoutes = mtRoutes;
+                        $rate.prop("disabled", false);
+                        $rateDiv.show();
+                        $httpConnectorDiv.hide();
+                        break;
+                    default:
+                        $natureAlert.addClass("hidden").html("");
+                        applyRoutes = [];
+                        break;
+                }
+                setRouteOptions(preferredType || null);
+            }
+
+            $nature.on("change", function () {
+                applyNature($(this).val(), null);
+            });
+
+            $routerType.on("change", function () {
+                const selectedOption = $(this).find("option:selected");
+                const index = selectedOption.data("index");
+                if (index > -1 && applyRoutes[index]) {
+                    $routerAlert.removeClass("hidden").html(applyRoutes[index][1]);
+                } else {
+                    $routerAlert.addClass("hidden").html("");
+                }
+            });
+
+            if ($nature.val()) {
+                applyNature($nature.val(), initialType);
+            }
         }
+
+        $(".joyce-route-form").each(function () {
+            wireRouteForm($(this));
+        });
     });
 </script>

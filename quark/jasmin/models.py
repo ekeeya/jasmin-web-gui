@@ -18,7 +18,6 @@
 #
 import logging
 import pickle
-import uuid
 from time import sleep
 from typing import List
 
@@ -235,29 +234,47 @@ class JasminUser(SmartModel, BaseJasminModel):
 
     def sync_from_jasmin(self, *, save: bool = True):
         """Fetch this username from Jasmin and refresh local credential JSON."""
+        from quark.jasmin.connection import resolve_jasmin_connection
         from quark.jasmin.reactor import run_in_reactor
         from quark.jasmin.router_pb import RouterPBInterface
 
-        jasmin_user = run_in_reactor(RouterPBInterface().get_user, self.username)
+        workspace = self.group.workspace if self.group_id else None
+        connection = resolve_jasmin_connection(workspace)
+        jasmin_user = run_in_reactor(RouterPBInterface(connection).get_user, self.username)
         if jasmin_user is None:
             logger.warning("Jasmin user %s not found during sync", self.username)
             return None
         return self.apply_jasmin_user(jasmin_user, save=save)
 
     @classmethod
-    def sync_many_from_jasmin(cls, users=None):
+    def sync_many_from_jasmin(cls, users=None, *, connection=None, workspace=None):
         """
         Bulk-refresh Django users from one user_get_all call.
 
         ``users`` may be an iterable of JasminUser instances (preferred: updates
         those objects in-place so list/edit forms see fresh data) or omitted to
         sync every local row. Failures are logged and do not raise.
+
+        Pass ``connection`` (or ``workspace`` to resolve it) when targeting a
+        specific Jasmin instance in multi mode.
         """
+        from quark.jasmin.connection import JasminNotConfigured, resolve_jasmin_connection
         from quark.jasmin.reactor import run_in_reactor
         from quark.jasmin.router_pb import RouterPBInterface
 
+        if connection is None:
+            try:
+                if workspace is None and users:
+                    first = next(iter(users), None)
+                    if first is not None and first.group_id:
+                        workspace = first.group.workspace
+                connection = resolve_jasmin_connection(workspace)
+            except JasminNotConfigured as e:
+                logger.warning("Skipping Jasmin user sync: %s", e)
+                return []
+
         try:
-            remote_users = run_in_reactor(RouterPBInterface().get_all_users) or []
+            remote_users = run_in_reactor(RouterPBInterface(connection).get_all_users) or []
         except Exception as e:
             logger.error("Failed to fetch Jasmin users for sync: %s", e)
             return []
@@ -743,52 +760,123 @@ class JasminSMPPConnector(BaseJasminConnector, BaseJasminModel, SmartModel):
         }
 
     @classmethod
-    def from_smpp_client_config(cls, config_data, workspace):
-        """Create Django model instance from SMPPClientConfig dictionary"""
-        connector = cls(
-            workspace=workspace,
-            cid=uuid.UUID(config_data['id']) if 'id' in config_data else uuid.uuid4(),
-            host=config_data.get('host', '127.0.0.1'),
-            port=config_data.get('port', 2775),
-            username=config_data.get('username', 'smppclient'),
-            password=config_data.get('password', 'password'),
-            system_type=config_data.get('systemType', ''),
-            log_file=config_data.get('log_file', None),
-            log_rotate=config_data.get('log_rotate', 'midnight'),
-            log_level=config_data.get('log_level', logging.INFO),
-            log_privacy=config_data.get('log_privacy', False),
-            session_init_timer_secs=config_data.get('sessionInitTimerSecs', 30),
-            enquire_link_timer_secs=config_data.get('enquireLinkTimerSecs', 30),
-            inactivity_timer_secs=config_data.get('inactivityTimerSecs', 300),
-            response_timer_secs=config_data.get('responseTimerSecs', 120),
-            pdu_read_timer_secs=config_data.get('pduReadTimerSecs', 10),
-            dlr_expiry=config_data.get('dlr_expiry', 86400),
-            reconnect_on_connection_loss=config_data.get('reconnectOnConnectionLoss', True),
-            reconnect_on_connection_failure=config_data.get('reconnectOnConnectionFailure', True),
-            reconnect_on_connection_loss_delay=config_data.get('reconnectOnConnectionLossDelay', 10),
-            reconnect_on_connection_failure_delay=config_data.get('reconnectOnConnectionFailureDelay', 10),
-            use_ssl=config_data.get('useSSL', False),
-            ssl_certificate_file=config_data.get('SSLCertificateFile', None),
-            bind_operation=config_data.get('bindOperation', 'transceiver'),
-            source_addr=config_data.get('source_addr', None),
-            source_addr_ton=config_data.get('source_addr_ton', cls.NATIONAL),
-            source_addr_npi=config_data.get('source_addr_npi', cls.NPI_ISDN),
-            dest_addr_ton=config_data.get('dest_addr_ton', cls.INTERNATIONAL),
-            dest_addr_npi=config_data.get('dest_addr_npi', cls.NPI_ISDN),
-            address_ton=config_data.get('addressTon', cls.UNKNOWN),
-            address_npi=config_data.get('addressNpi', cls.NPI_ISDN),
-            address_range=config_data.get('addressRange', None),
-            validity_period=config_data.get('validity_period', None),
-            priority_flag=config_data.get('priority_flag', cls.PRIORITY_0),
-            registered_delivery=config_data.get('registered_delivery', False),
-            replace_if_present_flag=config_data.get('replace_if_present_flag', cls.RIPF_DO_NOT_REPLACE),
-            data_coding=config_data.get('data_coding', cls.SMSC_DEFAULT),
-            requeue_delay=config_data.get('requeue_delay', 120),
-            submit_sm_throughput=config_data.get('submit_sm_throughput', 1),
-            dlr_msg_id_bases=config_data.get('dlr_msg_id_bases', cls.DLR_MSG_ID_SAME_BASE),
+    def from_smpp_client_config(cls, config, workspace, *, running: bool = False, user=None):
+        """
+        Upsert a Django SMPP connector from a Jasmin SMPPClientConfig (or dict).
+
+        Preserves the remote ``id`` as ``cid``. Always saves with run_on_reactor=False.
+        """
+        from quark.jasmin.utils.utils import (
+            NPI_VALUES,
+            PRIORITY_VALUES,
+            REGISTERED_DELIVERY_VALUES,
+            REPLACE_IF_PRESENT_VALUES,
+            TON_VALUES,
         )
-        # TODO, hand over to django, let it try to pick if by cid from db then update any
-        #  field that do not match or just create a new on, handle clever way to link the workspace
+
+        def _get(obj, key, default=None):
+            if isinstance(obj, dict):
+                return obj.get(key, default)
+            return getattr(obj, key, default)
+
+        def _enum_int(mapping, value, default):
+            if value is None:
+                return default
+            reverse = {v: int(k) for k, v in mapping.items()}
+            if value in reverse:
+                return reverse[value]
+            # Already an int / numeric string
+            try:
+                return int(getattr(value, "value", value))
+            except (TypeError, ValueError):
+                return default
+
+        def _registered_delivery(value, default=1):
+            if value is None:
+                return default
+            receipt = getattr(value, "receipt", value)
+            # Prefer Joyce model choices (1/2/3) over REGISTERED_DELIVERY_VALUES keys (0/1/2)
+            for key, enum_val in REGISTERED_DELIVERY_VALUES.items():
+                if receipt == enum_val:
+                    return int(key) + 1
+            try:
+                return int(getattr(receipt, "value", receipt))
+            except (TypeError, ValueError):
+                return default
+
+        cid = str(_get(config, "id") or "").strip()
+        if not cid:
+            raise ValueError("SMPP config has no id")
+
+        defaults = {
+            "host": _get(config, "host", "127.0.0.1") or "127.0.0.1",
+            "port": int(_get(config, "port", 2775) or 2775),
+            "username": _get(config, "username", "smppclient") or "smppclient",
+            "password": _get(config, "password", "") or "",
+            "system_type": _get(config, "systemType", "") or "",
+            "log_file": _get(config, "log_file", None),
+            "log_rotate": _get(config, "log_rotate", "midnight") or "midnight",
+            "log_level": int(_get(config, "log_level", logging.INFO) or logging.INFO),
+            "log_privacy": bool(_get(config, "log_privacy", False)),
+            "session_init_timer_secs": int(_get(config, "sessionInitTimerSecs", 30) or 30),
+            "enquire_link_timer_secs": int(_get(config, "enquireLinkTimerSecs", 30) or 30),
+            "inactivity_timer_secs": int(_get(config, "inactivityTimerSecs", 300) or 300),
+            "response_timer_secs": int(_get(config, "responseTimerSecs", 120) or 120),
+            "pdu_read_timer_secs": int(_get(config, "pduReadTimerSecs", 10) or 10),
+            "dlr_expiry": int(_get(config, "dlr_expiry", 86400) or 86400),
+            "reconnect_on_connection_loss": bool(_get(config, "reconnectOnConnectionLoss", True)),
+            "reconnect_on_connection_failure": bool(_get(config, "reconnectOnConnectionFailure", True)),
+            "reconnect_on_connection_loss_delay": int(
+                _get(config, "reconnectOnConnectionLossDelay", 10) or 10
+            ),
+            "reconnect_on_connection_failure_delay": int(
+                _get(config, "reconnectOnConnectionFailureDelay", 10) or 10
+            ),
+            "use_ssl": bool(_get(config, "useSSL", False)),
+            "ssl_certificate_file": _get(config, "SSLCertificateFile", None),
+            "bind_operation": _get(config, "bindOperation", "transceiver") or "transceiver",
+            "source_addr": _get(config, "source_addr", None),
+            "source_addr_ton": _enum_int(TON_VALUES, _get(config, "source_addr_ton"), cls.NATIONAL),
+            "source_addr_npi": _enum_int(NPI_VALUES, _get(config, "source_addr_npi"), cls.NPI_ISDN),
+            "dest_addr_ton": _enum_int(TON_VALUES, _get(config, "dest_addr_ton"), cls.INTERNATIONAL),
+            "dest_addr_npi": _enum_int(NPI_VALUES, _get(config, "dest_addr_npi"), cls.NPI_ISDN),
+            "address_ton": _enum_int(TON_VALUES, _get(config, "addressTon"), cls.UNKNOWN),
+            "address_npi": _enum_int(NPI_VALUES, _get(config, "addressNpi"), cls.NPI_ISDN),
+            "address_range": _get(config, "addressRange", None),
+            "validity_period": _get(config, "validity_period", None),
+            "priority_flag": _enum_int(PRIORITY_VALUES, _get(config, "priority_flag"), cls.PRIORITY_0),
+            "registered_delivery": _registered_delivery(_get(config, "registered_delivery"), 1),
+            "replace_if_present_flag": _enum_int(
+                REPLACE_IF_PRESENT_VALUES,
+                _get(config, "replace_if_present_flag"),
+                cls.RIPF_DO_NOT_REPLACE,
+            ),
+            "data_coding": int(_get(config, "data_coding", cls.SMSC_DEFAULT) or cls.SMSC_DEFAULT),
+            "requeue_delay": int(_get(config, "requeue_delay", 120) or 120),
+            "submit_sm_throughput": int(_get(config, "submit_sm_throughput", 1) or 1),
+            "dlr_msg_id_bases": int(_get(config, "dlr_msg_id_bases", cls.DLR_MSG_ID_SAME_BASE) or 0),
+            "connector_type": "SMPP",
+        }
+
+        obj = cls.objects.filter(workspace=workspace, cid=cid).first()
+        created = obj is None
+        if created:
+            obj = cls(workspace=workspace, cid=cid)
+            if user is not None:
+                obj.created_by = user
+                obj.modified_by = user
+
+        for key, value in defaults.items():
+            setattr(obj, key, value)
+
+        if user is not None:
+            obj.modified_by = user
+
+        obj.save(run_on_reactor=False)
+        # save() forces is_active=False on create — apply live status after
+        cls.objects.filter(pk=obj.pk).update(is_active=bool(running))
+        obj.is_active = bool(running)
+        return obj, created
 
     class Meta:
         db_table = "jasmin_smpp_connector"
@@ -1007,6 +1095,7 @@ class JasminRoute(BaseJasminModel, JasminBaseRouter, SmartModel):
 
     class Meta:
         db_table = 'jasmin_route'
+        unique_together = [("workspace", "nature", "order")]
 
 
 class JasminInterceptor(BaseJasminModel, JasminBaseInterceptor, SmartModel):

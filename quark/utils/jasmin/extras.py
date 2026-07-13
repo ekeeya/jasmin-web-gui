@@ -27,6 +27,11 @@ from quark.jasmin.reactor import run_in_reactor
 from quark.jasmin.router_pb import RouterPBInterface
 from quark.jasmin.smpp_pb import SmppPBAdapter
 from quark.jasmin.utils import to_jsmin_mt_creds, to_jasmin_smpp_creds
+from quark.jasmin.connection import (
+    JasminNotConfigured,
+    resolve_jasmin_connection,
+    workspace_from_jasmin_model,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -104,6 +109,10 @@ class BaseJasminModel(models.Model):
         ReactorOperation.GET_CONNECTOR,
     )
 
+    def _resolve_pb_connection(self):
+        workspace = workspace_from_jasmin_model(self)
+        return resolve_jasmin_connection(workspace)
+
     def _execute_reactor_operation(self, operation: ReactorOperation, pb_type: PBType,
                                    *args, rollback_on_error: bool = False, **kwargs):
         """
@@ -116,7 +125,15 @@ class BaseJasminModel(models.Model):
           - activate operations revert the local is_active flag
           - all non-read failures raise ValidationError for the UI
         """
-        instance = pb_type.value()
+        try:
+            connection = self._resolve_pb_connection()
+        except JasminNotConfigured as e:
+            if operation in self.READ_OPERATIONS:
+                logger.warning("Jasmin not configured for %s: %s", self, e)
+                return None
+            raise ValidationError(str(e))
+
+        instance = pb_type.value(connection)
         method = getattr(instance, operation.value)
 
         try:
@@ -303,13 +320,21 @@ class BaseJasminModel(models.Model):
             rollback_on_error=is_new,
         )
 
-    def jasmin_remove_route(self):
-        if hasattr(self, "order") and hasattr(self, "nature"):
+    def jasmin_remove_route(self, order=None, nature=None):
+        """
+        Remove a route from Jasmin.
+
+        Optional ``order`` / ``nature`` override the instance values so an update
+        can drop the previous slot when those fields change.
+        """
+        order = self.order if order is None else order
+        nature = self.nature if nature is None else nature
+        if order is not None and nature is not None:
             self._execute_reactor_operation(
                 self.ReactorOperation.REMOVE_ROUTE,
                 PBType.RouterPB,
-                self.order,
-                self.nature,
+                order,
+                nature,
                 settings.JASMIN_PERSIST
             )
 

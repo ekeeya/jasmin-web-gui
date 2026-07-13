@@ -68,6 +68,29 @@ This Django application uses the Twisted framework to communicate with the Jasmi
 
 The integration relies on a custom service layer that uses Twisted’s asynchronous Perspective Broker client to interact with the running Jasmin service. When you save a connector, route or interceptor, Joyce waits for Jasmin to confirm the change and surfaces real errors in the form if something fails.
 
+### Jasmin connection (per workspace)
+
+Every workspace chooses how it reaches Jasmin under **Workspace settings**:
+
+| Choice | Meaning |
+|--------|---------|
+| **Local demo Jasmin** | Use this Joyce server’s `JASMIN_ROUTER_PB_*`, `JASMIN_SMPP_PB_*`, and `JASMIN_HTTP_API_URL` (typical Docker demo). |
+| **My own Jasmin** | Store Router PB + SMPP PB + HTTP API endpoints on the workspace. PB passwords are encrypted at rest. |
+
+| Env var | Meaning |
+|---------|---------|
+| `JOYCE_CREDENTIALS_KEY` | Fernet key for encrypting custom PB passwords. If unset, Joyce persists one in `.joyce_credentials_key`. |
+
+Generate a key:
+
+```bash
+python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+```
+
+Until a workspace picks demo or finishes a custom connection, users are redirected to `/workspace/settings/` (also the landing page after signup).
+
+Custom PB passwords are never stored as plain text; Joyce decrypts them only when authenticating to that Jasmin instance.
+
 ---
 
 ## Setup Guide

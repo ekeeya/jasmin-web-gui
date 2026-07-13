@@ -178,6 +178,37 @@ class WorkSpace(SmartModel):
     is_flagged = models.BooleanField(default=False, help_text="Whether this workspace is currently flagged.")
     is_suspended = models.BooleanField(default=False, help_text="Whether this workspace is currently suspended.")
 
+    JASMIN_LINK_UNSET = ""
+    JASMIN_LINK_DEMO = "demo"
+    JASMIN_LINK_CUSTOM = "custom"
+    JASMIN_LINK_CHOICES = (
+        (JASMIN_LINK_UNSET, "Not configured"),
+        (JASMIN_LINK_DEMO, "Local demo Jasmin"),
+        (JASMIN_LINK_CUSTOM, "My own Jasmin"),
+    )
+
+    jasmin_link = models.CharField(
+        max_length=16,
+        choices=JASMIN_LINK_CHOICES,
+        default=JASMIN_LINK_UNSET,
+        blank=True,
+        help_text="How this workspace reaches Jasmin: demo gateway or your own.",
+    )
+
+    # Custom remote Jasmin (used when jasmin_link=custom). Passwords are Fernet-encrypted.
+    jasmin_router_pb_host = models.CharField(max_length=255, blank=True, default="")
+    jasmin_router_pb_port = models.PositiveIntegerField(null=True, blank=True)
+    jasmin_router_pb_username = models.CharField(max_length=128, blank=True, default="")
+    jasmin_router_pb_password = models.CharField(max_length=512, blank=True, default="")
+
+    jasmin_smpp_pb_host = models.CharField(max_length=255, blank=True, default="")
+    jasmin_smpp_pb_port = models.PositiveIntegerField(null=True, blank=True)
+    jasmin_smpp_pb_username = models.CharField(max_length=128, blank=True, default="")
+    jasmin_smpp_pb_password = models.CharField(max_length=512, blank=True, default="")
+
+    jasmin_http_api_url = models.URLField(max_length=512, blank=True, default="")
+    jasmin_connection_tested_at = models.DateTimeField(null=True, blank=True)
+
     jasmin_user_sync_interval_mins = models.PositiveIntegerField(
         default=5,
         help_text=(
@@ -189,6 +220,11 @@ class WorkSpace(SmartModel):
         null=True,
         blank=True,
         help_text="When Jasmin user credentials were last synced into Django for this workspace.",
+    )
+    jasmin_config_last_imported_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When full Jasmin config (groups/users/connectors/routes/…) was last pulled into Django.",
     )
 
     suspended_on = models.DateTimeField(null=True, blank=True)
@@ -320,6 +356,61 @@ class WorkSpace(SmartModel):
 
         membership = self.get_membership(user)
         return membership.role if membership else None
+
+    def jasmin_custom_fields_complete(self) -> bool:
+        """True when all custom remote Jasmin connection fields are present."""
+        return bool(
+            self.jasmin_router_pb_host
+            and self.jasmin_router_pb_port
+            and self.jasmin_router_pb_username
+            and self.jasmin_router_pb_password
+            and self.jasmin_smpp_pb_host
+            and self.jasmin_smpp_pb_port
+            and self.jasmin_smpp_pb_username
+            and self.jasmin_smpp_pb_password
+            and self.jasmin_http_api_url
+        )
+
+    def clear_jasmin_custom_connection(self, *, save: bool = True):
+        """Drop stored custom Jasmin endpoints/credentials (keeps sync interval)."""
+        self.jasmin_router_pb_host = ""
+        self.jasmin_router_pb_port = None
+        self.jasmin_router_pb_username = ""
+        self.jasmin_router_pb_password = ""
+        self.jasmin_smpp_pb_host = ""
+        self.jasmin_smpp_pb_port = None
+        self.jasmin_smpp_pb_username = ""
+        self.jasmin_smpp_pb_password = ""
+        self.jasmin_http_api_url = ""
+        self.jasmin_connection_tested_at = None
+        if save:
+            self.save(
+                update_fields=[
+                    "jasmin_router_pb_host",
+                    "jasmin_router_pb_port",
+                    "jasmin_router_pb_username",
+                    "jasmin_router_pb_password",
+                    "jasmin_smpp_pb_host",
+                    "jasmin_smpp_pb_port",
+                    "jasmin_smpp_pb_username",
+                    "jasmin_smpp_pb_password",
+                    "jasmin_http_api_url",
+                    "jasmin_connection_tested_at",
+                    "modified_on",
+                ]
+            )
+
+    def is_jasmin_ready(self) -> bool:
+        """
+        Whether this workspace may use Configure/Operate against Jasmin.
+
+        The workspace must opt into demo Jasmin or finish a custom connection.
+        """
+        if self.jasmin_link == self.JASMIN_LINK_DEMO:
+            return True
+        if self.jasmin_link == self.JASMIN_LINK_CUSTOM:
+            return self.jasmin_custom_fields_complete()
+        return False
 
     class Meta:
         db_table = "workspace"

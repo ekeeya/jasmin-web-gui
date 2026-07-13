@@ -57,6 +57,19 @@ class InputTextWidget(JoyceWidgetMixin, widgets.Input):
     template_name = 'widgets/input.html'
     input_type = 'text'
     is_annotated = True
+    render_value = True
+
+    def __init__(self, attrs=None):
+        attrs = dict(attrs or {})
+        if attrs.pop("password", None):
+            self.input_type = "password"
+            self.render_value = False
+        super().__init__(attrs=attrs)
+
+    def get_context(self, name, value, attrs):
+        if self.input_type == "password" and not self.render_value:
+            value = None
+        return super().get_context(name, value, attrs)
 
 
 class NumberInputTextWidget(InputTextWidget):

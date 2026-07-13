@@ -1,6 +1,7 @@
 # Virtual Environment
 venv/
 .env
+.joyce_credentials_key
 .cursor
 # Python
 *.pyc

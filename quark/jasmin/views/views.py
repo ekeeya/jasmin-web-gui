@@ -20,7 +20,7 @@ import logging
 from django import forms
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
-from django.http import JsonResponse
+from django.http import HttpResponseRedirect, JsonResponse
 from django.urls import reverse
 from django.utils.safestring import mark_safe
 from smartmin.mixins import NonAtomicMixin
@@ -489,6 +489,49 @@ class JasminRouteCRUDL(SmartCRUDL):
             form.instance.pk = route.pk  # so we do not save it again in the mixin
             return super().form_valid(form)
 
+    class Update(FormMixin, ModalFormMixin, WorkspacePermsMixin, NonAtomicMixin, SmartUpdateView):
+        permission = "jasmin.jasminroute_update"
+        form_class = JasminRouteForm
+        success_url = "@jasmin.jasminroute_list"
+
+        def get_form_kwargs(self):
+            kwargs = super().get_form_kwargs()
+            kwargs["workspace"] = self.derive_workspace()
+            return kwargs
+
+        def form_valid(self, form):
+            route = self.object
+            old_order = route.order
+            old_nature = route.nature
+
+            route.router_type = form.cleaned_data["router_type"]
+            route.nature = form.cleaned_data["nature"]
+            route.order = form.cleaned_data["order"]
+            route.rate = form.cleaned_data.get("rate")
+            route.modified_by = self.request.user
+            route.save(run_on_reactor=False)
+
+            route.smpp_connectors.set(form.cleaned_data["smpp_connectors"])
+            route.http_connectors.set(form.cleaned_data["http_connectors"])
+            route.filters.set(form.cleaned_data["filters"])
+
+            # Drop the previous Jasmin slot (same or prior order/nature), then push the new config.
+            route.jasmin_remove_route(order=old_order, nature=old_nature)
+            try:
+                route.save()
+            except ValidationError:
+                raise
+
+            form.instance = route
+            # Return AJAX success without ModalFormMixin re-saving (would double-push to Jasmin).
+            message = "Action executed successfully"
+            if "HTTP_X_AJAX_MODAL" in self.request.META:
+                return JsonResponse(
+                    dict(success=True, message=message, redirect_to=self.get_success_url()),
+                    safe=False,
+                )
+            return HttpResponseRedirect(self.get_success_url())
+
     class List(InjectModalFormMixin, BaseListView):
         title = "Routers"
         permission = "jasmin.jasminroute_list"
@@ -500,7 +543,15 @@ class JasminRouteCRUDL(SmartCRUDL):
         ordering = ("-created_on",)
         search_fields = ("fid",)
         modal_form = JasminRouteForm
-        actions = ['delete']
+        update_form = JasminRouteForm
+        actions = ['edit', 'delete']
+
+        def build_update(self):
+            self.set_update_form_params(
+                post_url="jasmin.jasminroute_update",
+                name="Route",
+                display_field="order",
+            )
 
         def build_modal(self, modal):
             modal.register_modal(

@@ -86,7 +86,9 @@ class JasminBaseRouter(models.Model):
     )
     workspace = models.ForeignKey("workspace.WorkSpace", on_delete=models.CASCADE)
 
-    order = models.IntegerField(unique=True)
+    order = models.IntegerField(
+        help_text="Route order within this workspace and nature (MO/MT).",
+    )
 
     class Meta:
         abstract = True

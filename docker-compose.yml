@@ -28,6 +28,10 @@ x-joyce-environment: &joyce-environment
   CELERY_BROKER_URL: redis://redis:6379/0
   CELERY_RESULT_BACKEND: redis://redis:6379/0
 
+  # Optional: Fernet key for encrypting custom workspace Jasmin PB passwords.
+  # If unset, Joyce writes one to .joyce_credentials_key on first start.
+  # JOYCE_CREDENTIALS_KEY: "generate-with-Fernet.generate_key()"
+
   # Optional
   DEBUG: "False"
 

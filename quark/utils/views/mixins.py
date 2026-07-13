@@ -53,6 +53,7 @@ class FormMixin:
             attrs.update(default_attrs)
             field.widget = TextareaWidget(attrs=attrs)
         elif isinstance(field.widget, (forms.widgets.PasswordInput,)):
+            attrs = dict(attrs)
             attrs["password"] = True
             field.widget = InputTextWidget(attrs=attrs)
         elif isinstance(

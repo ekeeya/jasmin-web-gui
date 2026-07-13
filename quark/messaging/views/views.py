@@ -224,7 +224,15 @@ class BalanceRateView(WorkspacePermsMixin, SmartTemplateView):
         context["lookup_error"] = ""
 
         if selected and self.request.method == "GET" and self.request.GET.get("check"):
-            client = JasminHttpClient()
+            from quark.jasmin.connection import JasminNotConfigured, resolve_jasmin_connection
+
+            try:
+                connection = resolve_jasmin_connection(workspace)
+                client = JasminHttpClient(base_url=connection.http_api_url)
+            except JasminNotConfigured as exc:
+                context["lookup_error"] = str(exc)
+                return context
+
             bal = client.balance(username=selected.username, password=selected.password)
             rate = client.rate(username=selected.username, password=selected.password)
             if bal.ok:
