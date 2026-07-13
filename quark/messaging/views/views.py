@@ -1,11 +1,16 @@
 #
 #  Copyright (c) 2026
 #
+import csv
+from datetime import datetime, time, timedelta
+
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db.models import Count
-from django.http import HttpResponseRedirect
+from django.http import HttpResponse, HttpResponseRedirect
 from django.urls import reverse
+from django.utils import timezone
+from django.utils.dateparse import parse_date
 from django.views import View
 from rest_framework import status
 from rest_framework.permissions import AllowAny
@@ -31,6 +36,51 @@ logger = logging.getLogger(__name__)
 CONSOLE_MODE_SESSION_KEY = "joyce_console_mode"
 MODE_CONFIGURE = "configure"
 MODE_OPERATE = "operate"
+
+
+def _aware_day_start(day):
+    dt = datetime.combine(day, time.min)
+    if timezone.is_naive(dt):
+        return timezone.make_aware(dt, timezone.get_current_timezone())
+    return dt
+
+
+def apply_outbound_message_filters(qs, params):
+    """Apply message-log filters from GET/POST query params."""
+    jasmin_user = (params.get("jasmin_user") or "").strip()
+    if jasmin_user.isdigit():
+        qs = qs.filter(jasmin_user_id=int(jasmin_user))
+
+    status_value = (params.get("status") or "").strip()
+    if status_value:
+        qs = qs.filter(status=status_value)
+
+    to_addr = (params.get("to") or "").strip()
+    if to_addr:
+        qs = qs.filter(to_addr__icontains=to_addr)
+
+    date_from = parse_date((params.get("date_from") or "").strip())
+    if date_from:
+        qs = qs.filter(created_on__gte=_aware_day_start(date_from))
+
+    date_to = parse_date((params.get("date_to") or "").strip())
+    if date_to:
+        qs = qs.filter(created_on__lt=_aware_day_start(date_to) + timedelta(days=1))
+
+    return qs
+
+
+def outbound_message_filter_querystring(params) -> str:
+    """Build a querystring of active filters (no page/export)."""
+    keep = ("search", "jasmin_user", "status", "to", "date_from", "date_to", "_order")
+    items = []
+    for key in keep:
+        value = (params.get(key) or "").strip()
+        if value:
+            items.append((key, value))
+    from urllib.parse import urlencode
+
+    return urlencode(items)
 
 
 class SetConsoleModeView(LoginRequiredMixin, WorkspacePermsMixin, View):
@@ -156,7 +206,15 @@ class OutboundMessageCRUDL(SmartCRUDL):
     class List(BaseListView):
         permission = "messaging.outboundmessage_list"
         title = "Message log"
-        search_fields = ("to_addr__icontains", "from_addr__icontains", "jasmin_msg_id__icontains", "batch_id__icontains", "content__icontains")
+        search_fields = (
+            "to_addr__icontains",
+            "from_addr__icontains",
+            "jasmin_msg_id__icontains",
+            "batch_id__icontains",
+            "client_message_id__icontains",
+            "client_batch_id__icontains",
+            "content__icontains",
+        )
         default_order = ("-created_on",)
         fields = ("to_addr", "status", "jasmin_user", "batch_kind", "jasmin_msg_id", "created_on")
         field_config = {
@@ -168,16 +226,85 @@ class OutboundMessageCRUDL(SmartCRUDL):
         add_button = False
         template_name = "messaging/message_list.html"
 
+        CSV_COLUMNS = (
+            ("created_on", "created_on"),
+            ("to_addr", "to"),
+            ("from_addr", "from"),
+            ("status", "status"),
+            ("jasmin_user", "jasmin_user"),
+            ("batch_kind", "kind"),
+            ("batch_id", "batch_id"),
+            ("client_batch_id", "client_batch_id"),
+            ("client_message_id", "client_message_id"),
+            ("jasmin_msg_id", "jasmin_msg_id"),
+            ("jasmin_batch_id", "jasmin_batch_id"),
+            ("dlr_status", "dlr_status"),
+            ("content", "content"),
+            ("error_message", "error_message"),
+            ("submitted_at", "submitted_at"),
+            ("delivered_at", "delivered_at"),
+            ("last_dlr_at", "last_dlr_at"),
+        )
+
+        def get(self, request, *args, **kwargs):
+            if (request.GET.get("export") or "").strip().lower() == "csv":
+                return self.export_csv()
+            return super().get(request, *args, **kwargs)
+
+        def derive_queryset(self, **kwargs):
+            qs = super().derive_queryset(**kwargs).select_related("jasmin_user")
+            return apply_outbound_message_filters(qs, self.request.GET)
+
         def get_context_data(self, **kwargs):
             context = super().get_context_data(**kwargs)
-            context["workspace"] = self.request.workspace
+            workspace = self.request.workspace
+            context["workspace"] = workspace
             context["user"] = self.request.user
             qs = self.derive_queryset()
             context["status_counts"] = {
                 row["status"]: row["c"]
                 for row in qs.values("status").annotate(c=Count("id"))
             }
+            context["filter_jasmin_users"] = JasminUser.objects.filter(
+                group__workspace=workspace
+            ).order_by("username")
+            context["status_choices"] = OutboundMessage.STATUS_CHOICES
+            context["filters"] = {
+                "jasmin_user": (self.request.GET.get("jasmin_user") or "").strip(),
+                "status": (self.request.GET.get("status") or "").strip(),
+                "to": (self.request.GET.get("to") or "").strip(),
+                "date_from": (self.request.GET.get("date_from") or "").strip(),
+                "date_to": (self.request.GET.get("date_to") or "").strip(),
+                "search": (self.request.GET.get("search") or "").strip(),
+            }
+            context["filter_query"] = outbound_message_filter_querystring(self.request.GET)
+            context["filtered_count"] = qs.count()
             return context
+
+        def export_csv(self):
+            qs = self.derive_queryset().order_by("-created_on")
+            response = HttpResponse(content_type="text/csv")
+            filename = timezone.now().strftime("joyce-messages-%Y%m%d-%H%M%S.csv")
+            response["Content-Disposition"] = f'attachment; filename="{filename}"'
+            writer = csv.writer(response)
+            writer.writerow([header for _, header in self.CSV_COLUMNS])
+
+            def fmt(value):
+                if value is None:
+                    return ""
+                if hasattr(value, "isoformat"):
+                    return value.isoformat(sep=" ", timespec="seconds")
+                return str(value)
+
+            for msg in qs.iterator(chunk_size=1000):
+                row = []
+                for attr, _header in self.CSV_COLUMNS:
+                    if attr == "jasmin_user":
+                        row.append(msg.jasmin_user.username if msg.jasmin_user_id else "")
+                    else:
+                        row.append(fmt(getattr(msg, attr, "")))
+                writer.writerow(row)
+            return response
 
     class Read(WorkspacePermsMixin, SmartReadView):
         permission = "messaging.outboundmessage_read"

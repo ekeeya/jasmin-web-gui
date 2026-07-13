@@ -4,118 +4,192 @@
     <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
             <p class="font-mono text-[10px] uppercase tracking-[0.2em] text-neutral-400">Operate</p>
-            <h1 class="font-display text-2xl font-bold tracking-tight text-neutral-900">Messaging overview</h1>
-            <p class="mt-1 text-sm text-neutral-500">Outbound SMS activity for {{ workspace.name }}.</p>
+            <h1 class="font-display text-2xl font-bold tracking-tight text-neutral-900">Usage &amp; delivery</h1>
+            <p class="mt-1 text-sm text-neutral-500">
+                Business view of outbound SMS for {{ workspace.name }} — volume, outcomes, and per-user usage.
+            </p>
         </div>
-        {% if delivery_rate != None %}
-            <div class="self-start border border-neutral-200 bg-white px-4 py-2 text-right">
-                <p class="font-mono text-[10px] uppercase tracking-widest text-neutral-400">Delivery rate</p>
-                <p class="font-display text-xl font-bold tabular-nums text-emerald-700">{{ delivery_rate }}%</p>
-            </div>
-        {% endif %}
+        <div class="flex flex-wrap gap-2">
+            <a href="{% url 'messaging.send' %}" class="btn btn-sm bg-neutral-950 text-white border-0 hover:bg-neutral-800">Send SMS</a>
+            <a href="{% url 'messaging.bulk_send' %}" class="btn btn-sm btn-outline border-neutral-300">Bulk send</a>
+            <a href="{% url 'messaging.outboundmessage_list' %}" class="btn btn-sm btn-outline border-neutral-300">Message log</a>
+            <a href="{% url 'messaging.balance' %}" class="btn btn-sm btn-outline border-neutral-300">Balance &amp; rate</a>
+        </div>
     </div>
 
-    <div class="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-6">
+    {# Business KPIs #}
+    <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <div class="border border-neutral-200 bg-white p-4">
             <p class="font-mono text-[10px] uppercase tracking-widest text-neutral-400">Today</p>
             <p class="mt-1 font-display text-2xl font-bold tabular-nums">{{ totals.today|default:0|intcomma }}</p>
             <p class="mt-1 text-xs text-neutral-500">
-                <span class="text-emerald-700">{{ totals.today_delivered|default:0 }} ok</span>
-                · <span class="text-rose-700">{{ totals.today_failed|default:0 }} fail</span>
+                <span class="text-emerald-700">{{ totals.today_delivered|default:0 }} delivered</span>
+                · <span class="text-rose-700">{{ totals.today_failed|default:0 }} failed</span>
             </p>
         </div>
         <div class="border border-neutral-200 bg-white p-4">
-            <p class="font-mono text-[10px] uppercase tracking-widest text-neutral-400">Total</p>
-            <p class="mt-1 font-display text-2xl font-bold tabular-nums">{{ totals.total|default:0|intcomma }}</p>
-            <p class="mt-1 text-xs text-neutral-500">{{ totals.single|default:0 }} single · {{ totals.bulk|default:0 }} bulk</p>
+            <p class="font-mono text-[10px] uppercase tracking-widest text-neutral-400">Last 7 days</p>
+            <p class="mt-1 font-display text-2xl font-bold tabular-nums">{{ totals.week|default:0|intcomma }}</p>
+            <p class="mt-1 text-xs text-neutral-500">
+                {{ totals.single|default:0 }} single · {{ totals.bulk|default:0 }} bulk (all time)
+            </p>
         </div>
         <div class="border border-neutral-200 bg-white p-4">
-            <p class="font-mono text-[10px] uppercase tracking-widest text-neutral-400">Submitted</p>
-            <p class="mt-1 font-display text-2xl font-bold tabular-nums text-sky-700">{{ totals.submitted|default:0|intcomma }}</p>
+            <p class="font-mono text-[10px] uppercase tracking-widest text-neutral-400">Delivery rate (7d)</p>
+            <p class="mt-1 font-display text-2xl font-bold tabular-nums {% if week_delivery_rate != None %}text-emerald-700{% else %}text-neutral-400{% endif %}">
+                {% if week_delivery_rate != None %}{{ week_delivery_rate }}%{% else %}—{% endif %}
+            </p>
+            <p class="mt-1 text-xs text-neutral-500">
+                All-time
+                {% if delivery_rate != None %}{{ delivery_rate }}%{% else %}—{% endif %}
+                · {{ totals.delivered|default:0|intcomma }} delivered
+            </p>
         </div>
         <div class="border border-neutral-200 bg-white p-4">
-            <p class="font-mono text-[10px] uppercase tracking-widest text-neutral-400">Acked</p>
-            <p class="mt-1 font-display text-2xl font-bold tabular-nums text-indigo-700">{{ totals.acked|default:0|intcomma }}</p>
-        </div>
-        <div class="border border-neutral-200 bg-white p-4">
-            <p class="font-mono text-[10px] uppercase tracking-widest text-neutral-400">Delivered</p>
-            <p class="mt-1 font-display text-2xl font-bold tabular-nums text-emerald-700">{{ totals.delivered|default:0|intcomma }}</p>
-        </div>
-        <div class="border border-neutral-200 bg-white p-4">
-            <p class="font-mono text-[10px] uppercase tracking-widest text-neutral-400">Failed</p>
-            <p class="mt-1 font-display text-2xl font-bold tabular-nums text-rose-700">{{ totals.failed|default:0|intcomma }}</p>
+            <p class="font-mono text-[10px] uppercase tracking-widest text-neutral-400">Active users (7d)</p>
+            <p class="mt-1 font-display text-2xl font-bold tabular-nums">{{ active_users_week|default:0 }}</p>
+            <p class="mt-1 text-xs text-neutral-500">{{ enabled_users|default:0 }} enabled gateway users</p>
         </div>
     </div>
 
-    <div class="flex flex-wrap gap-2">
-        <a href="{% url 'messaging.send' %}" class="btn btn-sm bg-neutral-950 text-white border-0 hover:bg-neutral-800">Send SMS</a>
-        <a href="{% url 'messaging.bulk_send' %}" class="btn btn-sm btn-outline border-neutral-300">Bulk send</a>
-        <a href="{% url 'messaging.outboundmessage_list' %}" class="btn btn-sm btn-outline border-neutral-300">Message log</a>
-        <a href="{% url 'messaging.balance' %}" class="btn btn-sm btn-outline border-neutral-300">Balance &amp; rate</a>
-        <a href="{% url 'messaging.console_mode' %}?mode=configure" class="btn btn-sm btn-ghost">← Switch to Configure</a>
-    </div>
-
-    <div class="grid gap-4 lg:grid-cols-5">
+    {# Charts #}
+    {{ chart|json_script:"operate-chart-data" }}
+    <div class="grid gap-4 lg:grid-cols-3">
         <div class="border border-neutral-200 bg-white lg:col-span-2">
             <div class="border-b border-neutral-100 px-4 py-3">
-                <h2 class="font-display text-sm font-semibold text-neutral-900">Status mix</h2>
-                <p class="mt-0.5 text-xs text-neutral-500">All-time outbound breakdown.</p>
+                <h2 class="font-display text-sm font-semibold text-neutral-900">Volume — last 14 days</h2>
+                <p class="mt-0.5 text-xs text-neutral-500">Messages submitted per day.</p>
             </div>
-            <ul class="divide-y divide-neutral-100 px-4 py-1">
-                {% for row in status_rows %}
-                <li class="flex items-center justify-between py-2.5 text-sm">
-                    <span class="font-mono text-xs uppercase tracking-wide text-neutral-600">{{ row.status }}</span>
-                    <span class="font-display font-semibold tabular-nums">{{ row.c|intcomma }}</span>
-                </li>
-                {% empty %}
-                <li class="py-8 text-center text-sm text-neutral-500">No messages yet.</li>
-                {% endfor %}
-            </ul>
+            <div class="relative h-64 px-3 py-3">
+                <canvas id="chart-volume" aria-label="Daily message volume"></canvas>
+            </div>
         </div>
-
-        <div class="border border-neutral-200 bg-white lg:col-span-3">
-            <div class="flex items-center justify-between border-b border-neutral-100 px-4 py-3">
-                <h2 class="font-display text-sm font-semibold text-neutral-900">Recent messages</h2>
-                <a href="{% url 'messaging.outboundmessage_list' %}" class="text-xs font-medium text-neutral-500 hover:text-neutral-900">View all</a>
+        <div class="border border-neutral-200 bg-white">
+            <div class="border-b border-neutral-100 px-4 py-3">
+                <h2 class="font-display text-sm font-semibold text-neutral-900">Status mix</h2>
+                <p class="mt-0.5 text-xs text-neutral-500">All-time outcomes.</p>
             </div>
-            <div class="overflow-x-auto">
-                <table class="w-full text-sm text-left">
-                    <thead class="text-xs uppercase bg-neutral-900 text-neutral-100">
-                        <tr>
-                            <th class="px-3 py-2">To</th>
-                            <th class="px-3 py-2">Status</th>
-                            <th class="px-3 py-2">User</th>
-                            <th class="px-3 py-2">Kind</th>
-                            <th class="px-3 py-2">Created</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for msg in recent %}
-                        <tr class="border-b border-neutral-100 hover:bg-neutral-50">
-                            <td class="px-3 py-2">
-                                <a href="{% url 'messaging.outboundmessage_read' msg.pk %}" class="hover:underline">{{ msg.to_addr }}</a>
-                            </td>
-                            <td class="px-3 py-2">
-                                <span class="font-mono text-xs uppercase tracking-wide
-                                    {% if msg.status == 'delivered' %}text-emerald-700
-                                    {% elif msg.status == 'failed' or msg.status == 'rejected' or msg.status == 'expired' %}text-rose-700
-                                    {% elif msg.status == 'submitted' or msg.status == 'acked' %}text-sky-700
-                                    {% endif %}">{{ msg.status }}</span>
-                            </td>
-                            <td class="px-3 py-2 text-neutral-600">{{ msg.jasmin_user.username|default:"—" }}</td>
-                            <td class="px-3 py-2 font-mono text-xs uppercase text-neutral-500">{{ msg.batch_kind }}</td>
-                            <td class="px-3 py-2 text-neutral-500">{{ msg.created_on|date:"Y-m-d H:i" }}</td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="5" class="px-3 py-8 text-center text-neutral-500">
-                                No messages yet. <a href="{% url 'messaging.send' %}" class="underline">Send your first SMS</a>.
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+            <div class="relative h-64 px-3 py-3">
+                <canvas id="chart-status" aria-label="Status breakdown"></canvas>
+            </div>
+        </div>
+        <div class="border border-neutral-200 bg-white lg:col-span-2">
+            <div class="border-b border-neutral-100 px-4 py-3">
+                <h2 class="font-display text-sm font-semibold text-neutral-900">Delivered vs failed — last 14 days</h2>
+                <p class="mt-0.5 text-xs text-neutral-500">Final outcomes by day (in-flight excluded).</p>
+            </div>
+            <div class="relative h-56 px-3 py-3">
+                <canvas id="chart-outcomes" aria-label="Daily delivered versus failed"></canvas>
+            </div>
+        </div>
+        <div class="border border-neutral-200 bg-white">
+            <div class="border-b border-neutral-100 px-4 py-3">
+                <h2 class="font-display text-sm font-semibold text-neutral-900">Top users (7d)</h2>
+                <p class="mt-0.5 text-xs text-neutral-500">Volume by Jasmin user.</p>
+            </div>
+            <div class="relative h-56 px-3 py-3">
+                <canvas id="chart-users" aria-label="Top users by weekly volume"></canvas>
             </div>
         </div>
     </div>
+
+    {# Per-user usage table #}
+    <div class="border border-neutral-200 bg-white">
+        <div class="flex items-center justify-between border-b border-neutral-100 px-4 py-3">
+            <div>
+                <h2 class="font-display text-sm font-semibold text-neutral-900">Usage by user</h2>
+                <p class="mt-0.5 text-xs text-neutral-500">Jasmin HTTP/SMPP credentials ranked by recent volume.</p>
+            </div>
+            <a href="{% url 'messaging.balance' %}" class="text-xs font-medium text-neutral-500 hover:text-neutral-900">Live balance →</a>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm text-left">
+                <thead class="text-xs uppercase bg-neutral-900 text-neutral-100">
+                    <tr>
+                        <th class="px-3 py-2">User</th>
+                        <th class="px-3 py-2 text-right">Today</th>
+                        <th class="px-3 py-2 text-right">7 days</th>
+                        <th class="px-3 py-2 text-right">Total</th>
+                        <th class="px-3 py-2 text-right">Delivered</th>
+                        <th class="px-3 py-2 text-right">Failed</th>
+                        <th class="px-3 py-2 text-right">Rate</th>
+                        <th class="px-3 py-2 text-right">Single / bulk</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for u in user_rows %}
+                    <tr class="border-b border-neutral-100 hover:bg-neutral-50">
+                        <td class="px-3 py-2.5 font-medium text-neutral-900">{{ u.username }}</td>
+                        <td class="px-3 py-2.5 text-right tabular-nums">{{ u.today|intcomma }}</td>
+                        <td class="px-3 py-2.5 text-right tabular-nums font-semibold">{{ u.week|intcomma }}</td>
+                        <td class="px-3 py-2.5 text-right tabular-nums text-neutral-600">{{ u.total|intcomma }}</td>
+                        <td class="px-3 py-2.5 text-right tabular-nums text-emerald-700">{{ u.delivered|intcomma }}</td>
+                        <td class="px-3 py-2.5 text-right tabular-nums text-rose-700">{{ u.failed|intcomma }}</td>
+                        <td class="px-3 py-2.5 text-right tabular-nums">
+                            {% if u.delivery_rate != None %}{{ u.delivery_rate }}%{% else %}—{% endif %}
+                        </td>
+                        <td class="px-3 py-2.5 text-right font-mono text-xs text-neutral-500">{{ u.single }} / {{ u.bulk }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="px-3 py-10 text-center text-neutral-500">
+                            No usage yet.
+                            <a href="{% url 'messaging.send' %}" class="underline">Send an SMS</a>
+                            to start tracking per-user volume.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {# Recent activity #}
+    <div class="border border-neutral-200 bg-white">
+        <div class="flex items-center justify-between border-b border-neutral-100 px-4 py-3">
+            <h2 class="font-display text-sm font-semibold text-neutral-900">Recent messages</h2>
+            <a href="{% url 'messaging.outboundmessage_list' %}" class="text-xs font-medium text-neutral-500 hover:text-neutral-900">View all</a>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-sm text-left">
+                <thead class="text-xs uppercase bg-neutral-900 text-neutral-100">
+                    <tr>
+                        <th class="px-3 py-2">To</th>
+                        <th class="px-3 py-2">Status</th>
+                        <th class="px-3 py-2">User</th>
+                        <th class="px-3 py-2">Kind</th>
+                        <th class="px-3 py-2">Created</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for msg in recent %}
+                    <tr class="border-b border-neutral-100 hover:bg-neutral-50">
+                        <td class="px-3 py-2">
+                            <a href="{% url 'messaging.outboundmessage_read' msg.pk %}" class="hover:underline">{{ msg.to_addr }}</a>
+                        </td>
+                        <td class="px-3 py-2">
+                            <span class="font-mono text-xs uppercase tracking-wide
+                                {% if msg.status == 'delivered' %}text-emerald-700
+                                {% elif msg.status == 'failed' or msg.status == 'rejected' or msg.status == 'expired' %}text-rose-700
+                                {% elif msg.status == 'submitted' or msg.status == 'acked' %}text-sky-700
+                                {% endif %}">{{ msg.status }}</span>
+                        </td>
+                        <td class="px-3 py-2 text-neutral-600">{{ msg.jasmin_user.username|default:"—" }}</td>
+                        <td class="px-3 py-2 font-mono text-xs uppercase text-neutral-500">{{ msg.batch_kind }}</td>
+                        <td class="px-3 py-2 text-neutral-500">{{ msg.created_on|date:"Y-m-d H:i" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="px-3 py-8 text-center text-neutral-500">No messages yet.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <p class="text-xs text-neutral-400">
+        <a href="{% url 'messaging.console_mode' %}?mode=configure" class="underline underline-offset-2 hover:text-neutral-700">← Switch to Configure</a>
+        for gateway inventory and setup.
+    </p>
 </div>

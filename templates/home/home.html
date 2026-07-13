@@ -8,3 +8,142 @@
     {% include 'home/partials/configure_dashboard.html' %}
 {% endif %}
 {% endblock %}
+
+{% block scripts %}
+{% if joyce_mode_operate %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script>
+(function () {
+    const el = document.getElementById('operate-chart-data');
+    if (!el || typeof Chart === 'undefined') return;
+    const data = JSON.parse(el.textContent);
+    const ink = '#171717';
+    const muted = '#a3a3a3';
+    const grid = '#f5f5f5';
+    const delivered = '#047857';
+    const failed = '#be123c';
+    const slate = '#525252';
+    const accents = ['#171717', '#404040', '#047857', '#0e7490', '#be123c', '#a16207', '#57534e', '#334155'];
+
+    Chart.defaults.font.family = "'Inter', system-ui, sans-serif";
+    Chart.defaults.color = muted;
+    Chart.defaults.plugins.legend.labels.boxWidth = 10;
+    Chart.defaults.plugins.legend.labels.boxHeight = 10;
+
+    const volumeCtx = document.getElementById('chart-volume');
+    if (volumeCtx) {
+        new Chart(volumeCtx, {
+            type: 'line',
+            data: {
+                labels: data.volume_labels || [],
+                datasets: [{
+                    label: 'Messages',
+                    data: data.volume_counts || [],
+                    borderColor: ink,
+                    backgroundColor: 'rgba(23, 23, 23, 0.06)',
+                    borderWidth: 2,
+                    pointRadius: 2,
+                    pointHoverRadius: 4,
+                    tension: 0.25,
+                    fill: true,
+                }],
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { grid: { display: false }, ticks: { maxRotation: 0, autoSkipPadding: 8 } },
+                    y: { beginAtZero: true, grid: { color: grid }, ticks: { precision: 0 } },
+                },
+            },
+        });
+    }
+
+    const statusCtx = document.getElementById('chart-status');
+    if (statusCtx) {
+        const labels = data.status_labels || [];
+        const counts = data.status_counts || [];
+        new Chart(statusCtx, {
+            type: 'doughnut',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: counts,
+                    backgroundColor: labels.map((_, i) => accents[i % accents.length]),
+                    borderWidth: 0,
+                }],
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '58%',
+                plugins: {
+                    legend: { position: 'bottom', labels: { font: { size: 11 } } },
+                },
+            },
+        });
+    }
+
+    const outcomesCtx = document.getElementById('chart-outcomes');
+    if (outcomesCtx) {
+        new Chart(outcomesCtx, {
+            type: 'bar',
+            data: {
+                labels: data.outcome_labels || [],
+                datasets: [
+                    {
+                        label: 'Delivered',
+                        data: data.outcome_delivered || [],
+                        backgroundColor: delivered,
+                        borderWidth: 0,
+                    },
+                    {
+                        label: 'Failed',
+                        data: data.outcome_failed || [],
+                        backgroundColor: failed,
+                        borderWidth: 0,
+                    },
+                ],
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } },
+                scales: {
+                    x: { stacked: true, grid: { display: false }, ticks: { maxRotation: 0, autoSkipPadding: 8 } },
+                    y: { stacked: true, beginAtZero: true, grid: { color: grid }, ticks: { precision: 0 } },
+                },
+            },
+        });
+    }
+
+    const usersCtx = document.getElementById('chart-users');
+    if (usersCtx) {
+        new Chart(usersCtx, {
+            type: 'bar',
+            data: {
+                labels: data.user_labels || [],
+                datasets: [{
+                    label: '7-day volume',
+                    data: data.user_week || [],
+                    backgroundColor: slate,
+                    borderWidth: 0,
+                }],
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { beginAtZero: true, grid: { color: grid }, ticks: { precision: 0 } },
+                    y: { grid: { display: false }, ticks: { font: { size: 11 } } },
+                },
+            },
+        });
+    }
+})();
+</script>
+{% endif %}
+{% endblock %}

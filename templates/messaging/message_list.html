@@ -19,28 +19,64 @@
         {% endif %}
     </div>
 
-    <div class="flex flex-row justify-between items-center mb-4 bg-white shadow-mb p-2">
-        {% if view.search_fields %}
-            <form method="get" action="{{ request.path }}" id="search-form">
-                <div class="join">
-                    <div>
-                        <label class="input validator search-item">
-                            <input type="text" name="search" value="{{ search }}" placeholder="Search to, id, batch…" />
-                        </label>
-                    </div>
-                    <button type="submit" class="btn bg-[#0E3B43] btn-neutral search-item">
-                        <span class="icon-search text-xl text-white"></span>
-                    </button>
-                </div>
-            </form>
-        {% else %}
-            <div></div>
-        {% endif %}
-        <div class="join">
-            <a href="{% url 'messaging.send' %}" class="btn btn-sm text-white bg-black join-item">Send SMS</a>
-            <a href="{% url 'messaging.bulk_send' %}" class="btn btn-sm btn-outline join-item">Bulk</a>
+    <form method="get" action="{{ request.path }}" id="message-filter-form" class="mb-4 space-y-3 border border-neutral-200 bg-white p-3">
+        <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+            <div>
+                <label class="mb-1 block font-mono text-[10px] uppercase tracking-widest text-neutral-400">Jasmin user</label>
+                <select name="jasmin_user" class="select select-bordered select-sm w-full rounded-none">
+                    <option value="">All users</option>
+                    {% for ju in filter_jasmin_users %}
+                        <option value="{{ ju.id }}" {% if filters.jasmin_user == ju.id|stringformat:"s" %}selected{% endif %}>{{ ju.username }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="mb-1 block font-mono text-[10px] uppercase tracking-widest text-neutral-400">Status</label>
+                <select name="status" class="select select-bordered select-sm w-full rounded-none">
+                    <option value="">All statuses</option>
+                    {% for value, label in status_choices %}
+                        <option value="{{ value }}" {% if filters.status == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="mb-1 block font-mono text-[10px] uppercase tracking-widest text-neutral-400">To</label>
+                <input type="text" name="to" value="{{ filters.to }}" placeholder="Destination…"
+                       class="input input-bordered input-sm w-full rounded-none" />
+            </div>
+            <div>
+                <label class="mb-1 block font-mono text-[10px] uppercase tracking-widest text-neutral-400">From date</label>
+                <input type="date" name="date_from" value="{{ filters.date_from }}"
+                       class="input input-bordered input-sm w-full rounded-none" />
+            </div>
+            <div>
+                <label class="mb-1 block font-mono text-[10px] uppercase tracking-widest text-neutral-400">To date</label>
+                <input type="date" name="date_to" value="{{ filters.date_to }}"
+                       class="input input-bordered input-sm w-full rounded-none" />
+            </div>
+            <div>
+                <label class="mb-1 block font-mono text-[10px] uppercase tracking-widest text-neutral-400">Search</label>
+                <input type="text" name="search" value="{{ filters.search }}" placeholder="Id, batch, content…"
+                       class="input input-bordered input-sm w-full rounded-none" />
+            </div>
         </div>
-    </div>
+        <div class="flex flex-wrap items-center justify-between gap-2">
+            <p class="text-xs text-neutral-500">
+                Showing <span class="font-semibold tabular-nums text-neutral-800">{{ filtered_count|default:0 }}</span> matching message{{ filtered_count|pluralize }}.
+            </p>
+            <div class="flex flex-wrap gap-2">
+                <button type="submit" class="btn btn-sm bg-neutral-950 text-white border-0 hover:bg-neutral-800">Apply filters</button>
+                <a href="{{ request.path }}" class="btn btn-sm btn-outline border-neutral-300">Clear</a>
+                <a href="{{ request.path }}{% if filter_query %}?{{ filter_query }}&amp;{% else %}?{% endif %}export=csv"
+                   class="btn btn-sm btn-outline border-neutral-300">
+                    <span class="icon-download text-base" aria-hidden="true"></span>
+                    Export CSV
+                </a>
+                <a href="{% url 'messaging.send' %}" class="btn btn-sm btn-outline border-neutral-300">Send SMS</a>
+                <a href="{% url 'messaging.bulk_send' %}" class="btn btn-sm btn-outline border-neutral-300">Bulk</a>
+            </div>
+        </div>
+    </form>
 
     <div class="flex-grow overflow-y-auto bg-white shadow-md">
         <div class="overflow-x-auto">
@@ -69,7 +105,7 @@
                 {% empty %}
                     <tr>
                         <td colspan="{{ fields|length }}" class="text-center py-4 text-gray-500 border-b border-gray-200">
-                            {% trans "No messages yet" %}
+                            {% trans "No messages match these filters" %}
                         </td>
                     </tr>
                 {% endfor %}

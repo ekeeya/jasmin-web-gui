@@ -77,6 +77,10 @@ class Home(WorkspacePermsMixin, SmartTemplateView):
         if not workspace:
             context["totals"] = {}
             context["recent"] = []
+            context["user_rows"] = []
+            context["chart"] = {}
+            context["active_users_week"] = 0
+            context["enabled_users"] = 0
             context["config_counts"] = {}
             context["checklist"] = []
             return context
