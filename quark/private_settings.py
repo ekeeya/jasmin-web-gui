@@ -39,6 +39,9 @@ JASMIN_SMPP_PB_PASSWORD = os.getenv("JASMIN_SMPP_PB_PASSWORD", "cmpwd")
 JASMIN_HTTP_API_URL = os.getenv("JASMIN_HTTP_API_URL", f"http://{JASMIN_HOST}:1401")
 JASMIN_HTTP_API_TIMEOUT = float(os.getenv("JASMIN_HTTP_API_TIMEOUT", "15"))
 
+# RESTful API (sendbatch). Empty disables REST bulk for demo unless set.
+JASMIN_REST_API_URL = os.getenv("JASMIN_REST_API_URL", f"http://{JASMIN_HOST}:8080")
+
 # URL Jasmin's DLRThrower will POST/GET to. Must be reachable FROM the Jasmin
 # process (often a Docker container). localhost is wrong when Jasmin is
 # containerised — use host.docker.internal for Joyce on the Docker host.
@@ -47,3 +50,7 @@ JOYCE_PUBLIC_BASE_URL = os.getenv(
     "http://host.docker.internal:8000",
 )
 JOYCE_DLR_CALLBACK_URL = os.getenv("JOYCE_DLR_CALLBACK_URL", "")
+
+# Chunk sizes when submitting bulk via REST sendbatch
+JOYCE_SENDBATCH_SAME_CONTENT_CHUNK = int(os.getenv("JOYCE_SENDBATCH_SAME_CONTENT_CHUNK", "2000"))
+JOYCE_SENDBATCH_PERSONALIZED_CHUNK = int(os.getenv("JOYCE_SENDBATCH_PERSONALIZED_CHUNK", "500"))

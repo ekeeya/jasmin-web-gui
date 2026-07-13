@@ -208,6 +208,16 @@ JASMIN_HTTP_API_URL = os.getenv(
 )
 JASMIN_HTTP_API_TIMEOUT = float(os.getenv("JASMIN_HTTP_API_TIMEOUT", "15"))
 
+# Jasmin RESTful API (default port 8080) used for /secure/sendbatch
+JASMIN_REST_API_URL = os.getenv(
+    "JASMIN_REST_API_URL",
+    f"http://{os.getenv('JASMIN_HOST', '127.0.0.1')}:8080",
+)
+
+# Chunk sizes for REST sendbatch
+JOYCE_SENDBATCH_SAME_CONTENT_CHUNK = int(os.getenv("JOYCE_SENDBATCH_SAME_CONTENT_CHUNK", "2000"))
+JOYCE_SENDBATCH_PERSONALIZED_CHUNK = int(os.getenv("JOYCE_SENDBATCH_PERSONALIZED_CHUNK", "500"))
+
 # Public base URL Joyce advertises to Jasmin for DLR callbacks.
 # When Jasmin runs in Docker and Joyce on the host, use host.docker.internal.
 JOYCE_PUBLIC_BASE_URL = os.getenv(
@@ -236,7 +246,10 @@ if not JOYCE_CREDENTIALS_KEY:
 
 CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0")
 CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", "redis://localhost:6379/0")
-CELERY_IMPORTS = ("quark.crons.jasmin_user_sync",)
+CELERY_IMPORTS = (
+    "quark.crons.jasmin_user_sync",
+    "quark.messaging.tasks",
+)
 # Beat ticks every minute; each workspace's jasmin_user_sync_interval_mins gates work.
 CELERY_BEAT_SCHEDULE = {
     "sync-jasmin-users": {

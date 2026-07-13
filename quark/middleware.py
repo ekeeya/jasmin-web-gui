@@ -101,6 +101,7 @@ class JasminConnectionGateMiddleware:
         "/workspace/signup/",
         "/api/",
         "/dlr",
+        "/batch-callback",
     )
 
     def __init__(self, get_response=None):

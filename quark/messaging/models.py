@@ -69,6 +69,20 @@ class OutboundMessage(SmartModel):
         choices=BATCH_CHOICES,
         default=BATCH_SINGLE,
     )
+    client_batch_id = models.CharField(
+        max_length=128,
+        blank=True,
+        default="",
+        db_index=True,
+        help_text="Optional external broadcast/batch id supplied by the caller",
+    )
+    client_message_id = models.CharField(
+        max_length=128,
+        blank=True,
+        default="",
+        db_index=True,
+        help_text="Optional external message id supplied by the caller for DLR correlation",
+    )
 
     to_addr = models.CharField(max_length=32, db_index=True)
     from_addr = models.CharField(max_length=32, blank=True, default="")
@@ -94,11 +108,19 @@ class OutboundMessage(SmartModel):
         db_index=True,
         help_text="Message id returned by Jasmin /send",
     )
+    jasmin_batch_id = models.CharField(
+        max_length=64,
+        blank=True,
+        default="",
+        db_index=True,
+        help_text="Jasmin REST sendbatch id for the chunk that included this message",
+    )
     submit_response = models.TextField(blank=True, default="")
     error_message = models.TextField(blank=True, default="")
 
     dlr_status = models.CharField(max_length=64, blank=True, default="")
     dlr_raw = models.JSONField(default=dict, blank=True)
+    external_dlr_forwarded_at = models.DateTimeField(null=True, blank=True)
     submitted_at = models.DateTimeField(null=True, blank=True)
     delivered_at = models.DateTimeField(null=True, blank=True)
     last_dlr_at = models.DateTimeField(null=True, blank=True)
@@ -109,6 +131,8 @@ class OutboundMessage(SmartModel):
         indexes = [
             models.Index(fields=["workspace", "status"]),
             models.Index(fields=["workspace", "-created_on"]),
+            models.Index(fields=["workspace", "client_message_id"]),
+            models.Index(fields=["workspace", "client_batch_id"]),
         ]
 
     def __str__(self):
@@ -165,6 +189,32 @@ class OutboundMessage(SmartModel):
                 "modified_on",
             ]
         )
+
+    def external_dlr_payload(self) -> dict:
+        """
+        Enriched DLR payload for the external channel.
+
+        Includes caller-supplied ids (when present) plus Joyce / Jasmin ids so
+        the external service can correlate without owning Jasmin's UUID.
+        """
+        raw = dict(self.dlr_raw or {})
+        # Flatten nested values that requests can send
+        payload = {str(k): ("" if v is None else str(v)) for k, v in raw.items()}
+        payload.update(
+            {
+                "joyce_message_id": str(self.pk),
+                "joyce_batch_id": self.batch_id or "",
+                "client_message_id": self.client_message_id or "",
+                "client_batch_id": self.client_batch_id or "",
+                "jasmin_msg_id": self.jasmin_msg_id or payload.get("id", ""),
+                "jasmin_batch_id": self.jasmin_batch_id or "",
+                "to": self.to_addr,
+                "from": self.from_addr or "",
+                "status": self.status,
+                "dlr_status": self.dlr_status or "",
+            }
+        )
+        return payload
 
 
 def dlr_callback_url() -> str:

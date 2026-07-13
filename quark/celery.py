@@ -18,6 +18,6 @@ app.autodiscover_tasks()
 app.conf.imports = tuple(
     dict.fromkeys(
         tuple(getattr(app.conf, "imports", ()) or ())
-        + ("quark.crons.jasmin_user_sync",)
+        + ("quark.crons.jasmin_user_sync", "quark.messaging.tasks")
     )
 )

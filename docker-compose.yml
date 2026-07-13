@@ -24,6 +24,7 @@ x-joyce-environment: &joyce-environment
   # Reachable from the jasmin container (compose DNS → nginx)
   JOYCE_PUBLIC_BASE_URL: "http://nginx"
   JASMIN_HTTP_API_URL: "http://jasmin:1401"
+  JASMIN_REST_API_URL: "http://jasmin_rest:8080"
 
   CELERY_BROKER_URL: redis://redis:6379/0
   CELERY_RESULT_BACKEND: redis://redis:6379/0

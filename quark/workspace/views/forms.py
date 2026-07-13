@@ -109,12 +109,62 @@ class WorkspaceSettingsForm(forms.ModelForm):
         widget=_text(placeholder="http://jasmin.example.com:1401"),
         help_text="Used for /send, /balance, and /rate.",
     )
+    jasmin_rest_api_url = forms.URLField(
+        required=False,
+        label="REST API base URL",
+        widget=_text(placeholder="http://jasmin.example.com:8080"),
+        help_text="",
+    )
     jasmin_user_sync_interval_mins = forms.IntegerField(
         min_value=0,
         required=True,
         label="User sync interval (minutes)",
         help_text="How often to pull live quotas into Joyce. 0 disables automatic sync.",
         widget=_number(min="0"),
+    )
+    messaging_api_enabled = forms.BooleanField(
+        required=False,
+        label="Enable Joyce messaging API",
+        help_text="Allow external apps to POST SMS through Joyce with a bearer token (send endpoint only).",
+        widget=forms.CheckboxInput(attrs={"class": "checkbox checkbox-sm"}),
+    )
+    external_dlr_url = forms.URLField(
+        required=False,
+        label="External DLR URL",
+        widget=_text(placeholder="https://your-app.example.com/webhooks/dlr"),
+        help_text="Optional. After Joyce handles a DLR, it is forwarded here (async, with retries).",
+    )
+    external_dlr_method = forms.ChoiceField(
+        required=False,
+        choices=(("POST", "POST"), ("GET", "GET")),
+        initial="POST",
+        label="External DLR method",
+        widget=forms.Select(
+            attrs={
+                "class": (
+                    "w-full rounded-none border border-neutral-300 bg-white px-3 py-2 text-sm "
+                    "text-neutral-900 focus:border-neutral-900 focus:outline-none focus:ring-1 "
+                    "focus:ring-neutral-900"
+                )
+            }
+        ),
+    )
+    external_dlr_retry_delay_secs = forms.IntegerField(
+        min_value=1,
+        required=False,
+        initial=60,
+        label="DLR forward retry delay (seconds)",
+        widget=_number(min="1"),
+        help_text="Default 60. Wait this long between forward retries.",
+    )
+    external_dlr_max_retries = forms.IntegerField(
+        min_value=1,
+        max_value=20,
+        required=False,
+        initial=5,
+        label="DLR forward max retries",
+        widget=_number(min="1", max="20"),
+        help_text="Default 5.",
     )
 
     class Meta:
@@ -130,7 +180,13 @@ class WorkspaceSettingsForm(forms.ModelForm):
             "jasmin_smpp_pb_username",
             "jasmin_smpp_pb_password",
             "jasmin_http_api_url",
+            "jasmin_rest_api_url",
             "jasmin_user_sync_interval_mins",
+            "messaging_api_enabled",
+            "external_dlr_url",
+            "external_dlr_method",
+            "external_dlr_retry_delay_secs",
+            "external_dlr_max_retries",
         )
 
     def __init__(self, *args, **kwargs):
@@ -185,6 +241,8 @@ class WorkspaceSettingsForm(forms.ModelForm):
         return cleaned
 
     def save(self, commit=True):
+        import secrets
+
         instance = super().save(commit=False)
         link = self.cleaned_data.get("jasmin_link") or WorkSpace.JASMIN_LINK_UNSET
 
@@ -212,6 +270,21 @@ class WorkspaceSettingsForm(forms.ModelForm):
                         setattr(instance, field, encrypt_secret(val))
                     except CredentialsKeyError as exc:
                         raise forms.ValidationError(str(exc)) from exc
+
+        enabled = bool(self.cleaned_data.get("messaging_api_enabled"))
+        instance.messaging_api_enabled = enabled
+        # Auto-generate on first enable; keep existing token otherwise.
+        if enabled and not (instance.messaging_api_token or "").strip():
+            import secrets
+
+            instance.messaging_api_token = secrets.token_urlsafe(32)
+
+        if self.cleaned_data.get("external_dlr_retry_delay_secs") in (None, ""):
+            instance.external_dlr_retry_delay_secs = 60
+        if self.cleaned_data.get("external_dlr_max_retries") in (None, ""):
+            instance.external_dlr_max_retries = 5
+        if not self.cleaned_data.get("external_dlr_method"):
+            instance.external_dlr_method = "POST"
 
         if commit:
             instance.save()

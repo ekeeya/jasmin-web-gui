@@ -20,7 +20,9 @@ from datetime import timedelta
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import login, logout
-from django.http import HttpResponseRedirect, JsonResponse
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.core.exceptions import PermissionDenied
+from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
 from django.urls import reverse
 from django.utils import timezone
 from django.views import View
@@ -30,6 +32,7 @@ from smartmin.users.models import FailedLogin
 from smartmin.views import SmartCRUDL, SmartCreateView, SmartUpdateView
 from django.contrib.auth.views import LoginView as AuthLoginView
 
+from quark.messaging.api_docs_pdf import build_messaging_api_pdf
 from quark.workspace.models import WorkSpace, User
 from quark.workspace.views.forms import SignupForm, WorkspaceSettingsForm
 from quark.workspace.views.mixins import WorkspacePermsMixin
@@ -183,7 +186,13 @@ class WorkspaceCRUDL(SmartCRUDL):
             "jasmin_smpp_pb_username",
             "jasmin_smpp_pb_password",
             "jasmin_http_api_url",
+            "jasmin_rest_api_url",
             "jasmin_user_sync_interval_mins",
+            "messaging_api_enabled",
+            "external_dlr_url",
+            "external_dlr_method",
+            "external_dlr_retry_delay_secs",
+            "external_dlr_max_retries",
         )
 
         @classmethod
@@ -208,6 +217,13 @@ class WorkspaceCRUDL(SmartCRUDL):
             context["credentials_key_configured"] = bool(
                 getattr(settings, "JOYCE_CREDENTIALS_KEY", "")
             )
+            context["messaging_api_token"] = workspace.messaging_api_token or ""
+            context["messaging_api_send_url"] = self.request.build_absolute_uri(
+                reverse("api.v1.messaging_send")
+            )
+            context["messaging_api_docs_url"] = reverse(
+                "workspace.messaging_api_docs_pdf"
+            )
             return context
 
         def post(self, request, *args, **kwargs):
@@ -218,7 +234,41 @@ class WorkspaceCRUDL(SmartCRUDL):
                 return self.import_from_jasmin(request)
             if action == "clear_jasmin_connection":
                 return self.clear_jasmin_connection(request)
+            if action == "regenerate_messaging_api_token":
+                return self.regenerate_messaging_api_token(request)
             return super().post(request, *args, **kwargs)
+
+        def regenerate_messaging_api_token(self, request):
+            import secrets
+
+            workspace = self.derive_workspace()
+            want_enabled = request.POST.get("messaging_api_enabled") in (
+                "on",
+                "true",
+                "1",
+                "True",
+            )
+            if not workspace.messaging_api_enabled and not want_enabled:
+                return JsonResponse(
+                    {
+                        "ok": False,
+                        "message": "Check Enable Joyce messaging API first, then refresh or save.",
+                    },
+                    status=400,
+                )
+            token = secrets.token_urlsafe(32)
+            workspace.messaging_api_enabled = True
+            workspace.messaging_api_token = token
+            workspace.save(
+                update_fields=["messaging_api_enabled", "messaging_api_token", "modified_on"]
+            )
+            return JsonResponse(
+                {
+                    "ok": True,
+                    "message": "Token refreshed.",
+                    "token": token,
+                }
+            )
 
         def _connection_from_request(self, request, workspace):
             """Build a JasminConnection from posted settings or saved workspace fields."""
@@ -318,7 +368,6 @@ class WorkspaceCRUDL(SmartCRUDL):
                 "tested_at": workspace.jasmin_connection_tested_at.isoformat(),
             })
 
-
         def import_from_jasmin(self, request):
             """AJAX: pull groups/users/connectors/routes/filters/interceptors into Django."""
             from quark.jasmin.import_config import import_workspace_config
@@ -355,3 +404,33 @@ class WorkspaceCRUDL(SmartCRUDL):
                 "Custom Jasmin connection cleared. Workspace is on Local demo Jasmin.",
             )
             return HttpResponseRedirect(self.get_success_url())
+
+
+class MessagingAPIDocsPDFView(LoginRequiredMixin, WorkspacePermsMixin, View):
+    """Download PDF documentation for Joyce's external messaging API."""
+
+    permission = "workspace.workspace_update"
+
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return self.handle_no_permission()
+        if not self.has_permission(request, *args, **kwargs):
+            raise PermissionDenied()
+        return super().dispatch(request, *args, **kwargs)
+
+    def get(self, request, *args, **kwargs):
+        workspace = self.derive_workspace()
+        if not workspace or not workspace.messaging_api_enabled:
+            raise PermissionDenied(
+                "Enable the Joyce messaging API in workspace settings to download docs."
+            )
+        send_url = request.build_absolute_uri(reverse("api.v1.messaging_send"))
+        pdf_bytes = build_messaging_api_pdf(
+            send_url=send_url,
+            workspace_name=workspace.name or "",
+        )
+        response = HttpResponse(pdf_bytes, content_type="application/pdf")
+        response["Content-Disposition"] = (
+            'attachment; filename="joyce-messaging-api.pdf"'
+        )
+        return response

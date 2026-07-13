@@ -174,8 +174,94 @@
                     {% if form.jasmin_http_api_url.help_text %}<p class="mt-1 text-[11px] text-neutral-500">{{ form.jasmin_http_api_url.help_text }}</p>{% endif %}
                     {% if form.jasmin_http_api_url.errors %}<p class="mt-1 text-xs text-red-600">{{ form.jasmin_http_api_url.errors|striptags }}</p>{% endif %}
                 </div>
+                <div>
+                    <label for="{{ form.jasmin_rest_api_url.id_for_label }}" class="mb-1 block text-xs font-medium text-neutral-700">{{ form.jasmin_rest_api_url.label }}</label>
+                    {{ form.jasmin_rest_api_url }}
+                    <p class="mt-1 text-[11px] text-neutral-500 leading-relaxed">
+                        Jasmin ships with a
+                        <a href="https://docs.jasminsms.com/en/latest/apis/rest/index.html"
+                           target="_blank" rel="noopener noreferrer"
+                           class="underline underline-offset-2 text-neutral-700 hover:text-neutral-950">new REST API</a>
+                        (typically port 8080). Without it, Jasmin falls back to the native HTTP API
+                        (port 1401) for messaging. If REST is configured on your Jasmin host, enter
+                        its base URL here so Joyce can use it for bulk SMS submissions
+                        (<code class="font-mono">sendbatch</code>). Leave empty to keep bulk async
+                        via classic HTTP <code class="font-mono">/send</code>.
+                    </p>
+                    {% if form.jasmin_rest_api_url.errors %}<p class="mt-1 text-xs text-red-600">{{ form.jasmin_rest_api_url.errors|striptags }}</p>{% endif %}
+                </div>
             </section>
         </div>
+
+        {# External messaging channel #}
+        <section class="border border-neutral-200 bg-white p-4 space-y-4">
+            <div>
+                <p class="font-mono text-[10px] uppercase tracking-widest text-neutral-400">External channel</p>
+                <p class="mt-0.5 text-xs text-neutral-500">
+                    Joyce messaging API for external apps, plus optional DLR forward URL.
+                </p>
+            </div>
+            <label class="inline-flex items-center gap-2 text-sm text-neutral-800">
+                {{ form.messaging_api_enabled }}
+                <span>{{ form.messaging_api_enabled.label }}</span>
+            </label>
+            <div id="messaging-api-fields" class="space-y-4 {% if not form.messaging_api_enabled.value %}hidden{% endif %}">
+                <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+                    <a href="{{ messaging_api_docs_url }}"
+                       class="inline-flex items-center gap-1.5 text-sm text-neutral-800 underline underline-offset-2 hover:text-neutral-950"
+                       download>
+                        <span class="icon-download text-base" aria-hidden="true"></span>
+                        Download API documentation (PDF)
+                    </a>
+                    <span class="text-[11px] text-neutral-500">How to authenticate, send SMS, and receive DLRs.</span>
+                </div>
+                <div>
+                    <p class="mb-1 text-xs font-medium text-neutral-700">API token</p>
+                    <p class="mb-2 text-[11px] text-neutral-500">
+                        Bearer token for <code class="font-mono">POST {{ messaging_api_send_url }}</code> only.
+                        {% if not messaging_api_token %}Save settings after enabling to generate a token.{% endif %}
+                    </p>
+                    <div class="flex items-stretch gap-2">
+                        <input id="messaging-api-token-value" type="text" readonly
+                               value="{{ messaging_api_token }}"
+                               placeholder="Save settings to generate…"
+                               class="min-w-0 flex-1 rounded-none border border-neutral-300 bg-neutral-50 px-3 py-2 font-mono text-sm text-neutral-900"/>
+                        <button type="button" id="copy-messaging-api-token"
+                                class="btn btn-sm btn-square btn-outline shrink-0"
+                                title="Copy token" {% if not messaging_api_token %}disabled{% endif %}>
+                            <span class="icon-copy text-base"></span>
+                        </button>
+                        <button type="button" id="refresh-messaging-api-token"
+                                class="btn btn-sm btn-square btn-outline shrink-0"
+                                title="Refresh token">
+                            <span class="icon-refresh text-base"></span>
+                        </button>
+                    </div>
+                    <p id="messaging-api-token-result" class="mt-1 text-xs text-neutral-500 hidden"></p>
+                </div>
+                <div class="grid gap-3 lg:grid-cols-2">
+                    <div class="lg:col-span-2">
+                        <label for="{{ form.external_dlr_url.id_for_label }}" class="mb-1 block text-xs font-medium text-neutral-700">{{ form.external_dlr_url.label }}</label>
+                        {{ form.external_dlr_url }}
+                        {% if form.external_dlr_url.help_text %}<p class="mt-1 text-[11px] text-neutral-500">{{ form.external_dlr_url.help_text }}</p>{% endif %}
+                    </div>
+                    <div>
+                        <label for="{{ form.external_dlr_method.id_for_label }}" class="mb-1 block text-xs font-medium text-neutral-700">{{ form.external_dlr_method.label }}</label>
+                        {{ form.external_dlr_method }}
+                    </div>
+                    <div>
+                        <label for="{{ form.external_dlr_retry_delay_secs.id_for_label }}" class="mb-1 block text-xs font-medium text-neutral-700">{{ form.external_dlr_retry_delay_secs.label }}</label>
+                        {{ form.external_dlr_retry_delay_secs }}
+                        {% if form.external_dlr_retry_delay_secs.help_text %}<p class="mt-1 text-[11px] text-neutral-500">{{ form.external_dlr_retry_delay_secs.help_text }}</p>{% endif %}
+                    </div>
+                    <div>
+                        <label for="{{ form.external_dlr_max_retries.id_for_label }}" class="mb-1 block text-xs font-medium text-neutral-700">{{ form.external_dlr_max_retries.label }}</label>
+                        {{ form.external_dlr_max_retries }}
+                        {% if form.external_dlr_max_retries.help_text %}<p class="mt-1 text-[11px] text-neutral-500">{{ form.external_dlr_max_retries.help_text }}</p>{% endif %}
+                    </div>
+                </div>
+            </div>
+        </section>
 
         {# Sync #}
         <section class="border border-neutral-200 bg-white p-4 space-y-3">
@@ -264,6 +350,73 @@
     }
     radios.forEach(r => r.addEventListener('change', syncCustomVisibility));
     syncCustomVisibility();
+
+    const messagingEnabled = form.querySelector('input[name="messaging_api_enabled"]');
+    const messagingFields = document.getElementById('messaging-api-fields');
+    function syncMessagingVisibility() {
+        if (!messagingFields || !messagingEnabled) return;
+        messagingFields.classList.toggle('hidden', !messagingEnabled.checked);
+    }
+    if (messagingEnabled) {
+        messagingEnabled.addEventListener('change', syncMessagingVisibility);
+        syncMessagingVisibility();
+    }
+
+    const tokenInput = document.getElementById('messaging-api-token-value');
+    const tokenResult = document.getElementById('messaging-api-token-result');
+    const copyBtn = document.getElementById('copy-messaging-api-token');
+    const refreshBtn = document.getElementById('refresh-messaging-api-token');
+
+    function setTokenResult(text, ok) {
+        if (!tokenResult) return;
+        tokenResult.classList.remove('hidden', 'text-neutral-500', 'text-neutral-800', 'text-red-600');
+        tokenResult.classList.add(ok ? 'text-neutral-800' : 'text-red-600');
+        tokenResult.textContent = text;
+    }
+
+    if (copyBtn && tokenInput) {
+        copyBtn.addEventListener('click', async function () {
+            const value = tokenInput.value || '';
+            if (!value) return;
+            try {
+                await navigator.clipboard.writeText(value);
+                setTokenResult('Token copied.', true);
+            } catch (e) {
+                tokenInput.select();
+                setTokenResult('Select and copy the token manually.', false);
+            }
+        });
+    }
+
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', function () {
+            if (!confirm('Refresh the API token? Existing clients will stop working until updated.')) {
+                return;
+            }
+            setTokenResult('Refreshing…', true);
+            const data = new FormData(form);
+            data.set('action', 'regenerate_messaging_api_token');
+            fetch(form.getAttribute('action') || window.location.pathname, {
+                method: 'POST',
+                headers: {'X-Requested-With': 'XMLHttpRequest'},
+                body: data,
+            }).then(async (resp) => {
+                const json = await resp.json();
+                if (json.ok && json.token) {
+                    if (tokenInput) {
+                        tokenInput.value = json.token;
+                        tokenInput.placeholder = '';
+                    }
+                    if (copyBtn) copyBtn.disabled = false;
+                    setTokenResult(json.message || 'Token refreshed.', true);
+                } else {
+                    setTokenResult(json.message || 'Could not refresh token. Enable the API and save first.', false);
+                }
+            }).catch(() => {
+                setTokenResult('Request failed.', false);
+            });
+        });
+    }
 
     function postAction(action, resultEl, onOk) {
         resultEl.classList.remove('hidden', 'text-neutral-500', 'text-neutral-800', 'text-neutral-600');

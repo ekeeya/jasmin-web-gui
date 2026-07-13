@@ -124,11 +124,20 @@ class BulkSendSMSView(WorkspacePermsMixin, SmartFormView):
             created_by=self.request.user,
         )
         ok = sum(1 for m in submitted if m.status == OutboundMessage.STATUS_SUBMITTED)
-        fail = len(submitted) - ok
-        messages.success(
-            self.request,
-            f"Bulk batch {batch_id}: {ok} submitted, {fail} failed ({len(submitted)} total).",
-        )
+        queued = sum(1 for m in submitted if m.status == OutboundMessage.STATUS_QUEUED)
+        fail = len(submitted) - ok - queued
+        if queued and not ok:
+            messages.success(
+                self.request,
+                f"Bulk batch {batch_id}: {queued} queued for async submit ({len(submitted)} total).",
+            )
+        else:
+            messages.success(
+                self.request,
+                f"Bulk batch {batch_id}: {ok} submitted, {fail} failed"
+                + (f", {queued} queued" if queued else "")
+                + f" ({len(submitted)} total).",
+            )
         return HttpResponseRedirect(f"{reverse('messaging.outboundmessage_list')}?search={batch_id}")
 
     def get_context_data(self, **kwargs):
@@ -249,6 +258,7 @@ class BalanceRateView(WorkspacePermsMixin, SmartTemplateView):
 class DLRCallbackView(APIView):
     """
     Public Jasmin DLR callback. Must remain CSRF-exempt and return plain ACK/Jasmin.
+    Optionally enqueues async forward to the workspace external DLR URL.
     """
 
     authentication_classes = []
@@ -274,11 +284,21 @@ class DLRCallbackView(APIView):
             if msg_id:
                 message = (
                     OutboundMessage.objects.filter(jasmin_msg_id=msg_id)
+                    .select_related("workspace")
                     .order_by("-created_on")
                     .first()
                 )
                 if message:
                     message.apply_dlr(payload)
+                    try:
+                        from quark.messaging.tasks import enqueue_external_dlr_forward
+
+                        enqueue_external_dlr_forward(message)
+                    except Exception:
+                        logger.exception(
+                            "Failed to enqueue external DLR forward for message %s",
+                            message.pk,
+                        )
 
             return Response("ACK/Jasmin", status=status.HTTP_200_OK, content_type="text/plain")
         except Exception:
@@ -287,6 +307,39 @@ class DLRCallbackView(APIView):
 
     def get(self, request, *args, **kwargs):
         # Some connectors may use GET callbacks
+        return self.post(request, *args, **kwargs)
+
+
+class BatchCallbackView(APIView):
+    """
+    Public Jasmin REST sendbatch success/error callback.
+    Updates jasmin_msg_id / status for matching OutboundMessage rows.
+    """
+
+    authentication_classes = []
+    permission_classes = [AllowAny]
+    renderer_classes = [PlainTextRenderer, CustomPlainTextRenderer]
+
+    def post(self, request, *args, **kwargs):
+        try:
+            if request.content_type == "application/x-www-form-urlencoded":
+                data = request.POST
+            else:
+                data = request.data
+            payload = {k: data.get(k) for k in data.keys()}
+            # Also accept query params (Jasmin may GET)
+            for k, v in request.query_params.items():
+                payload.setdefault(k, v)
+            logger.info("Received batch callback: %s", payload)
+            from quark.messaging.services import apply_batch_callback
+
+            apply_batch_callback(payload)
+            return Response("ACK/Jasmin", status=status.HTTP_200_OK, content_type="text/plain")
+        except Exception:
+            logger.exception("Error processing batch callback")
+            return Response("Error", status=status.HTTP_500_INTERNAL_SERVER_ERROR, content_type="text/plain")
+
+    def get(self, request, *args, **kwargs):
         return self.post(request, *args, **kwargs)
 
 

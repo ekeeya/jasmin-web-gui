@@ -207,7 +207,49 @@ class WorkSpace(SmartModel):
     jasmin_smpp_pb_password = models.CharField(max_length=512, blank=True, default="")
 
     jasmin_http_api_url = models.URLField(max_length=512, blank=True, default="")
+    jasmin_rest_api_url = models.URLField(
+        max_length=512,
+        blank=True,
+        default="",
+        help_text=(
+            "Optional Jasmin REST API base URL (sendbatch). Without REST, Jasmin uses the "
+            "native HTTP API; leave empty to keep Joyce bulk on async HTTP /send."
+        ),
+    )
     jasmin_connection_tested_at = models.DateTimeField(null=True, blank=True)
+
+    # External messaging channel (Joyce API + optional DLR forward)
+    messaging_api_enabled = models.BooleanField(
+        default=False,
+        help_text="When enabled, external apps can POST SMS via Joyce's token-authenticated API.",
+    )
+    messaging_api_token = models.CharField(
+        max_length=64,
+        blank=True,
+        default="",
+        db_index=True,
+        help_text="Bearer token for the Joyce messaging API. Regenerate from workspace settings.",
+    )
+    external_dlr_url = models.URLField(
+        max_length=512,
+        blank=True,
+        default="",
+        help_text="Optional external channel URL. Joyce forwards DLRs here after internal handling.",
+    )
+    external_dlr_method = models.CharField(
+        max_length=8,
+        choices=(("POST", "POST"), ("GET", "GET")),
+        default="POST",
+        help_text="HTTP method used when forwarding DLRs to the external channel.",
+    )
+    external_dlr_retry_delay_secs = models.PositiveIntegerField(
+        default=60,
+        help_text="Seconds between external DLR forward retries (default 60).",
+    )
+    external_dlr_max_retries = models.PositiveIntegerField(
+        default=5,
+        help_text="Max forward attempts to the external DLR URL (default 5).",
+    )
 
     jasmin_user_sync_interval_mins = models.PositiveIntegerField(
         default=5,
@@ -382,6 +424,7 @@ class WorkSpace(SmartModel):
         self.jasmin_smpp_pb_username = ""
         self.jasmin_smpp_pb_password = ""
         self.jasmin_http_api_url = ""
+        self.jasmin_rest_api_url = ""
         self.jasmin_connection_tested_at = None
         if save:
             self.save(
@@ -395,6 +438,7 @@ class WorkSpace(SmartModel):
                     "jasmin_smpp_pb_username",
                     "jasmin_smpp_pb_password",
                     "jasmin_http_api_url",
+                    "jasmin_rest_api_url",
                     "jasmin_connection_tested_at",
                     "modified_on",
                 ]

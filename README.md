@@ -91,6 +91,11 @@ Until a workspace picks demo or finishes a custom connection, users are redirect
 
 Custom PB passwords are never stored as plain text; Joyce decrypts them only when authenticating to that Jasmin instance.
 
+### External messaging API
+
+Workspaces can enable a token-authenticated send API and optional external DLR forwarding.
+See [docs/joyce-messaging-api.md](docs/joyce-messaging-api.md).
+
 ---
 
 ## Setup Guide

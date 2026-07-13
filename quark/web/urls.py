@@ -19,11 +19,12 @@
 
 from django.urls import path
 
-from quark.messaging.views import DLRCallbackView
+from quark.messaging.views import BatchCallbackView, DLRCallbackView
 from .views import Home, profile, Landing
 
 urlpatterns = [
     path("dlr", DLRCallbackView.as_view(), name="dlr"),
+    path("batch-callback", BatchCallbackView.as_view(), name="batch_callback"),
     path("", Landing.as_view(), {}, "landing.page"),
     path("dashboard/", Home.as_view(), {}, "dashboard.dashboard_home"),
 ]

@@ -1,5 +1,6 @@
 from .views import (
     BalanceRateView,
+    BatchCallbackView,
     BulkSendSMSView,
     DLRCallbackView,
     OutboundMessageCRUDL,
@@ -10,6 +11,7 @@ from .views import (
 
 __all__ = [
     "BalanceRateView",
+    "BatchCallbackView",
     "BulkSendSMSView",
     "DLRCallbackView",
     "OutboundMessageCRUDL",

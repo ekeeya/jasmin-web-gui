@@ -28,6 +28,7 @@ class JasminConnection:
     router_pb: JasminEndpoint
     smpp_pb: JasminEndpoint
     http_api_url: str
+    rest_api_url: str
     source: Literal["demo", "custom"]
 
     @property
@@ -35,6 +36,10 @@ class JasminConnection:
         """Stable key for grouping workspaces that share the same Router PB."""
         r = self.router_pb
         return f"{r.host}:{r.port}:{r.username}:{self.http_api_url}"
+
+    @property
+    def has_rest_api(self) -> bool:
+        return bool((self.rest_api_url or "").strip())
 
 
 def _demo_connection() -> JasminConnection:
@@ -53,6 +58,7 @@ def _demo_connection() -> JasminConnection:
             password=settings.JASMIN_SMPP_PB_PASSWORD,
         ),
         http_api_url=str(settings.JASMIN_HTTP_API_URL).rstrip("/"),
+        rest_api_url=str(getattr(settings, "JASMIN_REST_API_URL", "") or "").rstrip("/"),
         source="demo",
     )
 
@@ -90,6 +96,7 @@ def resolve_jasmin_connection(workspace=None) -> JasminConnection:
                 password=decrypt_secret(workspace.jasmin_smpp_pb_password),
             ),
             http_api_url=str(workspace.jasmin_http_api_url).rstrip("/"),
+            rest_api_url=str(getattr(workspace, "jasmin_rest_api_url", "") or "").rstrip("/"),
             source="custom",
         )
 
