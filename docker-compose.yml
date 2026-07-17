@@ -56,6 +56,8 @@ services:
     restart: unless-stopped
     healthcheck:
       test: rabbitmq-diagnostics -q ping
+    volumes:
+      - ./rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
     deploy:
       resources:
         limits:
@@ -130,6 +132,10 @@ services:
     container_name: smppsim
     ports:
       - 2776:2776
+      - 88:88
+    volumes:
+      # Live-edit inject_mo.htm without rebuilding the image
+      - ./smppsim/www:/www:ro
     restart: unless-stopped
     entrypoint: [ "/entrypoint.sh" ]
     deploy:

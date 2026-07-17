@@ -31,7 +31,7 @@ from jasmin.routing.Interceptors import MTInterceptor, DefaultInterceptor, Stati
 from jasmin.routing.Routes import DefaultRoute, StaticMTRoute, RandomRoundrobinMTRoute, FailoverMTRoute, \
     RandomRoundrobinMORoute, StaticMORoute, FailoverMORoute, MTRoute, MORoute, Route
 from jasmin.routing.jasminApi import Connector, SmppClientConnector, HttpConnector, \
-    MOInterceptorScript, MTInterceptorScript
+    SmppServerSystemIdConnector, MOInterceptorScript, MTInterceptorScript
 from smartmin.models import SmartModel
 from smpp.pdu.constants import *
 from smpp.pdu.pdu_types import RegisteredDelivery
@@ -878,6 +878,15 @@ class JasminSMPPConnector(BaseJasminConnector, BaseJasminModel, SmartModel):
         obj.is_active = bool(running)
         return obj, created
 
+    def to_mo_connector(self) -> Connector:
+        """
+        MO route destination as SMPP Server system-id (smpps).
+
+        Jasmin MO routing accepts ``http`` and ``smpps`` only — not ``smppc``.
+        Joyce maps this connector's cid the same way jcli ``smpps(cid)`` does.
+        """
+        return SmppServerSystemIdConnector(self.cid)
+
     class Meta:
         db_table = "jasmin_smpp_connector"
 
@@ -912,6 +921,18 @@ class JasminHTTPConnector(BaseJasminConnector, BaseJasminModel, SmartModel):
     def to_connector(self) -> Connector:
         config = dict(cid=self.cid, baseurl=self.base_url, method=self.method)
         return HttpConnector(**config)
+
+    def resync_mo_routes(self):
+        """
+        Re-push every MO route that uses this connector.
+
+        Jasmin has no HTTP-connector PB: the URL lives inside the MO route object.
+        Editing base_url in Joyce only updates Django until routes are re-added.
+        """
+        routes = self.jasminroute_set.filter(nature="MO")
+        for route in routes:
+            route.jasmin_remove_route()
+            route.jasmin_add_route(is_new=False)
 
     def __str__(self):
         return f"{self.cid}:http"
@@ -1022,18 +1043,27 @@ class JasminRoute(BaseJasminModel, JasminBaseRouter, SmartModel):
             ValidationError: If no connectors are found for the route.
         """
         filters = [f.to_jasmin_filter() for f in self.filters.all()]
-        smpp_connectors = [c.to_connector() for c in self.smpp_connectors.all()]
-        http_connectors = [c.to_connector() for c in self.http_connectors.all()]
         if self.nature == MT:
-            connectors = smpp_connectors  # only pull smpp connectors
-        else:
-            # consider both for a mo router, so, join them connectors
-            connectors = smpp_connectors + http_connectors
-        if not connectors:
-            raise ValidationError("Cannot save route: No connectors found.")
-
-        if self.nature == "MT":
+            connectors = [c.to_connector() for c in self.smpp_connectors.all()]
+            if not connectors:
+                raise ValidationError(
+                    "Cannot save MT route: select at least one SMPP client connector."
+                )
             return self._create_mt_route(filters, connectors)
+
+        # MO destinations: http and/or smpps (SMPP Server system id)
+        http_connectors = [c.to_connector() for c in self.http_connectors.all()]
+        smpp_connectors = [c.to_mo_connector() for c in self.smpp_connectors.all()]
+        connectors = http_connectors + smpp_connectors
+        if not connectors:
+            raise ValidationError(
+                "Cannot save MO route: select at least one HTTP or SMPP (smpps) connector."
+            )
+        # FailoverMORoute rejects mixed connector types
+        if self.router_type == "FailoverMORoute" and http_connectors and smpp_connectors:
+            raise ValidationError(
+                "FailoverMORoute cannot mix HTTP and SMPP connectors; pick one channel type."
+            )
         return self._create_mo_route(filters, connectors)
 
     def _create_mt_route(self, filters: List, connectors: List) -> MTRoute:
@@ -1063,7 +1093,9 @@ class JasminRoute(BaseJasminModel, JasminBaseRouter, SmartModel):
         jasmin_mo_route = MORouter.jasmin_router_class(self.router_type)
         connector = connectors[0]  # Default to first connector for the default route
         route_configs = {
-            DefaultRoute: lambda: DefaultRoute(connector=connector, rate=self.rate),
+            # MO routes are not rated. Passing the nullable DecimalField value
+            # makes Jasmin reject blank rates because DefaultRoute expects float.
+            DefaultRoute: lambda: DefaultRoute(connector=connector),
             StaticMORoute: lambda: StaticMORoute(connector=connector, filters=filters),
             RandomRoundrobinMORoute: lambda: RandomRoundrobinMORoute(
                 filters=filters, connectors=connectors

@@ -22,6 +22,7 @@ from django.utils.text import slugify
 
 from quark.jasmin.models import JasminGroup, JasminUser, JasminSMPPConnector, JasminFilter, JasminRoute, \
     JasminInterceptor, JasminHTTPConnector
+from quark.jasmin.utils.routers import MORouter, MTRouter
 from quark.jasmin.views.sub_forms import MessagingAuthorizationsForm, MessagingValueFiltersForm, MessagingDefaultsForm, \
     MessagingQuotasForm, SMPPAuthorizationsForm, SMPPQuotasForm
 from quark.utils.fields import SelectWidget, TextareaWidget, FilePickerWidget, CheckboxInputWidget
@@ -363,6 +364,116 @@ class JasminRouteForm(BaseWorkspaceForm):
         cleaned_data = super().clean()
         nature = cleaned_data.get("nature")
         order = cleaned_data.get("order")
+        router_type = cleaned_data.get("router_type")
+        filters = cleaned_data.get("filters")
+        smpp_connectors = cleaned_data.get("smpp_connectors")
+        http_connectors = cleaned_data.get("http_connectors")
+
+        if nature == "MO":
+            # Jasmin MO routes are not rated; do not retain or send this value.
+            cleaned_data["rate"] = None
+            http_count = (
+                http_connectors.count()
+                if http_connectors is not None and hasattr(http_connectors, "count")
+                else len(http_connectors or [])
+            )
+            smpp_count = (
+                smpp_connectors.count()
+                if smpp_connectors is not None and hasattr(smpp_connectors, "count")
+                else len(smpp_connectors or [])
+            )
+            total = http_count + smpp_count
+            mo_types = {c.name for c in MORouter}
+            if router_type and router_type not in mo_types:
+                self.add_error(
+                    "router_type",
+                    f"{router_type} is an MT route type; choose an MO route type.",
+                )
+            if router_type == "FailoverMORoute" and http_count and smpp_count:
+                self.add_error(
+                    "http_connectors",
+                    "FailoverMORoute cannot mix HTTP and SMPP connectors.",
+                )
+            # Validate combined connector counts for MO (http and/or smpps)
+            single_types = {"DefaultRoute", "StaticMORoute"}
+            multi_types = {"RandomRoundrobinMORoute", "FailoverMORoute"}
+            if router_type in single_types:
+                if total < 1:
+                    self.add_error(
+                        "http_connectors",
+                        f"{router_type} requires exactly one HTTP or SMPP connector.",
+                    )
+                elif total > 1:
+                    self.add_error(
+                        "http_connectors",
+                        f"{router_type} accepts only one connector (HTTP or SMPP).",
+                    )
+            elif router_type in multi_types and total < 2:
+                self.add_error(
+                    "http_connectors",
+                    f"{router_type} requires at least two connectors "
+                    "(HTTP and/or SMPP; Failover must be one channel type).",
+                )
+        elif nature == "MT":
+            cleaned_data["http_connectors"] = (
+                self.fields["http_connectors"].queryset.none()
+            )
+            connectors = smpp_connectors
+            connector_field = "smpp_connectors"
+            connector_label = "SMPP client connector"
+            mt_types = {c.name for c in MTRouter}
+            if router_type and router_type not in mt_types:
+                self.add_error(
+                    "router_type",
+                    f"{router_type} is an MO route type; choose an MT route type.",
+                )
+            if router_type and connectors is not None:
+                count = (
+                    connectors.count()
+                    if hasattr(connectors, "count")
+                    else len(connectors or [])
+                )
+                single_types = {"DefaultRoute", "StaticMTRoute"}
+                multi_types = {"RandomRoundrobinMTRoute", "FailoverMTRoute"}
+                if router_type in single_types:
+                    if count < 1:
+                        self.add_error(
+                            connector_field,
+                            f"{router_type} requires exactly one {connector_label}.",
+                        )
+                    elif count > 1:
+                        self.add_error(
+                            connector_field,
+                            f"{router_type} accepts only one {connector_label}.",
+                        )
+                elif router_type in multi_types and count < 2:
+                    self.add_error(
+                        connector_field,
+                        f"{router_type} requires at least two {connector_label}s.",
+                    )
+        else:
+            pass
+
+        if router_type == "DefaultRoute":
+            if order is not None and order != 0:
+                self.add_error(
+                    "order",
+                    "DefaultRoute must use order 0 (Jasmin default/fallback slot).",
+                )
+            # Default routes never use filters
+            cleaned_data["filters"] = self.fields["filters"].queryset.none()
+        elif router_type and order == 0:
+            self.add_error(
+                "order",
+                "Order 0 is reserved for DefaultRoute. Use a higher order for "
+                f"{router_type}.",
+            )
+        elif router_type and filters is not None and not filters.exists():
+            self.add_error(
+                "filters",
+                f"{router_type} requires at least one filter.",
+            )
+
         if nature is not None and order is not None:
             qs = JasminRoute.objects.filter(
                 workspace=self.workspace,

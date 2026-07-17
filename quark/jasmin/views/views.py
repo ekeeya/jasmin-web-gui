@@ -359,11 +359,31 @@ class JasminHTTPConnectorCRUDL(SmartCRUDL):
     class Update(FormMixin, ModalFormMixin, WorkspacePermsMixin, NonAtomicMixin, SmartUpdateView):
         permission = "jasmin.jasminhttpconnector_update"
         form_class = JasminHttpConnectorForm
+        success_url = "@jasmin.jasminhttpconnector_list"
 
         def get_form_kwargs(self):
             kwargs = super().get_form_kwargs()
             kwargs["workspace"] = self.derive_workspace()
             return kwargs
+
+        def form_valid(self, form):
+            form.instance.modified_by = self.request.user
+            self.object = form.save()
+            # Jasmin embeds the HTTP URL inside MO routes — re-push after URL/method change.
+            try:
+                self.object.resync_mo_routes()
+            except ValidationError as e:
+                for message in e.messages:
+                    form.add_error(None, message)
+                return self.form_invalid(form)
+
+            message = "Action executed successfully"
+            if "HTTP_X_AJAX_MODAL" in self.request.META:
+                return JsonResponse(
+                    dict(success=True, message=message, redirect_to=self.get_success_url()),
+                    safe=False,
+                )
+            return HttpResponseRedirect(self.get_success_url())
 
     class List(InjectModalFormMixin, BaseListView):
         title = "HTTP Connectors"
@@ -477,17 +497,26 @@ class JasminRouteCRUDL(SmartCRUDL):
             )
             route.save(run_on_reactor=False)  # save it but do not run reactor yet
 
-            route.smpp_connectors.set(self.form.cleaned_data["smpp_connectors"])
-            route.http_connectors.set(self.form.cleaned_data["http_connectors"])
-            route.filters.set(self.form.cleaned_data["filters"])
+            route.smpp_connectors.set(form.cleaned_data["smpp_connectors"])
+            route.http_connectors.set(form.cleaned_data["http_connectors"])
+            route.filters.set(form.cleaned_data["filters"])
             try:
                 route.save()  # now run on reactor
             except ValidationError:
                 # Jasmin rejected the route, don't keep an orphan row locally
                 route.delete(run_on_reactor=False)
                 raise
-            form.instance.pk = route.pk  # so we do not save it again in the mixin
-            return super().form_valid(form)
+
+            form.instance = route
+            # Avoid ModalFormMixin.form_valid → form.save(), which would re-save
+            # without created_by and push to Jasmin a second time.
+            message = "Action executed successfully"
+            if "HTTP_X_AJAX_MODAL" in self.request.META:
+                return JsonResponse(
+                    dict(success=True, message=message, redirect_to=self.get_success_url()),
+                    safe=False,
+                )
+            return HttpResponseRedirect(self.get_success_url())
 
     class Update(FormMixin, ModalFormMixin, WorkspacePermsMixin, NonAtomicMixin, SmartUpdateView):
         permission = "jasmin.jasminroute_update"
@@ -498,6 +527,9 @@ class JasminRouteCRUDL(SmartCRUDL):
             kwargs = super().get_form_kwargs()
             kwargs["workspace"] = self.derive_workspace()
             return kwargs
+
+        def derive_queryset(self):
+            return super().derive_queryset().filter(workspace=self.derive_workspace())
 
         def form_valid(self, form):
             route = self.object
@@ -541,7 +573,7 @@ class JasminRouteCRUDL(SmartCRUDL):
         fields = ("order", "router_type", "nature", "rate", 'created_on')
         template_name = "jasmin/routers/routers.html"
         ordering = ("-created_on",)
-        search_fields = ("fid",)
+        search_fields = ("router_type", "nature")
         modal_form = JasminRouteForm
         update_form = JasminRouteForm
         actions = ['edit', 'delete']
@@ -551,6 +583,7 @@ class JasminRouteCRUDL(SmartCRUDL):
                 post_url="jasmin.jasminroute_update",
                 name="Route",
                 display_field="order",
+                custom_form="jasmin/routers/router_create.html",
             )
 
         def build_modal(self, modal):

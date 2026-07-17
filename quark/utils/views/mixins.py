@@ -131,13 +131,14 @@ class InjectModalFormMixin(FormMixin):
 
     def set_update_form_params(self, **kwargs):
         for key, value in kwargs.items():
-            if key in ['post_url', 'display_field', 'name', 'modal_id']:
+            if key in ['post_url', 'display_field', 'name', 'modal_id', 'custom_form']:
                 setattr(self, key, value)
 
     def build_update_forms(self, workspace, items):
         self.build_update()
         update_forms = []
         if self.update_form:
+            custom_form = getattr(self, "custom_form", None)
             for item in items:
                 # Unique auto_id per row so checkboxes/labels don't collide across modals
                 form = self.update_form(
@@ -153,6 +154,8 @@ class InjectModalFormMixin(FormMixin):
                     form=form,
                     post_url=update_url,
                     title=f"Update {self.name} {getattr(item, self.display_field)}")
+                if custom_form:
+                    data["custom_form"] = custom_form
                 update_forms.append(data)
         return update_forms
 

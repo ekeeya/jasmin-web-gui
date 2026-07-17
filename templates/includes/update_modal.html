@@ -16,7 +16,9 @@
             {% csrf_token %}
 
             <div class="flex-1 error-update-after p-2 overflow-y-auto space-y-2">
-            {% if modal.custom_form %}
+            {% if item.custom_form %}
+            {% include item.custom_form with form=item.form %}
+            {% elif modal.custom_form %}
             {% include modal.custom_form with form=item.form %}
             {% else %}
                 {% for field in item.form %}
@@ -32,7 +34,7 @@
                             <p class="mt-1 text-sm text-gray-500">{{ field.help_text }}</p>
                         {% endif %}
                         
-                        <div style="font-size: 8pt !important;" id="{{ field.name }}" class="hidden mt-1 text-red-600"> </div>
+                        <div style="font-size: 8pt !important;" id="{{ field.name }}" data-modal-error="{{ field.name }}" class="hidden mt-1 text-red-600"> </div>
                     </div>
                 {% endfor %}
                 {% endif %}
@@ -85,21 +87,38 @@
         e.stopPropagation();
     });
     
+    function fieldIsEmpty(field) {
+        const val = field.val();
+        if (val == null) {
+            return true;
+        }
+        if (Array.isArray(val)) {
+            return val.length === 0;
+        }
+        return !String(val).trim();
+    }
+
     function validateForm() {
         let isValid = true;
         
-        $('.text-red-600').addClass('hidden').empty();
-        $('.form-group').removeClass('has-error');
-        $('.form-errors').empty();
+        form.find('.text-red-600').addClass('hidden').empty();
+        form.find('.form-group, .space-y-1').removeClass('has-error');
+        form.find('.form-errors').empty();
         
-        // Check each required field
+        // Check each required field (scoped to this form; multi-select safe)
         form.find('[required]').each(function() {
             const field = $(this);
+            if (field.is(':disabled') || !field.is(':visible')) {
+                return;
+            }
             const fieldName = field.attr('name');
-            const errorDiv = $(`#${fieldName}`);
-            const formGroup = field.closest('.form-group');
+            let errorDiv = form.find(`[data-modal-error="${fieldName}"]`);
+            if (!errorDiv.length) {
+                errorDiv = form.find(`#${fieldName}`);
+            }
+            const formGroup = field.closest('.form-group, .space-y-1');
             
-            if (!field.val().trim()) {
+            if (fieldIsEmpty(field)) {
                 isValid = false;
                 formGroup.addClass('has-error');
                 errorDiv.removeClass('hidden').append($('<p></p>').text('This field is required'));
@@ -108,6 +127,21 @@
         
         return isValid;
     }
+
+    function ensureMultiSelectPosted() {
+        // Disabled fields are omitted from FormData; re-enable temporarily.
+        form.find(':disabled').prop('disabled', false);
+        // Keep loudev dual-list selections on the underlying <select>.
+        form.find('select.joyce-multi-select, select[data-joyce-multiselect]').each(function () {
+            const $select = $(this);
+            $select.find('option').each(function () {
+                // no-op: selected state is already on options; ensure prop sticks
+                if (this.selected) {
+                    $(this).prop('selected', true);
+                }
+            });
+        });
+    }
     
     form.on('submit', function(e){
         e.preventDefault();
@@ -115,10 +149,12 @@
         if (!validateForm()) {
             return false;
         }
+
+        ensureMultiSelectPosted();
         
         $('.form-errors').empty();
-        $('.text-red-600').addClass('hidden').empty();
-        $('.form-group').removeClass('has-error');
+        form.find('.text-red-600').addClass('hidden').empty();
+        form.find('.form-group, .space-y-1').removeClass('has-error');
         $(`#${btnSubmit}`).prop('disabled', true).html('<span class="spinner-border spinner-border-sm mr-2" role="status" aria-hidden="true"></span>Processing...');
         
         const formData = new FormData(this);

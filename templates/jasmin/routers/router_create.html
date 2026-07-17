@@ -32,14 +32,15 @@
         </div>
     </div>
     <div class="grid grid-cols-1 gap-4">
-        <div class="space-y-1">
+        <div class="div-order space-y-1">
             <label for="{{ form.order.id_for_label }}" class="block text-sm font-medium text-gray-700">
                 {{ form.order.label }}
                 {% if form.order.field.required %}<span class="text-red-500">*</span>{% endif %}
             </label>
             {{ form.order }}
+            <span class="order-hint text-gray-500" style="font-size: 6pt !important;"></span>
             {% if form.order.help_text %}
-                <span style="font-size: 6pt !important;" class="text-gray-500">{{ form.order.help_text }}</span>
+                <span style="font-size: 6pt !important;" class="text-gray-500 order-help-default">{{ form.order.help_text }}</span>
             {% endif %}
 
             <div style="font-size: 6pt !important;" data-modal-error="{{ form.order.name }}"
@@ -61,11 +62,10 @@
         </div>
     </div>
 
-
-    <div class="grid grid-cols-1">
+    <div class="div-filters grid grid-cols-1">
         <fieldset class="space-y-4">
             <legend class="text-lg font-medium text-gray-900">Filters</legend>
-            <p class="text-xs text-gray-500">Click an item to move it between Available (left) and Selected (right).</p>
+            <p class="text-xs text-gray-500 filters-hint">Required for this route type. Click an item to move it between Available and Selected.</p>
             <div class="space-y-1">
                 <label for="{{ form.filters.id_for_label }}" class="block text-sm font-medium text-gray-700">
                     {{ form.filters.label }}
@@ -81,10 +81,11 @@
             </div>
         </fieldset>
     </div>
-    <div class="grid grid-cols-1">
+    <div class="div-connectors grid grid-cols-1">
         <fieldset class="space-y-4">
             <legend class="text-lg font-medium text-gray-900">Connectors</legend>
-            <div class="space-y-1">
+            <p class="text-xs text-gray-500 connectors-hint"></p>
+            <div class="div-smpp-connectors space-y-1">
                 <label for="{{ form.smpp_connectors.id_for_label }}" class="block text-sm font-medium text-gray-700">
                     {{ form.smpp_connectors.label }}
                     {% if form.smpp_connectors.field.required %}<span class="text-red-500">*</span>{% endif %}
@@ -129,8 +130,68 @@
             ["RandomRoundrobinMORoute", "A route with Filters and many Connectors, will return a random Connector if its Filters are matched, can be used as a load balancer route."],
             ["FailoverMORoute", "A route with Filters and many Connectors, will return an available (connected) Connector if its Filters are matched"]
         ];
-        const moAlert = "MO Route is used to route inbound messages (SMS MO) through two possible channels: http and smpps (SMPP Server).";
-        const mtAlert = "MT Route is used to route outbound messages (SMS MT) through one channel: smppc (SMPP Client).";
+        const moAlert = "MO routes deliver inbound SMS via HTTP and/or SMPP Server (smpps) connectors — pick either channel (or both for round-robin).";
+        const mtAlert = "MT routes deliver outbound SMS via SMPP client connectors (smppc).";
+
+        // Field rules from Jasmin jcli mo/mt router managers
+        const routeFieldRules = {
+            DefaultRoute: {
+                filters: false,
+                connectors: "one",
+                orderFixed: 0,
+                orderHint: "DefaultRoute must use order 0 (Jasmin default / fallback slot).",
+                moConnectorHint: "Select exactly one connector: HTTP or SMPP (smpps).",
+                mtConnectorHint: "Select exactly one SMPP client connector."
+            },
+            StaticMORoute: {
+                filters: true,
+                connectors: "one",
+                orderFixed: null,
+                orderHint: "Use order > 0. Higher numbers are evaluated first.",
+                moConnectorHint: "Select exactly one connector: HTTP or SMPP (smpps).",
+                mtConnectorHint: ""
+            },
+            StaticMTRoute: {
+                filters: true,
+                connectors: "one",
+                orderFixed: null,
+                orderHint: "Use order > 0. Higher numbers are evaluated first.",
+                moConnectorHint: "",
+                mtConnectorHint: "Select exactly one SMPP client connector."
+            },
+            RandomRoundrobinMORoute: {
+                filters: true,
+                connectors: "many",
+                orderFixed: null,
+                orderHint: "Use order > 0. Higher numbers are evaluated first.",
+                moConnectorHint: "Select two or more connectors (HTTP and/or SMPP).",
+                mtConnectorHint: ""
+            },
+            RandomRoundrobinMTRoute: {
+                filters: true,
+                connectors: "many",
+                orderFixed: null,
+                orderHint: "Use order > 0. Higher numbers are evaluated first.",
+                moConnectorHint: "",
+                mtConnectorHint: "Select two or more SMPP client connectors (load balancing)."
+            },
+            FailoverMORoute: {
+                filters: true,
+                connectors: "many",
+                orderFixed: null,
+                orderHint: "Use order > 0. Higher numbers are evaluated first.",
+                moConnectorHint: "Select two or more connectors of the same type (all HTTP or all SMPP — no mixing).",
+                mtConnectorHint: ""
+            },
+            FailoverMTRoute: {
+                filters: true,
+                connectors: "many",
+                orderFixed: null,
+                orderHint: "Use order > 0. Higher numbers are evaluated first.",
+                moConnectorHint: "",
+                mtConnectorHint: "Select two or more SMPP client connectors (failover)."
+            }
+        };
 
         function wireRouteForm($root) {
             if ($root.data("joyce-route-wired")) {
@@ -140,70 +201,234 @@
 
             const $nature = $root.find('[name="nature"]');
             const $routerType = $root.find('[name="router_type"]');
+            const $order = $root.find('[name="order"]');
             const $rate = $root.find('[name="rate"]');
             const $rateDiv = $root.find(".div-rate");
+            const $filtersDiv = $root.find(".div-filters");
             const $httpConnectorDiv = $root.find(".div-http-connectors");
+            const $smppConnectorDiv = $root.find(".div-smpp-connectors");
             const $natureAlert = $root.find(".nature-alert");
             const $routerAlert = $root.find(".router-alert");
+            const $orderHint = $root.find(".order-hint");
+            const $orderHelpDefault = $root.find(".order-help-default");
+            const $connectorsHint = $root.find(".connectors-hint");
             const initialType = $routerType.val();
             let applyRoutes = [];
+            let currentNature = $nature.val() || "";
 
-            function setRouteOptions(preferred) {
-                let options = '<option value="">----Select Route----</option>';
+            function clearMultiSelect($wrap) {
+                $wrap.find("select").val(null).trigger("change");
+                if (typeof window.refreshJoyceMultiSelects === "function") {
+                    window.refreshJoyceMultiSelects($wrap);
+                }
+            }
+
+            function activeConnectorWraps() {
+                if (currentNature === "MO") {
+                    return [$httpConnectorDiv, $smppConnectorDiv];
+                }
+                return [$smppConnectorDiv];
+            }
+
+            function selectedConnectorCount() {
+                let total = 0;
+                activeConnectorWraps().forEach(($wrap) => {
+                    const val = $wrap.find("select").val();
+                    if (Array.isArray(val)) {
+                        total += val.length;
+                    } else if (val) {
+                        total += 1;
+                    }
+                });
+                return total;
+            }
+
+            function limitToOneConnectorAcrossMO() {
+                // Keep a single selection total across HTTP + SMPP for Default/Static MO
+                const wraps = activeConnectorWraps();
+                const picks = [];
+                wraps.forEach(($wrap, wi) => {
+                    const $select = $wrap.find("select");
+                    const val = $select.val();
+                    const list = Array.isArray(val) ? val : (val ? [val] : []);
+                    list.forEach((v) => picks.push({ wi, v }));
+                });
+                if (picks.length <= 1) {
+                    return;
+                }
+                const keep = picks[picks.length - 1];
+                wraps.forEach(($wrap, wi) => {
+                    const $select = $wrap.find("select");
+                    if (wi === keep.wi) {
+                        $select.val([keep.v]).trigger("change");
+                    } else {
+                        $select.val(null).trigger("change");
+                    }
+                    if (typeof window.refreshJoyceMultiSelects === "function") {
+                        window.refreshJoyceMultiSelects($wrap);
+                    }
+                });
+            }
+
+            function limitToOneConnector($wrap) {
+                const $select = $wrap.find("select");
+                if (!$select.length) {
+                    return;
+                }
+                const selected = $select.val();
+                if (Array.isArray(selected) && selected.length > 1) {
+                    $select.val([selected[selected.length - 1]]).trigger("change");
+                    if (typeof window.refreshJoyceMultiSelects === "function") {
+                        window.refreshJoyceMultiSelects($wrap);
+                    }
+                }
+            }
+
+            function applyRouterType(routerType, opts) {
+                const options = opts || {};
+                const isInit = !!options.isInit;
+                const rules = routeFieldRules[routerType];
+                if (!rules) {
+                    $filtersDiv.show();
+                    $order.prop("readonly", false);
+                    $orderHint.text("");
+                    $orderHelpDefault.show();
+                    $connectorsHint.text("");
+                    return;
+                }
+
+                if (rules.filters) {
+                    $filtersDiv.show();
+                    if (typeof window.refreshJoyceMultiSelects === "function") {
+                        window.refreshJoyceMultiSelects($filtersDiv);
+                    }
+                } else {
+                    // On edit init, keep DB state unless DefaultRoute (filters unused)
+                    if (!isInit) {
+                        clearMultiSelect($filtersDiv);
+                    } else if (routerType === "DefaultRoute") {
+                        clearMultiSelect($filtersDiv);
+                    }
+                    $filtersDiv.hide();
+                }
+
+                if (rules.orderFixed !== null && rules.orderFixed !== undefined) {
+                    $order.val(rules.orderFixed).prop("readonly", true);
+                    $orderHelpDefault.hide();
+                } else {
+                    if (!isInit && $order.prop("readonly") && String($order.val()) === "0") {
+                        $order.val("");
+                    }
+                    $order.prop("readonly", false);
+                    $orderHelpDefault.show();
+                }
+                $orderHint.text(rules.orderHint || "");
+                $connectorsHint.text(
+                    currentNature === "MO" ? (rules.moConnectorHint || "") : (rules.mtConnectorHint || "")
+                );
+
+                // Never strip existing connectors on first paint (edit modal).
+                if (!isInit && rules.connectors === "one") {
+                    if (currentNature === "MO") {
+                        limitToOneConnectorAcrossMO();
+                    } else {
+                        limitToOneConnector($smppConnectorDiv);
+                    }
+                }
+            }
+
+            function setRouteOptions(preferred, opts) {
+                const options = opts || {};
+                let html = '<option value="">----Select Route----</option>';
                 applyRoutes.forEach((route, index) => {
                     const selected = preferred && preferred === route[0] ? " selected" : "";
-                    options += `<option data-index="${index}" value="${route[0]}"${selected}>${route[0]}</option>`;
+                    html += `<option data-index="${index}" value="${route[0]}"${selected}>${route[0]}</option>`;
                 });
-                $routerType.html(options);
+                $routerType.html(html);
                 if (preferred) {
                     $routerType.val(preferred);
                 }
-                $routerType.trigger("change");
+                applyRouterType($routerType.val(), options);
+                // Update help text without re-running clear/limit side effects via change
+                const selectedOption = $routerType.find("option:selected");
+                const index = selectedOption.data("index");
+                if (index > -1 && applyRoutes[index]) {
+                    $routerAlert.removeClass("hidden").html(applyRoutes[index][1]);
+                }
             }
 
-            function applyNature(nature, preferredType) {
+            function applyNature(nature, preferredType, opts) {
+                const options = opts || {};
+                const isInit = !!options.isInit;
+                currentNature = nature;
                 switch (nature) {
                     case "MO":
                         $natureAlert.removeClass("hidden").html(moAlert);
                         applyRoutes = moRoutes;
-                        $rate.prop("disabled", true);
+                        // Hide rate for MO but keep value for FormData via readonly (not disabled)
+                        $rate.prop("readonly", true).prop("disabled", false);
+                        if (!isInit) {
+                            $rate.val("");
+                        }
                         $rateDiv.hide();
                         $httpConnectorDiv.show();
+                        $smppConnectorDiv.show();
                         if (typeof window.refreshJoyceMultiSelects === "function") {
                             window.refreshJoyceMultiSelects($httpConnectorDiv);
+                            window.refreshJoyceMultiSelects($smppConnectorDiv);
                         }
                         break;
                     case "MT":
                         $natureAlert.removeClass("hidden").html(mtAlert);
                         applyRoutes = mtRoutes;
-                        $rate.prop("disabled", false);
+                        $rate.prop("readonly", false).prop("disabled", false);
                         $rateDiv.show();
                         $httpConnectorDiv.hide();
+                        $smppConnectorDiv.show();
+                        if (!isInit) {
+                            clearMultiSelect($httpConnectorDiv);
+                        }
+                        if (typeof window.refreshJoyceMultiSelects === "function") {
+                            window.refreshJoyceMultiSelects($smppConnectorDiv);
+                        }
                         break;
                     default:
                         $natureAlert.addClass("hidden").html("");
                         applyRoutes = [];
                         break;
                 }
-                setRouteOptions(preferredType || null);
+                setRouteOptions(preferredType || null, options);
             }
 
             $nature.on("change", function () {
-                applyNature($(this).val(), null);
+                applyNature($(this).val(), null, { isInit: false });
             });
 
             $routerType.on("change", function () {
                 const selectedOption = $(this).find("option:selected");
                 const index = selectedOption.data("index");
+                const routerType = $(this).val();
                 if (index > -1 && applyRoutes[index]) {
                     $routerAlert.removeClass("hidden").html(applyRoutes[index][1]);
                 } else {
                     $routerAlert.addClass("hidden").html("");
                 }
+                applyRouterType(routerType, { isInit: false });
+            });
+
+            $root.on("change", '[name="http_connectors"], [name="smpp_connectors"]', function () {
+                const rules = routeFieldRules[$routerType.val()];
+                if (rules && rules.connectors === "one") {
+                    if (currentNature === "MO") {
+                        limitToOneConnectorAcrossMO();
+                    } else {
+                        limitToOneConnector($(this).closest(".div-http-connectors, .div-smpp-connectors"));
+                    }
+                }
             });
 
             if ($nature.val()) {
-                applyNature($nature.val(), initialType);
+                applyNature($nature.val(), initialType, { isInit: true });
             }
         }
 

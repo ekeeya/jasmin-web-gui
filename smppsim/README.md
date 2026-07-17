@@ -57,5 +57,19 @@ smppccm -a
 > ok
 ```
 
+### Testing MO (Mobile Originated)
+
+Compose publishes:
+
+- `2776` — SMPP
+- `88` — SMPPSim web UI
+
+1. Start Jasmin’s SMPP connector (bound/transceiver to `smppsim:2776`).
+2. Open **http://localhost:88/inject_mo.htm**
+3. Submit a message — SMPPSim queues a `deliver_sm` to Jasmin.
+4. Confirm in Jasmin logs / your MO HTTP route callback.
+
+Static pages live under `smppsim/www/` (copied into the image as `DOCROOT=www`).
+
 ### Dependencies
 `smppsim.jar` expects `lib/jakarta-regexp-1.5.jar` (and stubs for `junit.jar` / `smpp.jar`) on the classpath. The Dockerfile copies `smppsim/lib/` into the image for this.

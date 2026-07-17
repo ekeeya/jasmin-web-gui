@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+  <title>Inject MO SMS</title>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <style type="text/css">
+    body { font-family: system-ui, sans-serif; margin: 1.5rem; max-width: 36rem; color: #171717; }
+    h1 { font-size: 1.25rem; margin: 0 0 0.35rem; }
+    .hint { font-size: 0.85rem; color: #525252; margin: 0 0 1rem; line-height: 1.4; }
+    .msg { color: #047857; margin: 0 0 1rem; font-weight: 600; min-height: 1.2em; }
+    label { display: block; font-size: 0.85rem; font-weight: 600; margin: 0.75rem 0 0.25rem; }
+    input[type="text"], textarea {
+      width: 100%; box-sizing: border-box; font: inherit; padding: 0.45rem 0.5rem;
+      border: 1px solid #d4d4d4;
+    }
+    textarea { min-height: 5rem; }
+    .actions { margin-top: 1.25rem; }
+    input[type="submit"] {
+      background: #171717; color: #fff; border: 0; padding: 0.55rem 1.1rem; cursor: pointer;
+    }
+    /* Keep SMPPSim happy: still submit defaults it expects */
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <h1>Inject MO SMS</h1>
+  <p class="hint">
+    Sends a DELIVER_SM into SMPPSim. If Jasmin is bound as an ESME, Jasmin receives it,
+    matches your MO route, and POSTs to your HTTP connector URL.
+  </p>
+  <p class="msg">$$message$$</p>
+
+  <form method="get" action="inject_mo">
+    <label for="short_message">Message text</label>
+    <textarea id="short_message" name="short_message" rows="4" cols="80">$$short_message$$</textarea>
+
+    <label for="source_addr">From (source_addr)</label>
+    <input id="source_addr" type="text" name="source_addr" value="$$source_addr$$" />
+
+    <label for="destination_addr">To (destination_addr)</label>
+    <input id="destination_addr" type="text" name="destination_addr" value="$$dest_addr$$" />
+
+    <!-- Defaults SMPPSim / Jasmin expect; leave as-is unless debugging -->
+    <div class="hidden">
+      <input type="text" name="service_type" value="$$service_type$$" />
+      <input type="text" name="source_addr_ton" value="$$source_addr_ton$$" />
+      <input type="text" name="source_addr_npi" value="$$source_addr_npi$$" />
+      <input type="text" name="dest_addr_ton" value="$$dest_addr_ton$$" />
+      <input type="text" name="dest_addr_npi" value="$$dest_addr_npi$$" />
+      <input type="text" name="esm_class" value="$$esm_class$$" />
+      <input type="text" name="protocol_ID" value="$$protocol_id$$" />
+      <input type="text" name="priority_flag" value="$$priority_flag$$" />
+      <input type="text" name="registered_delivery_flag" value="$$registered_delivery_flag$$" />
+      <input type="text" name="data_coding" value="$$data_coding$$" />
+      <input type="text" name="user_message_reference" value="$$user_message_reference$$" />
+      <input type="text" name="source_port" value="$$source_port$$" />
+      <input type="text" name="destination_port" value="$$destination_port$$" />
+      <input type="text" name="sar_msg_ref_num" value="$$sar_msg_ref_num$$" />
+      <input type="text" name="sar_total_segments" value="$$sar_total_segments$$" />
+      <input type="text" name="sar_segment_seqnum" value="$$sar_segment_seqnum$$" />
+      <input type="text" name="user_response_code" value="$$user_response_code$$" />
+      <input type="text" name="privacy_indicator" value="$$privacy_indicator$$" />
+      <input type="text" name="payload_type" value="$$payload_type$$" />
+      <input type="text" name="message_payload" value="$$message_payload$$" />
+      <input type="text" name="callback_num" value="$$callback_num$$" />
+      <input type="text" name="source_subaddress" value="$$source_subaddress$$" />
+      <input type="text" name="dest_subaddress" value="$$dest_subaddress$$" />
+      <input type="text" name="language_indicator" value="$$language_indicator$$" />
+      <input type="text" name="tlv1_tag" value="$$tlv1_tag$$" />
+      <input type="text" name="tlv1_len" value="$$tlv1_len$$" />
+      <input type="text" name="tlv1_val" value="$$tlv1_val$$" />
+      <input type="text" name="tlv2_tag" value="$$tlv2_tag$$" />
+      <input type="text" name="tlv2_len" value="$$tlv2_len$$" />
+      <input type="text" name="tlv2_val" value="$$tlv2_val$$" />
+      <input type="text" name="tlv3_tag" value="$$tlv3_tag$$" />
+      <input type="text" name="tlv3_len" value="$$tlv3_len$$" />
+      <input type="text" name="tlv3_val" value="$$tlv3_val$$" />
+      <input type="text" name="tlv4_tag" value="$$tlv4_tag$$" />
+      <input type="text" name="tlv4_len" value="$$tlv4_len$$" />
+      <input type="text" name="tlv4_val" value="$$tlv4_val$$" />
+    </div>
+
+    <p class="actions">
+      <input type="submit" name="submit" value="Send MO" />
+    </p>
+  </form>
+</body>
+</html>
