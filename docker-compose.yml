@@ -67,7 +67,7 @@ services:
       - no-new-privileges:true
 
   jasmin:
-    image: jookies/jasmin:0.10
+    image: jookies/jasmin:0.11.0
     restart: unless-stopped
     container_name: jasmin
     ports:
@@ -94,9 +94,13 @@ services:
     security_opt:
       - no-new-privileges:true
 
-  # Jasmin REST API worker only — do not reuse for Joyce (different Celery app + broker).
+  # Jasmin REST API batch worker. Built from Dockerfile.rest so it uses the SAME
+  # env-driven config.py as jasmin_rest — the stock image hardcodes 127.0.0.1 for
+  # the broker/redis/http-api and would ignore the env vars below.
   jasmin_celery:
-    image: jookies/jasmin:0.10
+    build:
+      context: .
+      dockerfile: Dockerfile.rest
     restart: unless-stopped
     container_name: jasmin_celery
     depends_on:
@@ -106,8 +110,11 @@ services:
         condition: service_healthy
     entrypoint: [ "/usr/local/bin/celery", "-A", "jasmin.protocols.rest.tasks", "worker", "-l", "INFO", "-c", "4" ]
     environment:
+      JASMIN_OLD_API_URI: http://jasmin:1401
       CELERY_BROKER_URL: amqp://guest:guest@rabbit-mq:5672//
       CELERY_RESULT_BACKEND: redis://:@redis:6379/1
+      HTTP_THROUGHPUT_PER_WORKER: "8"
+      SMART_QOS: "true"
 
   jasmin_rest:
     build:
@@ -120,9 +127,15 @@ services:
     depends_on:
       - jasmin
       - jasmin_celery
+      - rabbit-mq
+      - redis
     entrypoint: [ "/usr/local/bin/python", "/usr/local/bin/twistd", "-n", "--pidfile=/tmp/twistd-web-restapi.pid", "web", "--wsgi=jasmin.protocols.rest.api" ]
     environment:
       JASMIN_OLD_API_URI: http://jasmin:1401
+      CELERY_BROKER_URL: amqp://guest:guest@rabbit-mq:5672//
+      CELERY_RESULT_BACKEND: redis://:@redis:6379/1
+      HTTP_THROUGHPUT_PER_WORKER: "8"
+      SMART_QOS: "true"
 
 # Jasmin comes with a test smpp smsc on port 2775 but if you doubt it use this one
   smppsim:

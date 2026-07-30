@@ -1,90 +1,761 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<!DOCTYPE html>
+<html lang="en">
 <head>
-  <title>Inject MO SMS</title>
-  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-  <style type="text/css">
-    body { font-family: system-ui, sans-serif; margin: 1.5rem; max-width: 36rem; color: #171717; }
-    h1 { font-size: 1.25rem; margin: 0 0 0.35rem; }
-    .hint { font-size: 0.85rem; color: #525252; margin: 0 0 1rem; line-height: 1.4; }
-    .msg { color: #047857; margin: 0 0 1rem; font-weight: 600; min-height: 1.2em; }
-    label { display: block; font-size: 0.85rem; font-weight: 600; margin: 0.75rem 0 0.25rem; }
-    input[type="text"], textarea {
-      width: 100%; box-sizing: border-box; font: inherit; padding: 0.45rem 0.5rem;
-      border: 1px solid #d4d4d4;
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Inject MO · SMPPSim</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --ink: #0f1419;
+      --ink-soft: #1a222c;
+      --panel: rgba(255, 251, 245, 0.94);
+      --panel-border: rgba(15, 20, 25, 0.1);
+      --text: #141a22;
+      --muted: #5c6673;
+      --line: #d7dde5;
+      --accent: #e8590c;
+      --accent-ink: #fff8f3;
+      --ok: #0f7a4c;
+      --ok-bg: #e8f7ef;
+      --warn: #9a6700;
+      --warn-bg: #fff6db;
+      --err: #b42318;
+      --err-bg: #fef3f2;
+      --shadow: 0 18px 50px rgba(8, 12, 18, 0.28);
+      --radius: 14px;
+      --ease: cubic-bezier(0.22, 1, 0.36, 1);
     }
-    textarea { min-height: 5rem; }
-    .actions { margin-top: 1.25rem; }
-    input[type="submit"] {
-      background: #171717; color: #fff; border: 0; padding: 0.55rem 1.1rem; cursor: pointer;
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      min-height: 100%;
     }
-    /* Keep SMPPSim happy: still submit defaults it expects */
-    .hidden { display: none; }
+
+    body {
+      font-family: "IBM Plex Sans", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(ellipse 80% 55% at 12% -10%, rgba(232, 89, 12, 0.35), transparent 55%),
+        radial-gradient(ellipse 60% 45% at 100% 0%, rgba(56, 119, 168, 0.28), transparent 50%),
+        linear-gradient(160deg, #0f1419 0%, #1b2734 48%, #101820 100%);
+      background-attachment: fixed;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background-image:
+        linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+      background-size: 28px 28px;
+      mask-image: radial-gradient(circle at 50% 20%, #000 20%, transparent 75%);
+    }
+
+    .shell {
+      position: relative;
+      z-index: 1;
+      width: min(720px, calc(100% - 2rem));
+      margin: 0 auto;
+      padding: 1.5rem 0 3rem;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-bottom: 1.25rem;
+      animation: rise 420ms var(--ease) both;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.7rem;
+      min-width: 0;
+    }
+
+    .brand-mark {
+      width: 2.25rem;
+      height: 2.25rem;
+      border-radius: 9px;
+      background: linear-gradient(145deg, #ff8a3d, #e8590c 55%, #b84308);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
+      display: grid;
+      place-items: center;
+      color: white;
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: -0.04em;
+      flex-shrink: 0;
+    }
+
+    .brand-copy {
+      min-width: 0;
+    }
+
+    .brand-copy strong {
+      display: block;
+      color: #f4f7fb;
+      font-size: 0.95rem;
+      letter-spacing: -0.02em;
+    }
+
+    .brand-copy span {
+      display: block;
+      color: rgba(244, 247, 251, 0.62);
+      font-size: 0.75rem;
+      font-family: "IBM Plex Mono", monospace;
+    }
+
+    .nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+      justify-content: flex-end;
+    }
+
+    .nav a {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.45rem 0.75rem;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      background: rgba(255, 255, 255, 0.06);
+      color: rgba(244, 247, 251, 0.9);
+      text-decoration: none;
+      font-size: 0.8rem;
+      font-weight: 500;
+      transition: background 160ms var(--ease), border-color 160ms var(--ease), transform 120ms var(--ease);
+    }
+
+    .nav a:hover {
+      background: rgba(255, 255, 255, 0.12);
+      border-color: rgba(255, 255, 255, 0.28);
+    }
+
+    .nav a:active {
+      transform: scale(0.97);
+    }
+
+    .nav a.primary {
+      background: rgba(232, 89, 12, 0.92);
+      border-color: transparent;
+      color: white;
+    }
+
+    .nav a.primary:hover {
+      background: #ff6a1a;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--panel-border);
+      border-radius: calc(var(--radius) + 4px);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      animation: rise 520ms var(--ease) 60ms both;
+    }
+
+    .hero {
+      padding: 1.35rem 1.4rem 1.1rem;
+      border-bottom: 1px solid var(--line);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.7), transparent),
+        linear-gradient(115deg, rgba(232, 89, 12, 0.08), transparent 45%);
+    }
+
+    .hero h1 {
+      margin: 0;
+      font-size: clamp(1.35rem, 2.4vw, 1.7rem);
+      letter-spacing: -0.03em;
+      line-height: 1.15;
+    }
+
+    .hero p {
+      margin: 0.55rem 0 0;
+      color: var(--muted);
+      font-size: 0.92rem;
+      line-height: 1.45;
+      max-width: 38rem;
+    }
+
+    .flow {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      margin-top: 0.95rem;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.28rem 0.6rem;
+      border-radius: 999px;
+      background: #f1f4f8;
+      border: 1px solid #e2e8f0;
+      color: #334155;
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 0.68rem;
+      letter-spacing: 0.01em;
+    }
+
+    .chip::before {
+      content: "";
+      width: 0.4rem;
+      height: 0.4rem;
+      border-radius: 50%;
+      background: var(--accent);
+    }
+
+    .chip:nth-child(2)::before { background: #3877a8; }
+    .chip:nth-child(3)::before { background: #0f7a4c; }
+
+    .body {
+      padding: 1.2rem 1.4rem 1.4rem;
+    }
+
+    .status {
+      display: none;
+      margin: 0 0 1rem;
+      padding: 0.75rem 0.9rem;
+      border-radius: 10px;
+      border: 1px solid transparent;
+      font-size: 0.88rem;
+      line-height: 1.4;
+      animation: rise 280ms var(--ease) both;
+    }
+
+    .status.show { display: block; }
+    .status.ok { background: var(--ok-bg); color: var(--ok); border-color: #b7e4cb; }
+    .status.warn { background: var(--warn-bg); color: var(--warn); border-color: #f0d98a; }
+    .status.err { background: var(--err-bg); color: var(--err); border-color: #f5c2c0; }
+    .status.info { background: #eef4fb; color: #1d4f7a; border-color: #c6daf0; }
+
+    .grid {
+      display: grid;
+      gap: 0.95rem;
+    }
+
+    .row-2 {
+      display: grid;
+      gap: 0.95rem;
+    }
+
+    @media (min-width: 640px) {
+      .row-2 { grid-template-columns: 1fr 1fr; }
+    }
+
+    label {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 0.5rem;
+      margin-bottom: 0.35rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #273041;
+    }
+
+    label .hint {
+      font-weight: 500;
+      color: var(--muted);
+      font-family: "IBM Plex Mono", monospace;
+      font-size: 0.68rem;
+    }
+
+    input[type="text"],
+    textarea,
+    select {
+      width: 100%;
+      font: inherit;
+      color: var(--text);
+      background: #fff;
+      border: 1px solid #cfd7e2;
+      border-radius: 10px;
+      padding: 0.7rem 0.8rem;
+      outline: none;
+      transition: border-color 160ms var(--ease), box-shadow 160ms var(--ease);
+    }
+
+    textarea {
+      min-height: 7.5rem;
+      resize: vertical;
+      line-height: 1.45;
+      font-family: "IBM Plex Sans", sans-serif;
+    }
+
+    input[type="text"]:focus,
+    textarea:focus,
+    select:focus {
+      border-color: #e8590c;
+      box-shadow: 0 0 0 3px rgba(232, 89, 12, 0.18);
+    }
+
+    .counter {
+      margin-top: 0.35rem;
+      display: flex;
+      justify-content: space-between;
+      gap: 0.75rem;
+      color: var(--muted);
+      font-size: 0.72rem;
+      font-family: "IBM Plex Mono", monospace;
+    }
+
+    .counter.over { color: var(--err); }
+
+    .advanced {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      overflow: hidden;
+      background: #f8fafc;
+    }
+
+    .advanced summary {
+      list-style: none;
+      cursor: pointer;
+      user-select: none;
+      padding: 0.85rem 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    .advanced summary::-webkit-details-marker { display: none; }
+
+    .advanced summary .meta {
+      color: var(--muted);
+      font-weight: 500;
+      font-size: 0.72rem;
+      font-family: "IBM Plex Mono", monospace;
+    }
+
+    .advanced summary .chev {
+      width: 1.4rem;
+      height: 1.4rem;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: white;
+      display: grid;
+      place-items: center;
+      transition: transform 180ms var(--ease);
+      flex-shrink: 0;
+    }
+
+    .advanced[open] summary .chev {
+      transform: rotate(90deg);
+    }
+
+    .advanced-body {
+      padding: 0 1rem 1rem;
+      display: grid;
+      gap: 0.85rem;
+    }
+
+    @media (min-width: 640px) {
+      .advanced-body { grid-template-columns: 1fr 1fr; }
+    }
+
+    .advanced-body .span-2 {
+      grid-column: 1 / -1;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.7rem;
+      margin-top: 1.2rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--line);
+    }
+
+    .btn {
+      appearance: none;
+      border: 0;
+      border-radius: 999px;
+      padding: 0.7rem 1.2rem;
+      font: inherit;
+      font-weight: 600;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: transform 120ms var(--ease), background 160ms var(--ease), box-shadow 160ms var(--ease);
+    }
+
+    .btn:active { transform: scale(0.97); }
+
+    .btn-primary {
+      background: linear-gradient(180deg, #ff6d24, #e8590c);
+      color: white;
+      box-shadow: 0 8px 18px rgba(232, 89, 12, 0.28);
+    }
+
+    .btn-primary:hover {
+      background: linear-gradient(180deg, #ff7d3b, #f06418);
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: #405064;
+      border: 1px solid #cfd7e2;
+    }
+
+    .btn-ghost:hover {
+      background: #f1f5f9;
+    }
+
+    .kbd {
+      margin-left: auto;
+      color: var(--muted);
+      font-size: 0.72rem;
+      font-family: "IBM Plex Mono", monospace;
+    }
+
+    .kbd span {
+      display: inline-block;
+      padding: 0.12rem 0.35rem;
+      border: 1px solid #d0d7e1;
+      border-bottom-width: 2px;
+      border-radius: 5px;
+      background: white;
+      color: #334155;
+    }
+
+    .footer-note {
+      margin-top: 1rem;
+      color: rgba(244, 247, 251, 0.58);
+      font-size: 0.75rem;
+      text-align: center;
+      animation: rise 560ms var(--ease) 120ms both;
+    }
+
+    .footer-note a {
+      color: rgba(255, 214, 186, 0.95);
+      text-decoration: none;
+    }
+
+    .footer-note a:hover { text-decoration: underline; }
+
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation: none !important;
+        transition: none !important;
+      }
+    }
   </style>
 </head>
 <body>
-  <h1>Inject MO SMS</h1>
-  <p class="hint">
-    Sends a DELIVER_SM into SMPPSim. If Jasmin is bound as an ESME, Jasmin receives it,
-    matches your MO route, and POSTs to your HTTP connector URL.
-  </p>
-  <p class="msg">$$message$$</p>
+  <div class="shell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">MO</div>
+        <div class="brand-copy">
+          <strong>SMPPSim</strong>
+          <span>deliver_sm injector</span>
+        </div>
+      </div>
+      <nav class="nav" aria-label="SMPPSim navigation">
+        <a class="primary" href="index.htm">← Control panel</a>
+        <a href="index.htm?refresh">Refresh</a>
+        <a href="user-guide.htm" target="userguide">User guide</a>
+      </nav>
+    </header>
 
-  <form method="get" action="inject_mo">
-    <label for="short_message">Message text</label>
-    <textarea id="short_message" name="short_message" rows="4" cols="80">$$short_message$$</textarea>
+    <main class="panel">
+      <section class="hero">
+        <h1>Inject an MO message</h1>
+        <p>
+          Queue a <code>DELIVER_SM</code> into SMPPSim. If Jasmin is bound as an ESME,
+          it receives the PDU, matches your MO route, and forwards to the HTTP connector.
+        </p>
+        <div class="flow" aria-hidden="true">
+          <span class="chip">phone → SMSC</span>
+          <span class="chip">SMPPSim → Jasmin</span>
+          <span class="chip">MO route → HTTP</span>
+        </div>
+      </section>
 
-    <label for="source_addr">From (source_addr)</label>
-    <input id="source_addr" type="text" name="source_addr" value="$$source_addr$$" />
+      <section class="body">
+        <div id="status" class="status" role="status" aria-live="polite">$$message$$</div>
 
-    <label for="destination_addr">To (destination_addr)</label>
-    <input id="destination_addr" type="text" name="destination_addr" value="$$dest_addr$$" />
+        <form id="mo-form" method="get" action="inject_mo">
+          <div class="grid">
+            <div>
+              <label for="short_message">
+                Message text
+                <span class="hint">short_message</span>
+              </label>
+              <textarea id="short_message" name="short_message" rows="5" maxlength="1000" required>$$short_message$$</textarea>
+              <div class="counter" id="counter">
+                <span><span id="char-count">0</span> / 160 GSM chars</span>
+                <span id="segment-hint">1 segment</span>
+              </div>
+            </div>
 
-    <!-- Defaults SMPPSim / Jasmin expect; leave as-is unless debugging -->
-    <div class="hidden">
-      <input type="text" name="service_type" value="$$service_type$$" />
-      <input type="text" name="source_addr_ton" value="$$source_addr_ton$$" />
-      <input type="text" name="source_addr_npi" value="$$source_addr_npi$$" />
-      <input type="text" name="dest_addr_ton" value="$$dest_addr_ton$$" />
-      <input type="text" name="dest_addr_npi" value="$$dest_addr_npi$$" />
-      <input type="text" name="esm_class" value="$$esm_class$$" />
-      <input type="text" name="protocol_ID" value="$$protocol_id$$" />
-      <input type="text" name="priority_flag" value="$$priority_flag$$" />
-      <input type="text" name="registered_delivery_flag" value="$$registered_delivery_flag$$" />
-      <input type="text" name="data_coding" value="$$data_coding$$" />
-      <input type="text" name="user_message_reference" value="$$user_message_reference$$" />
-      <input type="text" name="source_port" value="$$source_port$$" />
-      <input type="text" name="destination_port" value="$$destination_port$$" />
-      <input type="text" name="sar_msg_ref_num" value="$$sar_msg_ref_num$$" />
-      <input type="text" name="sar_total_segments" value="$$sar_total_segments$$" />
-      <input type="text" name="sar_segment_seqnum" value="$$sar_segment_seqnum$$" />
-      <input type="text" name="user_response_code" value="$$user_response_code$$" />
-      <input type="text" name="privacy_indicator" value="$$privacy_indicator$$" />
-      <input type="text" name="payload_type" value="$$payload_type$$" />
-      <input type="text" name="message_payload" value="$$message_payload$$" />
-      <input type="text" name="callback_num" value="$$callback_num$$" />
-      <input type="text" name="source_subaddress" value="$$source_subaddress$$" />
-      <input type="text" name="dest_subaddress" value="$$dest_subaddress$$" />
-      <input type="text" name="language_indicator" value="$$language_indicator$$" />
-      <input type="text" name="tlv1_tag" value="$$tlv1_tag$$" />
-      <input type="text" name="tlv1_len" value="$$tlv1_len$$" />
-      <input type="text" name="tlv1_val" value="$$tlv1_val$$" />
-      <input type="text" name="tlv2_tag" value="$$tlv2_tag$$" />
-      <input type="text" name="tlv2_len" value="$$tlv2_len$$" />
-      <input type="text" name="tlv2_val" value="$$tlv2_val$$" />
-      <input type="text" name="tlv3_tag" value="$$tlv3_tag$$" />
-      <input type="text" name="tlv3_len" value="$$tlv3_len$$" />
-      <input type="text" name="tlv3_val" value="$$tlv3_val$$" />
-      <input type="text" name="tlv4_tag" value="$$tlv4_tag$$" />
-      <input type="text" name="tlv4_len" value="$$tlv4_len$$" />
-      <input type="text" name="tlv4_val" value="$$tlv4_val$$" />
-    </div>
+            <div class="row-2">
+              <div>
+                <label for="source_addr">
+                  From
+                  <span class="hint">source_addr</span>
+                </label>
+                <input id="source_addr" type="text" name="source_addr" value="$$source_addr$$" autocomplete="off" required />
+              </div>
+              <div>
+                <label for="destination_addr">
+                  To
+                  <span class="hint">destination_addr</span>
+                </label>
+                <input id="destination_addr" type="text" name="destination_addr" value="$$dest_addr$$" autocomplete="off" required />
+              </div>
+            </div>
 
-    <p class="actions">
-      <input type="submit" name="submit" value="Send MO" />
+            <details class="advanced" id="advanced">
+              <summary>
+                <span>
+                  Advanced SMPP fields
+                  <span class="meta">TON · NPI · coding · TLVs</span>
+                </span>
+                <span class="chev" aria-hidden="true">›</span>
+              </summary>
+              <div class="advanced-body">
+                <div>
+                  <label for="service_type">service_type</label>
+                  <input id="service_type" type="text" name="service_type" value="$$service_type$$" />
+                </div>
+                <div>
+                  <label for="data_coding">data_coding</label>
+                  <input id="data_coding" type="text" name="data_coding" value="$$data_coding$$" />
+                </div>
+                <div>
+                  <label for="source_addr_ton">source_addr_ton</label>
+                  <input id="source_addr_ton" type="text" name="source_addr_ton" value="$$source_addr_ton$$" />
+                </div>
+                <div>
+                  <label for="source_addr_npi">source_addr_npi</label>
+                  <input id="source_addr_npi" type="text" name="source_addr_npi" value="$$source_addr_npi$$" />
+                </div>
+                <div>
+                  <label for="dest_addr_ton">dest_addr_ton</label>
+                  <input id="dest_addr_ton" type="text" name="dest_addr_ton" value="$$dest_addr_ton$$" />
+                </div>
+                <div>
+                  <label for="dest_addr_npi">dest_addr_npi</label>
+                  <input id="dest_addr_npi" type="text" name="dest_addr_npi" value="$$dest_addr_npi$$" />
+                </div>
+                <div>
+                  <label for="esm_class">esm_class</label>
+                  <input id="esm_class" type="text" name="esm_class" value="$$esm_class$$" />
+                </div>
+                <div>
+                  <label for="protocol_ID">protocol_ID</label>
+                  <input id="protocol_ID" type="text" name="protocol_ID" value="$$protocol_id$$" />
+                </div>
+                <div>
+                  <label for="priority_flag">priority_flag</label>
+                  <input id="priority_flag" type="text" name="priority_flag" value="$$priority_flag$$" />
+                </div>
+                <div>
+                  <label for="registered_delivery_flag">registered_delivery_flag</label>
+                  <input id="registered_delivery_flag" type="text" name="registered_delivery_flag" value="$$registered_delivery_flag$$" />
+                </div>
+                <div>
+                  <label for="user_message_reference">user_message_reference</label>
+                  <input id="user_message_reference" type="text" name="user_message_reference" value="$$user_message_reference$$" />
+                </div>
+                <div>
+                  <label for="source_port">source_port</label>
+                  <input id="source_port" type="text" name="source_port" value="$$source_port$$" />
+                </div>
+                <div>
+                  <label for="destination_port">destination_port</label>
+                  <input id="destination_port" type="text" name="destination_port" value="$$destination_port$$" />
+                </div>
+                <div>
+                  <label for="sar_msg_ref_num">sar_msg_ref_num</label>
+                  <input id="sar_msg_ref_num" type="text" name="sar_msg_ref_num" value="$$sar_msg_ref_num$$" />
+                </div>
+                <div>
+                  <label for="sar_total_segments">sar_total_segments</label>
+                  <input id="sar_total_segments" type="text" name="sar_total_segments" value="$$sar_total_segments$$" />
+                </div>
+                <div>
+                  <label for="sar_segment_seqnum">sar_segment_seqnum</label>
+                  <input id="sar_segment_seqnum" type="text" name="sar_segment_seqnum" value="$$sar_segment_seqnum$$" />
+                </div>
+                <div>
+                  <label for="user_response_code">user_response_code</label>
+                  <input id="user_response_code" type="text" name="user_response_code" value="$$user_response_code$$" />
+                </div>
+                <div>
+                  <label for="privacy_indicator">privacy_indicator</label>
+                  <input id="privacy_indicator" type="text" name="privacy_indicator" value="$$privacy_indicator$$" />
+                </div>
+                <div>
+                  <label for="payload_type">payload_type</label>
+                  <input id="payload_type" type="text" name="payload_type" value="$$payload_type$$" />
+                </div>
+                <div class="span-2">
+                  <label for="message_payload">message_payload</label>
+                  <input id="message_payload" type="text" name="message_payload" value="$$message_payload$$" />
+                </div>
+                <div class="span-2">
+                  <label for="callback_num">callback_num</label>
+                  <input id="callback_num" type="text" name="callback_num" value="$$callback_num$$" />
+                </div>
+                <div>
+                  <label for="source_subaddress">source_subaddress</label>
+                  <input id="source_subaddress" type="text" name="source_subaddress" value="$$source_subaddress$$" />
+                </div>
+                <div>
+                  <label for="dest_subaddress">dest_subaddress</label>
+                  <input id="dest_subaddress" type="text" name="dest_subaddress" value="$$dest_subaddress$$" />
+                </div>
+                <div>
+                  <label for="language_indicator">language_indicator</label>
+                  <input id="language_indicator" type="text" name="language_indicator" value="$$language_indicator$$" />
+                </div>
+                <div>
+                  <label for="tlv1_tag">tlv1_tag</label>
+                  <input id="tlv1_tag" type="text" name="tlv1_tag" value="$$tlv1_tag$$" />
+                </div>
+                <div>
+                  <label for="tlv1_len">tlv1_len</label>
+                  <input id="tlv1_len" type="text" name="tlv1_len" value="$$tlv1_len$$" />
+                </div>
+                <div>
+                  <label for="tlv1_val">tlv1_val</label>
+                  <input id="tlv1_val" type="text" name="tlv1_val" value="$$tlv1_val$$" />
+                </div>
+                <div>
+                  <label for="tlv2_tag">tlv2_tag</label>
+                  <input id="tlv2_tag" type="text" name="tlv2_tag" value="$$tlv2_tag$$" />
+                </div>
+                <div>
+                  <label for="tlv2_len">tlv2_len</label>
+                  <input id="tlv2_len" type="text" name="tlv2_len" value="$$tlv2_len$$" />
+                </div>
+                <div>
+                  <label for="tlv2_val">tlv2_val</label>
+                  <input id="tlv2_val" type="text" name="tlv2_val" value="$$tlv2_val$$" />
+                </div>
+                <div>
+                  <label for="tlv3_tag">tlv3_tag</label>
+                  <input id="tlv3_tag" type="text" name="tlv3_tag" value="$$tlv3_tag$$" />
+                </div>
+                <div>
+                  <label for="tlv3_len">tlv3_len</label>
+                  <input id="tlv3_len" type="text" name="tlv3_len" value="$$tlv3_len$$" />
+                </div>
+                <div>
+                  <label for="tlv3_val">tlv3_val</label>
+                  <input id="tlv3_val" type="text" name="tlv3_val" value="$$tlv3_val$$" />
+                </div>
+                <div>
+                  <label for="tlv4_tag">tlv4_tag</label>
+                  <input id="tlv4_tag" type="text" name="tlv4_tag" value="$$tlv4_tag$$" />
+                </div>
+                <div>
+                  <label for="tlv4_len">tlv4_len</label>
+                  <input id="tlv4_len" type="text" name="tlv4_len" value="$$tlv4_len$$" />
+                </div>
+                <div>
+                  <label for="tlv4_val">tlv4_val</label>
+                  <input id="tlv4_val" type="text" name="tlv4_val" value="$$tlv4_val$$" />
+                </div>
+              </div>
+            </details>
+          </div>
+
+          <div class="actions">
+            <button class="btn btn-primary" type="submit" name="submit" value="Submit">Send MO</button>
+            <button class="btn btn-ghost" type="button" id="fill-sample">Fill sample</button>
+            <div class="kbd">Tip: <span>⌘</span>/<span>Ctrl</span> + <span>Enter</span></div>
+          </div>
+        </form>
+      </section>
+    </main>
+
+    <p class="footer-note">
+      Bound to Jasmin? Start from the
+      <a href="index.htm">control panel</a>
+      and confirm RX/TRX sessions before injecting.
     </p>
-  </form>
+  </div>
+
+  <script>
+    (function () {
+      var form = document.getElementById("mo-form");
+      var message = document.getElementById("short_message");
+      var counter = document.getElementById("counter");
+      var charCount = document.getElementById("char-count");
+      var segmentHint = document.getElementById("segment-hint");
+      var status = document.getElementById("status");
+      var fillSample = document.getElementById("fill-sample");
+
+      function classifyStatus(text) {
+        var t = (text || "").toLowerCase();
+        if (!t.trim()) return null;
+        if (t.indexOf("error") !== -1 || t.indexOf("fail") !== -1 || t.indexOf("invalid") !== -1) return "err";
+        if (t.indexOf("success") !== -1 || t.indexOf("queued") !== -1 || t.indexOf("injected") !== -1) return "ok";
+        if (t.indexOf("warning") !== -1 || t.indexOf("pending") !== -1) return "warn";
+        return "info";
+      }
+
+      function renderStatus() {
+        var raw = (status.textContent || "").replace(/\$\$message\$\$/g, "").trim();
+        status.textContent = raw;
+        status.className = "status";
+        var kind = classifyStatus(raw);
+        if (!kind) return;
+        status.classList.add("show", kind);
+      }
+
+      function updateCounter() {
+        var len = (message.value || "").length;
+        charCount.textContent = String(len);
+        var segments = len === 0 ? 0 : (len <= 160 ? 1 : Math.ceil(len / 153));
+        segmentHint.textContent = segments + (segments === 1 ? " segment" : " segments");
+        if (len > 160) counter.classList.add("over");
+        else counter.classList.remove("over");
+      }
+
+      message.addEventListener("input", updateCounter);
+      updateCounter();
+      renderStatus();
+
+      fillSample.addEventListener("click", function () {
+        message.value = "Hello from SMPPSim MO inject";
+        document.getElementById("source_addr").value = "256700000001";
+        document.getElementById("destination_addr").value = "8000";
+        updateCounter();
+        message.focus();
+      });
+
+      form.addEventListener("keydown", function (event) {
+        if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
+          event.preventDefault();
+          form.requestSubmit();
+        }
+      });
+    })();
+  </script>
 </body>
 </html>

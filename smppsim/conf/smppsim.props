@@ -37,16 +37,16 @@ PERCENTAGE_THAT_TRANSITION=75
 # add up to 100 and must be integer values. SMPPSim will adjust the percentages if they do not.
 
 # Percentage of messages that will transition from ENROUTE to DELIVERED
-PERCENTAGE_DELIVERED=90
+PERCENTAGE_DELIVERED=97
 
 # Percentage of messages that will transition from ENROUTE to UNDELIVERABLE
-PERCENTAGE_UNDELIVERABLE=6
+PERCENTAGE_UNDELIVERABLE=2
 
 # Percentage of messages that will transition from ENROUTE to ACCEPTED
-PERCENTAGE_ACCEPTED=2
+PERCENTAGE_ACCEPTED=0
 
 # Percentage of messages that will transition from ENROUTE to REJECTED
-PERCENTAGE_REJECTED=2
+PERCENTAGE_REJECTED=1
 
 # Time messages held in queue before being discarded, after a final state has been reached (milliseconds)
 # For example, after transitioning to DELIVERED (a final state), state info about this message will be
