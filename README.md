@@ -206,7 +206,12 @@ Pick a domain, for example `example.com`. Create these names:
 | `sms.example.com` | Jasmin HTTP: `/send` on 1401, `/secure/*` on REST 9010 |
 | `sim.example.com` | SMPPSim web UI (same thing as host port 88) |
 
-No SMPP hostname. Jasmin's built-in test SMSC listens on **TCP 2775** on the server IP. If you want an ESME to bind and try that, open **2775** on the firewall (and restrict it to known IPs if you can). Otherwise leave 2775 closed.
+No SMPP hostname. Bind ports are on the server IP:
+
+- **2775**: Jasmin's built-in test SMSC. Open this if you want an ESME to bind to Jasmin.
+- **2776**: SMPPSim's SMPP port. Open this if you want an ESME to bind to SMPPSim (same fake SMSC as the web UI on port 88). Joyce/Jasmin in Docker already use `smppsim:2776` without opening this.
+
+Restrict those ports to known IPs if you can. Leave them closed if you do not need external binds.
 
 ### 2. Get the code and the env file
 
@@ -260,7 +265,7 @@ sudo certbot --nginx \
 
 Certbot will add HTTPS.
 
-Firewall: open **80** and **443**. Open **2775** only if you want clients to bind to Jasmin's test SMSC on the public IP. Keep **9003**, **9010**, **1401**, **88**, **8988**, **8989**, and **8990** closed to the world (they are loopback only). From the server you can jcli with `telnet 127.0.0.1 8990`. Port **88** is still how you hit SMPPSim on the box itself (`http://127.0.0.1:88`). Public users should use `https://sim.example.com`.
+Firewall: open **80** and **443**. Open **2775** if you want clients to bind to Jasmin's test SMSC. Open **2776** if you want clients to bind to SMPPSim. Keep **9003**, **9010**, **1401**, **88**, **8988**, **8989**, and **8990** closed to the world (they are loopback only). From the server you can jcli with `telnet 127.0.0.1 8990`. Port **88** is still how you hit SMPPSim on the box itself (`http://127.0.0.1:88`). Public users should use `https://sim.example.com`.
 
 Feel free to publish the containers on other host ports if these clash with something else on the box. Edit the `"host:container"` mappings in `docker-compose.prod.yml`, then point `deploy/nginx.conf` `proxy_pass` at the new loopback ports. Container-to-container traffic (Joyce to Jasmin, Jasmin to `smppsim:2776`) does not use those host ports, so leave the internal names and ports as they are.
 

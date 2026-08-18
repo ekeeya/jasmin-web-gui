@@ -142,9 +142,9 @@ services:
     container_name: smppsim
     ports:
       - "127.0.0.1:88:88"
-      # SMPP listen (SMPPSim). Jasmin already uses smppsim:2776 on the compose
-      # network; this publish is so you can bind from the host (127.0.0.1:2776).
-      - "127.0.0.1:2776:2776"
+      # SMPPSim SMPP. Open 2776 on the host firewall if ESMEs should bind here.
+      # Jasmin in Docker already uses smppsim:2776 without this publish.
+      - "2776:2776"
     restart: "no"
     security_opt:
       - no-new-privileges:true

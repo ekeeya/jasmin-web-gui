@@ -4,7 +4,7 @@ TLS on the box. No nginx container. Site nginx lives in a **gitignored** `deploy
 
 ## DNS
 
-Point `joyce`, `sms`, and `sim` at the Ubuntu public IP. There is no `jasmin.*` or SMPP subdomain. REST stays on loopback (`127.0.0.1:9010`). Open TCP **2775** on the public IP only if you want ESMEs to bind to Jasmin's test SMSC. jcli is `127.0.0.1:8990`.
+Point `joyce`, `sms`, and `sim` at the Ubuntu public IP. There is no `jasmin.*` or SMPP subdomain. REST stays on loopback (`127.0.0.1:9010`). Open TCP **2775** if you want ESMEs to bind to Jasmin's test SMSC. Open **2776** if you want ESMEs to bind to SMPPSim. jcli is `127.0.0.1:8990`.
 
 ## Host nginx routes (`deploy/nginx.conf.example`)
 
@@ -23,7 +23,7 @@ sudo certbot --nginx -d joyce.example.com \
   -d sms.example.com -d sim.example.com
 ```
 
-Open firewall: `80`, `443`. Open `2775` only to bind to Jasmin's test SMSC. Do not open `9003`, `9010`, `1401`, `88`, `8988`, `8989`, `8990`.
+Open firewall: `80`, `443`. Open `2775` to bind to Jasmin's test SMSC. Open `2776` to bind to SMPPSim. Do not open `9003`, `9010`, `1401`, `88`, `8988`, `8989`, `8990`.
 
 ## Docker
 
