@@ -10,7 +10,7 @@ Point `joyce`, `jasmin`, `sms`, `sim`, and `smpp` at the Ubuntu public IP (`smpp
 
 | HTTPS | Loopback | Container |
 |-------|----------|-----------|
-| `joyce.<domain>` | `127.0.0.1:9000` | `joyce` (Gunicorn) |
+| `joyce.<domain>` | `127.0.0.1:9003` | `joyce` (Gunicorn) |
 | `jasmin.<domain>` | `127.0.0.1:8080` | `jasmin_rest` |
 | `sms.<domain>` | `127.0.0.1:1401` | `jasmin` HTTP API |
 | `sim.<domain>` | `127.0.0.1:88` | `smppsim` |

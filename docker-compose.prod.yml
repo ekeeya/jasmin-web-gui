@@ -27,8 +27,10 @@ x-joyce-environment: &joyce-environment
   JASMIN_SMPP_PB_USERNAME: ${JASMIN_SMPP_PB_USERNAME:-cmadmin}
   JASMIN_SMPP_PB_PASSWORD: ${JASMIN_SMPP_PB_PASSWORD:-cmpwd}
   JASMIN_HTTP_API_URL: http://jasmin:1401
+  # Container port stays 8080. Host publish is 9010 (see jasmin_rest.ports).
   JASMIN_REST_API_URL: http://jasmin_rest:8080
 
+  # DLR URL is compose DNS + Gunicorn's bind inside the joyce container.
   JOYCE_PUBLIC_BASE_URL: ${JOYCE_PUBLIC_BASE_URL:-http://joyce:9000}
   JOYCE_CREDENTIALS_KEY: ${JOYCE_CREDENTIALS_KEY:-}
 
@@ -37,8 +39,9 @@ x-joyce-environment: &joyce-environment
 
   DEBUG: ${DEBUG:-False}
   ALLOWED_HOSTS: ${ALLOWED_HOSTS:-*}
-  CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS:-http://localhost:9000}
+  CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS:-http://127.0.0.1:9003,http://localhost:9003}
 
+  # Listen inside the joyce container. Host maps 9003 -> this port.
   GUNICORN_BIND: ${GUNICORN_BIND:-0.0.0.0:9000}
   GUNICORN_WORKERS: ${GUNICORN_WORKERS:-3}
 
@@ -111,6 +114,7 @@ services:
     restart: "no"
     container_name: jasmin_rest
     ports:
+      # host:container  (browser/nginx use 9010; app inside listens on 8080)
       - "127.0.0.1:9010:8080"
     depends_on:
       - jasmin
@@ -156,7 +160,8 @@ services:
     environment:
       <<: *joyce-environment
     ports:
-      - "127.0.0.1:9000:9000"
+      # host:container  (nginx -> 9003; Gunicorn still binds 9000 in the container)
+      - "127.0.0.1:9003:9000"
 
   joyce_celery:
     image: joyce-app:latest

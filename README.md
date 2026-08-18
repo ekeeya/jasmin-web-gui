@@ -297,7 +297,7 @@ To stop the containers, use `sudo systemctl stop joyce`. That runs Compose `down
 
 ```bash
 docker compose -f docker-compose.prod.yml --env-file .env.prod ps
-curl -I http://127.0.0.1:9000
+curl -I http://127.0.0.1:9003
 curl -I http://127.0.0.1:88
 ```
 
