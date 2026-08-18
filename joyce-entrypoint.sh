@@ -8,9 +8,9 @@ cd /app
 export DB_HOST="${DB_HOST:-host.docker.internal}"
 
 # As requested: copy from sample on every start.
-if [ -f "/app/quark/datasource.py.sample" ]; then
-  cp "/app/quark/datasource.py.sample" "/app/quark/datasource.py"
-fi
+#if [ -f "/app/quark/datasource.py.sample" ]; then
+#  cp "/app/quark/datasource.py.sample" "/app/quark/datasource.py"
+#fi
 
 cat /app/quark/datasource.py
 # Wait briefly for DB connectivity (helps avoid race conditions).
@@ -32,22 +32,16 @@ done
 
 python manage.py migrate --noinput
 
-# Worker / beat / other commands: skip collectstatic + runserver
+# Worker / beat / other commands: skip collectstatic + gunicorn
 if [ "$#" -gt 0 ]; then
   exec "$@"
 fi
 
-# Collect static files for Django.
 python manage.py collectstatic --noinput
 
-# Production: GUNICORN_BIND=0.0.0.0:9000  Local compose: leave unset → runserver :8000
-if [ -n "${GUNICORN_BIND:-}" ]; then
-  exec gunicorn quark.wsgi:application \
-    --bind "${GUNICORN_BIND}" \
-    --workers "${GUNICORN_WORKERS:-3}" \
-    --timeout "${GUNICORN_TIMEOUT:-120}" \
-    --access-logfile - \
-    --error-logfile -
-fi
-
-exec python manage.py runserver 0.0.0.0:8000
+exec gunicorn quark.wsgi:application \
+  --bind "${GUNICORN_BIND:-0.0.0.0:9000}" \
+  --workers "${GUNICORN_WORKERS:-3}" \
+  --timeout "${GUNICORN_TIMEOUT:-120}" \
+  --access-logfile - \
+  --error-logfile -

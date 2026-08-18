@@ -67,8 +67,17 @@ class JasminGroupCRUDL(SmartCRUDL):
                 form.cleaned_data["workspace"],
                 form.cleaned_data["description"],
             )
-            form.instance.pk = self.object.pk  # set it so we skip re-saving it in mixin form_valid
-            return super().form_valid(form)
+            form.instance = self.object
+            # ModalFormMixin.form_valid always form.save()s. That second save
+            # has created_by empty and would violate the NOT NULL constraint
+            # (and push the group to Jasmin again).
+            message = "Action executed successfully"
+            if "HTTP_X_AJAX_MODAL" in self.request.META:
+                return JsonResponse(
+                    dict(success=True, message=message, redirect_to=self.get_success_url()),
+                    safe=False,
+                )
+            return HttpResponseRedirect(self.get_success_url())
 
     class List(InjectModalFormMixin, BaseListView):
         title = "Jasmin Groups"
@@ -668,8 +677,14 @@ class JasminInterceptorCRUDL(SmartCRUDL):
                 interceptor.delete(run_on_reactor=False)
                 raise
 
-            form.instance.pk = interceptor.pk
-            return super().form_valid(form)
+            form.instance = interceptor
+            message = "Action executed successfully"
+            if "HTTP_X_AJAX_MODAL" in self.request.META:
+                return JsonResponse(
+                    dict(success=True, message=message, redirect_to=self.get_success_url()),
+                    safe=False,
+                )
+            return HttpResponseRedirect(self.get_success_url())
 
     class List(InjectModalFormMixin, BaseListView):
         title = "Interceptors"

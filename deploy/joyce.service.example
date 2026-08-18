@@ -1,0 +1,18 @@
+[Unit]
+Description=Joyce SMS stack (Docker Compose)
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+TimeoutStartSec=0
+WorkingDirectory=@JOYCE_ROOT@
+EnvironmentFile=-@JOYCE_ROOT@/.env.prod
+ExecStart=/usr/bin/docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --remove-orphans
+ExecStop=/usr/bin/docker compose -f docker-compose.prod.yml --env-file .env.prod down
+ExecReload=/usr/bin/docker compose -f docker-compose.prod.yml --env-file .env.prod up -d --remove-orphans
+
+[Install]
+WantedBy=multi-user.target

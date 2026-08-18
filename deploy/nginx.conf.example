@@ -1,0 +1,98 @@
+# Sample host nginx (HTTP only). Copy and replace example.com:
+#   cp deploy/nginx.conf.example deploy/nginx.conf
+#   sudo cp deploy/nginx.conf /etc/nginx/sites-available/joyce
+#   sudo ln -s /etc/nginx/sites-available/joyce /etc/nginx/sites-enabled/
+#   sudo nginx -t && sudo systemctl reload nginx
+#   sudo certbot --nginx -d joyce.example.com -d jasmin.example.com \
+#     -d sms.example.com -d sim.example.com
+#
+# smpp.example.com is TCP 2775 — no server{} here.
+#
+# Loopback backends:
+#   joyce       127.0.0.1:9000
+#   jasmin REST 127.0.0.1:8080
+#   jasmin HTTP 127.0.0.1:1401
+#   smppsim     127.0.0.1:88
+
+server {
+    listen 80;
+    listen [::]:80;
+    server_name joyce.example.com;
+
+    client_max_body_size 20m;
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/html;
+    }
+
+    location / {
+        proxy_pass http://127.0.0.1:9000;
+        proxy_http_version 1.1;
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 120s;
+    }
+}
+
+server {
+    listen 80;
+    listen [::]:80;
+    server_name jasmin.example.com;
+
+    client_max_body_size 20m;
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/html;
+    }
+
+    location / {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_http_version 1.1;
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 120s;
+    }
+}
+
+server {
+    listen 80;
+    listen [::]:80;
+    server_name sms.example.com;
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/html;
+    }
+
+    location / {
+        proxy_pass http://127.0.0.1:1401;
+        proxy_http_version 1.1;
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 120s;
+    }
+}
+
+server {
+    listen 80;
+    listen [::]:80;
+    server_name sim.example.com;
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/html;
+    }
+
+    location / {
+        proxy_pass http://127.0.0.1:88;
+        proxy_http_version 1.1;
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}

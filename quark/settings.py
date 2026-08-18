@@ -39,6 +39,10 @@ ALLOWED_HOSTS = [
     for host in os.getenv("ALLOWED_HOSTS", "*").split(",")
     if host.strip()
 ]
+if "*" not in ALLOWED_HOSTS:
+    for _host in ("localhost", "127.0.0.1", "joyce"):
+        if _host not in ALLOWED_HOSTS:
+            ALLOWED_HOSTS.append(_host)
 
 # Comma-separated full origins, e.g. https://joyce.example.com,http://localhost:9000
 _csrf = os.getenv(

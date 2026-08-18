@@ -2,6 +2,9 @@
 venv/
 .env
 .env.prod
+deploy/joyce.service
+deploy/nginx.conf
+deploy/nginx-oddjobs.tech.conf
 .joyce_credentials_key
 .cursor
 # Python
