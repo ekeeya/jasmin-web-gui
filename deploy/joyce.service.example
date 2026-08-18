@@ -11,10 +11,12 @@ TimeoutStopSec=120
 WorkingDirectory=@JOYCE_ROOT@
 EnvironmentFile=-@JOYCE_ROOT@/.env.prod
 # Foreground compose: if any container exits, stop the rest and fail this unit.
+# To stop the stack, use: sudo systemctl stop joyce
+# Do not run `docker compose down` while this unit is active; systemd will start it again.
 ExecStart=/usr/bin/docker compose -f docker-compose.prod.yml --env-file .env.prod up --abort-on-container-exit --remove-orphans
 ExecStop=/usr/bin/docker compose -f docker-compose.prod.yml --env-file .env.prod down
-Restart=on-failure
-RestartSec=10
+# Do not auto-restart: a crash should leave the stack down until you `systemctl start joyce`.
+Restart=no
 
 [Install]
 WantedBy=multi-user.target

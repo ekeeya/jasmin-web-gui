@@ -291,6 +291,8 @@ sudo systemctl restart joyce
 sudo systemctl stop joyce
 ```
 
+To stop the containers, use `sudo systemctl stop joyce`. That runs Compose `down` and keeps systemd from starting them again. If you run `docker compose ... down` while `joyce.service` is still active, systemd treats it as a crash and brings the stack back (including port 9000).
+
 ### 6. Check it is up
 
 ```bash
