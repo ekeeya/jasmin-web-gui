@@ -159,6 +159,9 @@ services:
     security_opt:
       - no-new-privileges:true
 
+  # Joyce (Django + Celery). Leave these on for a full stack.
+  # For IDE debugging, comment out joyce, joyce_celery, and joyce_celery_beat,
+  # then run manage.py / Celery on the host against Jasmin, Redis, and Rabbit below.
   joyce:
     container_name: joyce
     restart: unless-stopped
@@ -219,18 +222,6 @@ services:
     environment:
       <<: *joyce-environment
     command: ["celery", "-A", "quark", "beat", "-l", "INFO"]
-
-  nginx:
-    image: nginx:alpine
-    container_name: joyce_nginx
-    restart: unless-stopped
-    depends_on:
-      - joyce
-    ports:
-      - 8000:80
-    volumes:
-      - joyce_static:/usr/share/nginx/html/static:ro
-      - ./docker/nginx.conf:/etc/nginx/conf.d/default.conf:ro
 
 volumes:
   joyce_static:
