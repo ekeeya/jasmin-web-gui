@@ -203,12 +203,10 @@ Pick a domain, for example `example.com`. Create these names:
 | Name | What it is |
 |------|------------|
 | `joyce.example.com` | Joyce UI and Joyce APIs |
-| `jasmin.example.com` | Jasmin REST (`/secure/send`) |
 | `sms.example.com` | Jasmin classic HTTP API (`/send`) |
 | `sim.example.com` | SMPPSim web UI (same thing as host port 88) |
-| `smpp.example.com` | Jasmin SMPP for real ESMEs, **TCP 2775**, not HTTP |
 
-`smpp` is not a website. ESMEs bind to `smpp.example.com:2775`.
+No SMPP hostname. Jasmin's built-in test SMSC listens on **TCP 2775** on the server IP. If you want an ESME to bind and try that, open **2775** on the firewall (and restrict it to known IPs if you can). Otherwise leave 2775 closed.
 
 ### 2. Get the code and the env file
 
@@ -232,7 +230,7 @@ ALLOWED_HOSTS=joyce.example.com
 CSRF_TRUSTED_ORIGINS=https://joyce.example.com
 
 # Jasmin must call Joyce *inside* Docker, not via the public hostname
-JOYCE_PUBLIC_BASE_URL=http://joyce:9000
+JOYCE_PUBLIC_BASE_URL=http://joyce:8000
 ```
 
 If Postgres runs on the Ubuntu host, allow Docker in `pg_hba.conf` (for example `172.16.0.0/12`) and reload Postgres.
@@ -256,14 +254,13 @@ sudo nginx -t && sudo systemctl reload nginx
 ```bash
 sudo certbot --nginx \
   -d joyce.example.com \
-  -d jasmin.example.com \
   -d sms.example.com \
   -d sim.example.com
 ```
 
-Certbot will add HTTPS. Leave `smpp.example.com` out of this list.
+Certbot will add HTTPS.
 
-Firewall: open **80**, **443**, and **2775**. Keep **9000**, **8080**, **1401**, **88**, **8988**, and **8989** closed to the world. Docker already binds those HTTP ports to `127.0.0.1` so only host nginx can reach them. Port **88** is still how you hit SMPPSim on the box itself (`http://127.0.0.1:88`). Public users should use `https://sim.example.com`.
+Firewall: open **80** and **443**. Open **2775** only if you want clients to bind to Jasmin's test SMSC on the public IP. Keep **9003**, **9010**, **1401**, **88**, **8988**, **8989**, and **8990** closed to the world (they are loopback only). From the server you can jcli with `telnet 127.0.0.1 8990`. Port **88** is still how you hit SMPPSim on the box itself (`http://127.0.0.1:88`). Public users should use `https://sim.example.com`.
 
 Feel free to publish the containers on other host ports if these clash with something else on the box. Edit the `"host:container"` mappings in `docker-compose.prod.yml`, then point `deploy/nginx.conf` `proxy_pass` at the new loopback ports. Container-to-container traffic (Joyce to Jasmin, Jasmin to `smppsim:2776`) does not use those host ports, so leave the internal names and ports as they are.
 
@@ -304,8 +301,8 @@ curl -I http://127.0.0.1:88
 Then in a browser:
 
 - https://joyce.example.com
-- https://jasmin.example.com
 - https://sim.example.com (SMPPSim UI, same as **host:88**)
+- On the server: `telnet 127.0.0.1 8990` for jcli
 
 ### 7. First login in Joyce
 
@@ -329,7 +326,7 @@ Then in a browser:
 5. Start the connector. Add an MT route that uses it. Send a test SMS from Joyce.
 6. If you are on SMPPSim, test **MO** at https://sim.example.com/inject_mo.htm (or http://YOUR_SERVER:88/inject_mo.htm on the host). If you are on a real SMSC, MO will come from the network the usual way.
 
-DLRs: Jasmin posts to `http://joyce:9000/dlr` inside Docker. Do not set `JOYCE_PUBLIC_BASE_URL` to the public https hostname or receipts will hairpin and often fail.
+DLRs: Jasmin posts to `http://joyce:8000/dlr` inside Docker. Do not set `JOYCE_PUBLIC_BASE_URL` to the public https hostname or receipts will hairpin and often fail.
 
 More detail lives in [docs/ubuntu-deploy.md](docs/ubuntu-deploy.md).
 

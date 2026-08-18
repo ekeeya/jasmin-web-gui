@@ -4,28 +4,26 @@ TLS on the box. No nginx container. Site nginx lives in a **gitignored** `deploy
 
 ## DNS
 
-Point `joyce`, `jasmin`, `sms`, `sim`, and `smpp` at the Ubuntu public IP (`smpp` is SMPP TCP, not HTTPS).
+Point `joyce`, `sms`, and `sim` at the Ubuntu public IP. There is no `jasmin.*` or SMPP subdomain. REST stays on loopback (`127.0.0.1:9010`). Open TCP **2775** on the public IP only if you want ESMEs to bind to Jasmin's test SMSC. jcli is `127.0.0.1:8990`.
 
 ## Host nginx routes (`deploy/nginx.conf.example`)
 
 | HTTPS | Loopback | Container |
 |-------|----------|-----------|
 | `joyce.<domain>` | `127.0.0.1:9003` | `joyce` (Gunicorn) |
-| `jasmin.<domain>` | `127.0.0.1:8080` | `jasmin_rest` |
 | `sms.<domain>` | `127.0.0.1:1401` | `jasmin` HTTP API |
 | `sim.<domain>` | `127.0.0.1:88` | `smppsim` |
-| `smpp.<domain>:2775` | public TCP | `jasmin` SMPP — **no** `server {}` |
 
 ```bash
 cp deploy/nginx.conf.example deploy/nginx.conf   # edit server_name
 sudo cp deploy/nginx.conf /etc/nginx/sites-available/joyce
 sudo ln -sf /etc/nginx/sites-available/joyce /etc/nginx/sites-enabled/
 sudo nginx -t && sudo systemctl reload nginx
-sudo certbot --nginx -d joyce.example.com -d jasmin.example.com \
+sudo certbot --nginx -d joyce.example.com \
   -d sms.example.com -d sim.example.com
 ```
 
-Open firewall: `80`, `443`, `2775`. Do not open `9000`, `8080`, `1401`, `88`, `8988`, `8989`.
+Open firewall: `80`, `443`. Open `2775` only to bind to Jasmin's test SMSC. Do not open `9003`, `9010`, `1401`, `88`, `8988`, `8989`, `8990`.
 
 ## Docker
 
@@ -39,7 +37,7 @@ docker compose -f docker-compose.prod.yml --env-file .env.prod up -d
 ```
 
 Joyce still uses compose DNS: `jasmin:8988`, `jasmin:8989`, `jasmin:1401`, `jasmin_rest:8080`.  
-DLRs: `JOYCE_PUBLIC_BASE_URL=http://joyce:9000`.
+DLRs: `JOYCE_PUBLIC_BASE_URL=http://joyce:8000`.
 
 ## systemd + deploy script
 

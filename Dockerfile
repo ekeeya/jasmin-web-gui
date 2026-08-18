@@ -29,7 +29,7 @@ RUN python -m pip install --no-cache-dir gunicorn whitenoise
 
 COPY ./joyce-entrypoint.sh /app/docker/joyce-entrypoint.sh
 
-EXPOSE 9000 9000
+EXPOSE 8000
 
 RUN chmod +x /app/docker/joyce-entrypoint.sh
 
