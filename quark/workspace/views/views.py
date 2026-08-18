@@ -425,10 +425,8 @@ class MessagingAPIDocsPDFView(LoginRequiredMixin, WorkspacePermsMixin, View):
 
     def get(self, request, *args, **kwargs):
         workspace = self.derive_workspace()
-        if not workspace or not workspace.messaging_api_enabled:
-            raise PermissionDenied(
-                "Enable the Joyce messaging API in workspace settings to download docs."
-            )
+        if not workspace:
+            raise PermissionDenied()
         send_url = request.build_absolute_uri(reverse("api.v1.messaging_send"))
         pdf_bytes = build_messaging_api_pdf(
             send_url=send_url,
@@ -438,4 +436,6 @@ class MessagingAPIDocsPDFView(LoginRequiredMixin, WorkspacePermsMixin, View):
         response["Content-Disposition"] = (
             'attachment; filename="joyce-messaging-api.pdf"'
         )
+        response["Content-Length"] = str(len(pdf_bytes))
+        response["X-Accel-Buffering"] = "no"
         return response

@@ -1,4 +1,4 @@
-# Guide fonts for Joyce messaging API PDF
+# Fonts for the Joyce messaging API PDF
 
-Liberation Sans and Liberation Mono (SIL Open Font License — see `LICENSE`).
-Metric-compatible with Arial and Courier New; used for readable API guide typography.
+- **IBM Plex Sans / Mono** (SIL Open Font License) for the styled guide.
+- Liberation Sans / Mono remain as a fallback if Plex files are missing.

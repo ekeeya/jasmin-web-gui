@@ -4,6 +4,40 @@ Tired of fiddling with `jcli`? Joyce is a friendly Django interface that lets yo
 
 ![Joyce landing page](docs/screenshots/landing.png)
 
+## Try the live demo
+
+You can click around a running instance at [https://joyce.oddjobs.tech/](https://joyce.oddjobs.tech/).
+
+Sign in with:
+
+- Username: `jdoe`
+- Password: `12345678`
+
+That account uses the **local demo Jasmin** bundled with this server. Groups, users, connectors, and routes you create there are scoped to that workspace. They do not wipe anyone else's config.
+
+Want your own sandbox? Open [https://joyce.oddjobs.tech/workspace/signup/](https://joyce.oddjobs.tech/workspace/signup/) and create a workspace. After signup you land on **Workspace settings**, where you pick how this workspace talks to Jasmin:
+
+1. **Local demo Jasmin**  
+   Use the Jasmin that ships with this Joyce server. Your groups, users, connectors, filters, and routes stay isolated to *your* workspace (Joyce prefixes IDs so they do not collide with other tenants on the same gateway).
+
+2. **My own Jasmin**  
+   Point Joyce at a gateway you run. Fill in Router PB (usually port 8988), SMPP client manager PB (8989), and the HTTP API URL (usually port 1401). Optionally set the REST URL for bulk send. Passwords are encrypted at rest. Those PB ports must be reachable **from the Joyce server** (firewall / VPN), not from your browser.
+
+   Then use **Test connection**. If that succeeds, click **Import from Jasmin** to pull groups, users, SMPP connectors, routes, and interceptors into this workspace. Filters are derived from routes and interceptors (Jasmin has no filter PB). HTTP connectors are taken from MO routes. User passwords cannot be imported (Jasmin only stores hashes).
+
+You can switch a workspace from custom back to the local demo later. Stored custom endpoints are then dropped.
+
+### Test incoming SMS (MO)
+
+The demo SMSC web UI is [https://sim.oddjobs.tech/](https://sim.oddjobs.tech/). To inject a mobile-originated message, use **[https://sim.oddjobs.tech/inject_mo.htm](https://sim.oddjobs.tech/inject_mo.htm)**.
+
+That page talks to **this server's local Jasmin**, not your private gateway. Fill in from/to/text and submit. If your workspace is on Local demo Jasmin, and you have set up:
+
+- an MO filter that matches the test (for example destination or source address), and
+- an MO route that uses an HTTP connector pointing at your callback URL,
+
+Jasmin will forward that MO to your service the same way a real handset would. Use a destination number and HTTP connector URL that belong to *your* workspace so traffic does not hit someone else's route.
+
 ---
 
 ## Purpose

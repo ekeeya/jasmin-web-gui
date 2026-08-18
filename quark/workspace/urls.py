@@ -32,7 +32,7 @@ urlpatterns += [
     re_path(r"^login/$", LoginView.as_view(), name="workspace.login"),
     re_path(r"^users/logout/$", LogoutView.as_view(), name="users.user_logout"),
     re_path(
-        r"^workspace/settings/messaging-api-docs\.pdf$",
+        r"^workspace/settings/messaging-api-docs/$",
         MessagingAPIDocsPDFView.as_view(),
         name="workspace.messaging_api_docs_pdf",
     ),

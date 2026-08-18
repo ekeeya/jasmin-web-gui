@@ -1,5 +1,5 @@
 # Copyright (c) 2026
-"""Build a PDF guide for Joyce's external messaging API."""
+"""Build a print-style PDF manual for Joyce's external messaging API."""
 
 from __future__ import annotations
 
@@ -7,16 +7,18 @@ from io import BytesIO
 from pathlib import Path
 
 from reportlab.lib import colors
-from reportlab.lib.enums import TA_LEFT
+from reportlab.lib.enums import TA_JUSTIFY, TA_RIGHT
 from reportlab.lib.pagesizes import A4
-from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import mm
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import (
+    BaseDocTemplate,
+    Frame,
+    PageTemplate,
     Paragraph,
     Preformatted,
-    SimpleDocTemplate,
     Spacer,
     Table,
     TableStyle,
@@ -25,12 +27,20 @@ from reportlab.platypus import (
 _FONTS_DIR = Path(__file__).resolve().parent / "fonts"
 _FONTS_REGISTERED = False
 
-# Liberation Sans / Mono — metric-compatible with Arial / Courier New; common in guides.
 FONT_SANS = "JoyceSans"
+FONT_SANS_MED = "JoyceSans-Medium"
 FONT_SANS_BOLD = "JoyceSans-Bold"
 FONT_SANS_ITALIC = "JoyceSans-Italic"
 FONT_MONO = "JoyceMono"
-FONT_MONO_BOLD = "JoyceMono-Bold"
+FONT_MONO_MED = "JoyceMono-Medium"
+
+INK = colors.HexColor("#12141a")
+INK_SOFT = colors.HexColor("#3d4450")
+RULE = colors.HexColor("#e4e0d8")
+PAPER = colors.HexColor("#faf8f4")
+CODE_BG = colors.HexColor("#f3efe6")
+ACCENT = colors.HexColor("#c45c26")
+HEAD_BG = colors.HexColor("#12141a")
 
 
 def _register_fonts() -> None:
@@ -38,21 +48,28 @@ def _register_fonts() -> None:
     if _FONTS_REGISTERED:
         return
 
-    pairs = (
+    plex = (
+        (FONT_SANS, "IBMPlexSans-Regular.ttf"),
+        (FONT_SANS_MED, "IBMPlexSans-Medium.ttf"),
+        (FONT_SANS_BOLD, "IBMPlexSans-SemiBold.ttf"),
+        (FONT_SANS_ITALIC, "IBMPlexSans-Italic.ttf"),
+        (FONT_MONO, "IBMPlexMono-Regular.ttf"),
+        (FONT_MONO_MED, "IBMPlexMono-Medium.ttf"),
+    )
+    liberation = (
         (FONT_SANS, "LiberationSans-Regular.ttf"),
+        (FONT_SANS_MED, "LiberationSans-Bold.ttf"),
         (FONT_SANS_BOLD, "LiberationSans-Bold.ttf"),
         (FONT_SANS_ITALIC, "LiberationSans-Italic.ttf"),
         (FONT_MONO, "LiberationMono-Regular.ttf"),
-        (FONT_MONO_BOLD, "LiberationMono-Bold.ttf"),
+        (FONT_MONO_MED, "LiberationMono-Bold.ttf"),
     )
-    for name, filename in pairs:
+    use = plex if (_FONTS_DIR / "IBMPlexSans-Regular.ttf").is_file() else liberation
+    for name, filename in use:
         path = _FONTS_DIR / filename
         if not path.is_file():
-            raise FileNotFoundError(
-                f"Missing guide font {path}. Expected Liberation fonts under {_FONTS_DIR}."
-            )
+            raise FileNotFoundError(f"Missing guide font {path}")
         pdfmetrics.registerFont(TTFont(name, str(path)))
-
     pdfmetrics.registerFontFamily(
         FONT_SANS,
         normal=FONT_SANS,
@@ -63,147 +80,290 @@ def _register_fonts() -> None:
     _FONTS_REGISTERED = True
 
 
-def build_messaging_api_pdf(*, send_url: str, workspace_name: str = "") -> bytes:
-    """Return PDF bytes documenting POST /api/v1/messaging/send/ for integrators."""
-    _register_fonts()
+def _styles() -> dict[str, ParagraphStyle]:
+    return {
+        "kicker": ParagraphStyle(
+            "kicker",
+            fontName=FONT_SANS_MED,
+            fontSize=8,
+            leading=11,
+            textColor=ACCENT,
+            spaceAfter=6,
+            tracking=1.2,
+        ),
+        "title": ParagraphStyle(
+            "title",
+            fontName=FONT_SANS_BOLD,
+            fontSize=26,
+            leading=32,
+            textColor=INK,
+            spaceAfter=8,
+        ),
+        "lede": ParagraphStyle(
+            "lede",
+            fontName=FONT_SANS,
+            fontSize=11.5,
+            leading=17,
+            textColor=INK_SOFT,
+            spaceAfter=16,
+            alignment=TA_JUSTIFY,
+        ),
+        "h2": ParagraphStyle(
+            "h2",
+            fontName=FONT_SANS_BOLD,
+            fontSize=13.5,
+            leading=18,
+            textColor=INK,
+            spaceBefore=18,
+            spaceAfter=8,
+        ),
+        "h3": ParagraphStyle(
+            "h3",
+            fontName=FONT_SANS_MED,
+            fontSize=11,
+            leading=15,
+            textColor=INK,
+            spaceBefore=12,
+            spaceAfter=5,
+        ),
+        "body": ParagraphStyle(
+            "body",
+            fontName=FONT_SANS,
+            fontSize=10,
+            leading=15,
+            textColor=INK_SOFT,
+            spaceAfter=8,
+            alignment=TA_JUSTIFY,
+        ),
+        "step": ParagraphStyle(
+            "step",
+            fontName=FONT_SANS,
+            fontSize=10,
+            leading=15,
+            textColor=INK_SOFT,
+            leftIndent=14,
+            spaceAfter=4,
+        ),
+        "code": ParagraphStyle(
+            "code",
+            fontName=FONT_MONO,
+            fontSize=8,
+            leading=11.5,
+            textColor=INK,
+        ),
+        "cell": ParagraphStyle(
+            "cell",
+            fontName=FONT_SANS,
+            fontSize=9,
+            leading=12.5,
+            textColor=INK_SOFT,
+        ),
+        "cellh": ParagraphStyle(
+            "cellh",
+            fontName=FONT_SANS_MED,
+            fontSize=8.5,
+            leading=12,
+            textColor=INK,
+        ),
+        "foot": ParagraphStyle(
+            "foot",
+            fontName=FONT_SANS,
+            fontSize=8,
+            leading=10,
+            textColor=colors.HexColor("#8a8580"),
+        ),
+        "footr": ParagraphStyle(
+            "footr",
+            fontName=FONT_SANS,
+            fontSize=8,
+            leading=10,
+            textColor=colors.HexColor("#8a8580"),
+            alignment=TA_RIGHT,
+        ),
+    }
 
+
+def _draw_chrome(canvas, doc) -> None:
+    canvas.saveState()
+    w, h = A4
+    canvas.setFillColor(HEAD_BG)
+    canvas.rect(0, h - 14 * mm, w, 14 * mm, fill=1, stroke=0)
+    canvas.setFillColor(ACCENT)
+    canvas.rect(0, h - 14 * mm, 3.2 * mm, 14 * mm, fill=1, stroke=0)
+    canvas.setFillColor(colors.white)
+    canvas.setFont(FONT_SANS_MED, 8)
+    canvas.drawString(18 * mm, h - 8.6 * mm, "JOYCE")
+    canvas.setFont(FONT_SANS, 8)
+    canvas.drawRightString(w - 18 * mm, h - 8.6 * mm, "Messaging API  ·  integrator guide")
+    canvas.setStrokeColor(RULE)
+    canvas.setLineWidth(0.4)
+    canvas.line(18 * mm, 12 * mm, w - 18 * mm, 12 * mm)
+    canvas.setFillColor(colors.HexColor("#8a8580"))
+    canvas.setFont(FONT_SANS, 8)
+    canvas.drawString(18 * mm, 7 * mm, "joyce.oddjobs.tech")
+    canvas.drawRightString(w - 18 * mm, 7 * mm, f"{doc.page}")
+    canvas.restoreState()
+
+
+def _code_block(text: str, styles: dict) -> Table:
+    inner = Preformatted(text.rstrip() + "\n", styles["code"])
+    table = Table([[inner]], colWidths=[170 * mm])
+    table.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, -1), CODE_BG),
+                ("BOX", (0, 0), (-1, -1), 0.3, RULE),
+                ("LINEBEFORE", (0, 0), (0, -1), 2.2, ACCENT),
+                ("LEFTPADDING", (0, 0), (-1, -1), 10),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 10),
+                ("TOPPADDING", (0, 0), (-1, -1), 8),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ]
+        )
+    )
+    return table
+
+
+def _table(rows: list[list[str]], styles: dict, col_widths=None) -> Table:
+    data = [
+        [
+            Paragraph(_esc(cell), styles["cellh"] if i == 0 else styles["cell"])
+            for cell in row
+        ]
+        for i, row in enumerate(rows)
+    ]
+    table = Table(data, colWidths=col_widths, hAlign="LEFT", repeatRows=1)
+    table.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, 0), INK),
+                ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+                ("BACKGROUND", (0, 1), (-1, -1), colors.white),
+                ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, PAPER]),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("LEFTPADDING", (0, 0), (-1, -1), 8),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+                ("TOPPADDING", (0, 0), (-1, -1), 6),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+                ("LINEBELOW", (0, 0), (-1, -2), 0.3, RULE),
+                ("BOX", (0, 0), (-1, -1), 0.4, INK),
+            ]
+        )
+    )
+    return table
+
+
+def build_messaging_api_pdf(*, send_url: str, workspace_name: str = "") -> bytes:
+    """Return PDF bytes for the integrator guide."""
+    _register_fonts()
+    styles = _styles()
     buffer = BytesIO()
-    doc = SimpleDocTemplate(
+
+    doc = BaseDocTemplate(
         buffer,
         pagesize=A4,
-        leftMargin=18 * mm,
-        rightMargin=18 * mm,
-        topMargin=16 * mm,
-        bottomMargin=16 * mm,
         title="Joyce Messaging API",
         author="Joyce",
+        subject="How to send SMS and receive delivery reports",
+        leftMargin=18 * mm,
+        rightMargin=18 * mm,
+        topMargin=22 * mm,
+        bottomMargin=18 * mm,
+    )
+    frame = Frame(
+        doc.leftMargin,
+        doc.bottomMargin,
+        doc.width,
+        doc.height,
+        id="body",
+        showBoundary=0,
+    )
+    doc.addPageTemplates(
+        [PageTemplate(id="manual", frames=frame, onPage=_draw_chrome)]
     )
 
-    styles = getSampleStyleSheet()
-    title = ParagraphStyle(
-        "JoyceTitle",
-        parent=styles["Heading1"],
-        fontName=FONT_SANS_BOLD,
-        fontSize=20,
-        leading=26,
-        spaceAfter=8,
-        textColor=colors.HexColor("#171717"),
+    s = []
+    s.append(Paragraph("INTEGRATOR GUIDE", styles["kicker"]))
+    s.append(Paragraph("Messaging API", styles["title"]))
+    lede = (
+        "This is the short manual we would hand a developer who needs to send SMS "
+        "from another system. You talk only to Joyce. Joyce talks to Jasmin, "
+        "waits for delivery reports, and can optionally ping your own webhook."
     )
-    h2 = ParagraphStyle(
-        "JoyceH2",
-        parent=styles["Heading2"],
-        fontName=FONT_SANS_BOLD,
-        fontSize=13,
-        leading=18,
-        spaceBefore=16,
-        spaceAfter=6,
-        textColor=colors.HexColor("#171717"),
-    )
-    h3 = ParagraphStyle(
-        "JoyceH3",
-        parent=styles["Heading3"],
-        fontName=FONT_SANS_BOLD,
-        fontSize=11,
-        leading=15,
-        spaceBefore=12,
-        spaceAfter=4,
-        textColor=colors.HexColor("#262626"),
-    )
-    body = ParagraphStyle(
-        "JoyceBody",
-        parent=styles["Normal"],
-        fontName=FONT_SANS,
-        fontSize=10.5,
-        leading=15,
-        spaceAfter=7,
-        alignment=TA_LEFT,
-        textColor=colors.HexColor("#404040"),
-    )
-    code = ParagraphStyle(
-        "JoyceCode",
-        parent=styles["Code"],
-        fontName=FONT_MONO,
-        fontSize=8.5,
-        leading=12,
-        leftIndent=4,
-        rightIndent=4,
-        spaceBefore=4,
-        spaceAfter=8,
-        backColor=colors.HexColor("#f5f5f5"),
-        textColor=colors.HexColor("#171717"),
-    )
-    meta = ParagraphStyle(
-        "JoyceMeta",
-        parent=styles["Normal"],
-        fontName=FONT_SANS,
-        fontSize=9.5,
-        leading=13,
-        textColor=colors.HexColor("#737373"),
-        spaceAfter=14,
-    )
-
-    story = []
-    story.append(Paragraph("Joyce Messaging API", title))
-    subtitle = "External-facing SMS send API and delivery-report forwarding."
     if workspace_name:
-        subtitle += f" Workspace: <b>{_esc(workspace_name)}</b>."
-    story.append(Paragraph(subtitle, meta))
+        lede += f" Examples below are for the <b>{_esc(workspace_name)}</b> workspace."
+    s.append(Paragraph(lede, styles["lede"]))
 
-    story.append(Paragraph("Overview", h2))
-    story.append(
+    s.append(Paragraph("1.  What you are calling", styles["h2"]))
+    s.append(
         Paragraph(
-            "External applications submit SMS through Joyce. Joyce talks to Jasmin "
-            f"(HTTP <font face='{FONT_MONO}'>/send</font> or REST "
-            f"<font face='{FONT_MONO}'>/secure/sendbatch</font>) and always receives DLRs "
-            f"on its own <font face='{FONT_MONO}'>/dlr</font> endpoint. Optionally, Joyce "
-            "forwards DLRs to your external channel URL.",
-            body,
+            "One HTTPS endpoint accepts every send. Joyce looks at the JSON and "
+            "decides whether this is one message, the same text to many numbers, "
+            "or a personalised batch. You do not pick a separate bulk URL.",
+            styles["body"],
+        )
+    )
+    s.append(_code_block(f"POST {send_url}\nContent-Type: application/json", styles))
+    s.append(Spacer(1, 4))
+    s.append(
+        Paragraph(
+            "Put the workspace token on every request. Either header works:",
+            styles["body"],
+        )
+    )
+    s.append(
+        _code_block(
+            "Authorization: Bearer <messaging_api_token>\n"
+            "X-Joyce-Token: <messaging_api_token>",
+            styles,
         )
     )
 
-    story.append(Paragraph("Enable the API", h2))
-    story.append(
+    s.append(Paragraph("2.  Turn it on in Joyce", styles["h2"]))
+    s.append(Paragraph("Open <b>Workspace settings</b>, then:", styles["body"]))
+    s.append(
         Paragraph(
-            "1. Open <b>Workspace settings</b>.<br/>"
-            "2. Under <b>External channel</b>, enable <b>Joyce messaging API</b> and "
-            "save — a token is generated automatically (existing tokens are kept).<br/>"
-            "3. Use the refresh icon beside the token to rotate it; copy the bearer "
-            "token for send requests only.<br/>"
-            "4. For My own Jasmin, set <b>REST API base URL</b> (port 8080) if you want "
-            f"bulk via <font face='{FONT_MONO}'>sendbatch</font>.<br/>"
-            "5. Optionally set <b>External DLR URL</b> (method, retry delay, max retries).",
-            body,
+            "1. Enable <b>Joyce messaging API</b> and save. A token is created "
+            "for you (an existing token is kept).",
+            styles["step"],
+        )
+    )
+    s.append(
+        Paragraph(
+            "2. Copy the bearer token. Use the refresh icon only when you want to rotate it.",
+            styles["step"],
+        )
+    )
+    s.append(
+        Paragraph(
+            "3. If this workspace uses <b>My own Jasmin</b> and you want true bulk, "
+            "set the REST API base URL (usually port 8080) so Joyce can call "
+            f"<font face='{FONT_MONO}'>sendbatch</font>.",
+            styles["step"],
+        )
+    )
+    s.append(
+        Paragraph(
+            "4. Optionally set an <b>external DLR URL</b>, HTTP method, retry delay, "
+            "and max retries. Joyce still records the receipt even if that webhook is down.",
+            styles["step"],
         )
     )
 
-    story.append(Paragraph("Your send endpoint", h2))
-    story.append(
+    s.append(Paragraph("3.  Send SMS", styles["h2"]))
+    s.append(
         Paragraph(
-            "Use this absolute URL for your workspace (host may vary by environment):",
-            body,
-        )
-    )
-    story.append(Preformatted(f"POST {send_url}", code))
-
-    story.append(Paragraph("Authentication", h2))
-    story.append(Paragraph("All send requests require a bearer token:", body))
-    story.append(Preformatted("Authorization: Bearer <messaging_api_token>", code))
-    story.append(Paragraph("Alternatively:", body))
-    story.append(Preformatted("X-Joyce-Token: <messaging_api_token>", code))
-
-    story.append(Paragraph("Send SMS", h2))
-    story.append(
-        Paragraph(
-            "Joyce inspects the payload and chooses single vs bulk automatically. "
-            f"<font face='{FONT_MONO}'>username</font> must be an <b>enabled</b> Jasmin "
-            "user in that workspace.",
-            body,
+            f"<font face='{FONT_MONO}'>username</font> must be an enabled Jasmin user "
+            "in this workspace. Numbers work best in international form without a plus, "
+            f"for example <font face='{FONT_MONO}'>256700000001</font>.",
+            styles["body"],
         )
     )
 
-    story.append(Paragraph("Single destination", h3))
-    story.append(
-        Preformatted(
+    s.append(Paragraph("One number", styles["h3"]))
+    s.append(
+        _code_block(
             '{\n'
             '  "username": "u1_myuser",\n'
             '  "to": "256700000001",\n'
@@ -214,13 +374,13 @@ def build_messaging_api_pdf(*, send_url: str, workspace_name: str = "") -> bytes
             '  "dlr_level": 3,\n'
             '  "priority": 0\n'
             "}",
-            code,
+            styles,
         )
     )
 
-    story.append(Paragraph("Same content, many destinations", h3))
-    story.append(
-        Preformatted(
+    s.append(Paragraph("Same text, many numbers", styles["h3"]))
+    s.append(
+        _code_block(
             '{\n'
             '  "username": "u1_myuser",\n'
             '  "to": ["256700000001", "256700000002"],\n'
@@ -228,13 +388,13 @@ def build_messaging_api_pdf(*, send_url: str, workspace_name: str = "") -> bytes
             '  "client_batch_id": "broadcast-99",\n'
             '  "client_message_ids": ["msg-a", "msg-b"]\n'
             "}",
-            code,
+            styles,
         )
     )
 
-    story.append(Paragraph("Personalized messages", h3))
-    story.append(
-        Preformatted(
+    s.append(Paragraph("A different line for each person", styles["h3"]))
+    s.append(
+        _code_block(
             '{\n'
             '  "username": "u1_myuser",\n'
             '  "client_batch_id": "orders-2026-07-13",\n'
@@ -247,67 +407,72 @@ def build_messaging_api_pdf(*, send_url: str, workspace_name: str = "") -> bytes
             '  "from": "JOYCE",\n'
             '  "dlr_level": 3\n'
             "}",
-            code,
+            styles,
         )
     )
 
-    story.append(Paragraph("Optional correlation IDs (max 128 chars)", h3))
-    story.append(
+    s.append(Paragraph("Your own ids (optional, max 128 characters)", styles["h3"]))
+    s.append(
         _table(
             [
-                ["Field", "Scope"],
+                ["Field", "What it tags"],
                 [
                     "client_message_id",
-                    "One destination (top-level or per messages[]). Alias: message_id.",
+                    "One destination (top-level or inside messages[]). Alias: message_id.",
                 ],
                 [
                     "client_message_ids",
-                    "Parallel list matching a multi-value to.",
+                    "List in the same order as a multi-value to.",
                 ],
                 [
                     "client_batch_id",
-                    "Whole submit / broadcast. Alias: broadcast_id.",
+                    "The whole submit. Alias: broadcast_id.",
                 ],
-            ]
+            ],
+            styles,
+            col_widths=[48 * mm, 122 * mm],
         )
     )
-    story.append(Spacer(1, 4))
-    story.append(
+    s.append(Spacer(1, 6))
+    s.append(
         Paragraph(
-            "Jasmin still generates its own message UUID and REST batchId. Your IDs "
-            "are stored by Joyce and echoed on DLR forwards.",
-            body,
+            "Jasmin still mints its own message UUID (and a REST batch id when bulk "
+            "goes through sendbatch). Joyce stores your ids and sends them back on DLR "
+            "forwards so your app never has to speak Jasmin’s identifiers.",
+            styles["body"],
         )
     )
 
-    story.append(Paragraph("Routing behaviour", h3))
-    story.append(
+    s.append(Paragraph("How Joyce routes the submit", styles["h3"]))
+    s.append(
         _table(
             [
-                ["Destinations", "REST API URL?", "Behaviour"],
-                ["1", "n/a", "Sync classic HTTP /send"],
-                ["2+", "Yes", "Chunked Jasmin REST sendbatch"],
-                ["2+", "No", "Async Celery: classic /send one-by-one"],
-            ]
+                ["How many destinations", "REST URL on the workspace?", "What happens"],
+                ["1", "Does not matter", "Synchronous classic HTTP /send"],
+                ["2 or more", "Yes", "Chunked Jasmin REST sendbatch"],
+                ["2 or more", "No", "Celery queue: classic /send, one by one"],
+            ],
+            styles,
+            col_widths=[42 * mm, 52 * mm, 76 * mm],
         )
     )
 
-    story.append(Paragraph("Response", h3))
-    story.append(
+    s.append(Paragraph("4.  What you get back", styles["h2"]))
+    s.append(
         Paragraph(
-            "<b>200</b> for single or REST bulk; <b>202</b> when mode is "
-            f"<font face='{FONT_MONO}'>bulk_async</font> (accepted; workers submit in the "
-            "background). Mode is one of "
-            f"<font face='{FONT_MONO}'>single</font>, "
-            f"<font face='{FONT_MONO}'>bulk_rest</font>, "
-            f"<font face='{FONT_MONO}'>bulk_async</font>. The "
-            f"<font face='{FONT_MONO}'>messages</font> array is capped at 100 rows; use "
-            f"<font face='{FONT_MONO}'>batch_id</font> in the Operate UI for the rest.",
-            body,
+            "<b>200</b> means Joyce submitted (or queued via REST) in this request. "
+            "<b>202</b> means <font face='%s'>bulk_async</font>: accepted, workers "
+            "will hit Jasmin in the background. <font face='%s'>mode</font> is "
+            "<font face='%s'>single</font>, <font face='%s'>bulk_rest</font>, or "
+            "<font face='%s'>bulk_async</font>. The <font face='%s'>messages</font> "
+            "array is capped at 100 rows; look up the rest in Operate with "
+            "<font face='%s'>batch_id</font>."
+            % ((FONT_MONO,) * 7),
+            styles["body"],
         )
     )
-    story.append(
-        Preformatted(
+    s.append(
+        _code_block(
             '{\n'
             '  "batch_id": "a1b2c3d4e5f6g7h8",\n'
             '  "client_batch_id": "campaign-42",\n'
@@ -327,79 +492,97 @@ def build_messaging_api_pdf(*, send_url: str, workspace_name: str = "") -> bytes
             "  ],\n"
             '  "messages_truncated": false\n'
             "}",
-            code,
+            styles,
         )
     )
 
-    story.append(Paragraph("Delivery reports", h2))
-    story.append(
+    s.append(Paragraph("5.  Delivery reports", styles["h2"]))
+    s.append(
         Paragraph(
-            "1. Jasmin always calls Joyce: "
-            f"<font face='{FONT_MONO}'>GET|POST {{JOYCE_PUBLIC_BASE_URL}}/dlr</font> "
-            f"(or <font face='{FONT_MONO}'>JOYCE_DLR_CALLBACK_URL</font>).<br/>"
-            "2. Joyce updates the outbound message.<br/>"
-            "3. If External DLR URL is set, Joyce queues an async forward (GET or POST).<br/>"
-            "4. Forward failures are retried up to max retries (default 5), waiting "
-            "retry delay seconds (default 60). Internal DLR handling is never blocked "
-            "by the external channel.",
-            body,
+            "Jasmin always tells Joyce first. Your webhook is a courtesy copy, not "
+            "the source of truth.",
+            styles["body"],
         )
     )
-
-    story.append(Paragraph("External DLR payload", h3))
-    story.append(
+    s.append(
         Paragraph(
-            "Joyce forwards an enriched JSON body (POST) or query params (GET):",
-            body,
+            "1. Jasmin calls Joyce at "
+            f"<font face='{FONT_MONO}'>GET|POST {{JOYCE_PUBLIC_BASE_URL}}/dlr</font>.",
+            styles["step"],
         )
     )
-    story.append(
+    s.append(Paragraph("2. Joyce updates the outbound message row.", styles["step"]))
+    s.append(
+        Paragraph(
+            "3. If you set an external DLR URL, Joyce queues a forward (GET or POST).",
+            styles["step"],
+        )
+    )
+    s.append(
+        Paragraph(
+            "4. Failed forwards retry (default 5 times, 60 seconds apart). A dead "
+            "webhook never blocks internal DLR handling.",
+            styles["step"],
+        )
+    )
+    s.append(Paragraph("What we send your webhook", styles["h3"]))
+    s.append(
+        Paragraph(
+            "POST is a JSON body. GET uses the same fields as query parameters. "
+            "Jasmin’s original DLR keys are included, plus:",
+            styles["body"],
+        )
+    )
+    s.append(
         _table(
             [
                 ["Field", "Meaning"],
-                ["client_message_id", "Your optional message id from send"],
-                ["client_batch_id", "Your optional broadcast/batch id from send"],
+                ["client_message_id", "Your optional id from send"],
+                ["client_batch_id", "Your optional broadcast id from send"],
                 ["joyce_message_id", "Joyce OutboundMessage primary key"],
                 ["joyce_batch_id", "Joyce batch id for the submit"],
-                ["jasmin_msg_id", "Jasmin gateway UUID (id on the raw DLR)"],
-                ["jasmin_batch_id", "Jasmin REST chunk batch id (when used)"],
+                ["jasmin_msg_id", "Gateway UUID (id on the raw DLR)"],
+                ["jasmin_batch_id", "REST chunk batch id, when bulk used REST"],
                 ["to / from", "Addresses"],
-                ["status / dlr_status", "Joyce status + raw DLR status"],
-            ]
+                ["status / dlr_status", "Joyce status and the raw DLR status"],
+            ],
+            styles,
+            col_widths=[48 * mm, 122 * mm],
         )
     )
-    story.append(Spacer(1, 4))
-    story.append(
+    s.append(Spacer(1, 8))
+    s.append(
         Paragraph(
-            f"Match on <font face='{FONT_MONO}'>client_message_id</font> (or "
-            f"<font face='{FONT_MONO}'>client_batch_id</font> + "
-            f"<font face='{FONT_MONO}'>to</font>) in your app.",
-            body,
+            f"In your app, match on <font face='{FONT_MONO}'>client_message_id</font>, "
+            f"or on <font face='{FONT_MONO}'>client_batch_id</font> plus "
+            f"<font face='{FONT_MONO}'>to</font>. You do not need Jasmin to accept "
+            "your ids.",
+            styles["body"],
         )
     )
 
-    story.append(Paragraph("Batch progress callbacks (REST bulk)", h2))
-    story.append(
+    s.append(Paragraph("6.  REST bulk progress", styles["h2"]))
+    s.append(
         Paragraph(
-            f"When using <font face='{FONT_MONO}'>sendbatch</font>, Joyce registers "
+            f"When Joyce uses <font face='{FONT_MONO}'>sendbatch</font>, it registers "
             f"<font face='{FONT_MONO}'>{{JOYCE_PUBLIC_BASE_URL}}/batch-callback</font>. "
-            "Jasmin calls this per successful/failed item so Joyce can store "
-            f"<font face='{FONT_MONO}'>jasmin_msg_id</font> for later DLR matching.",
-            body,
+            "Jasmin calls that URL per item so Joyce can store "
+            f"<font face='{FONT_MONO}'>jasmin_msg_id</font> before the DLR arrives. "
+            "You do not call this URL yourself.",
+            styles["body"],
         )
     )
 
-    doc.build(story)
+    doc.build(s)
     return buffer.getvalue()
 
 
 def write_messaging_api_pdf(
     path: str | Path,
     *,
-    send_url: str = "https://your-joyce-host/api/v1/messaging/send/",
+    send_url: str = "https://joyce.oddjobs.tech/api/v1/messaging/send/",
     workspace_name: str = "",
 ) -> Path:
-    """Write the guide PDF to disk (for docs/ or local preview)."""
     out = Path(path)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_bytes(
@@ -417,60 +600,18 @@ def _esc(text: str) -> str:
     )
 
 
-def _table(rows: list[list[str]]) -> Table:
-    data = [
-        [Paragraph(_esc(cell), _cell_style(i == 0)) for cell in row]
-        for i, row in enumerate(rows)
-    ]
-    table = Table(data, colWidths=None, hAlign="LEFT")
-    table.setStyle(
-        TableStyle(
-            [
-                ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#f5f5f5")),
-                ("TEXTCOLOR", (0, 0), (-1, 0), colors.HexColor("#171717")),
-                ("FONTNAME", (0, 0), (-1, 0), FONT_SANS_BOLD),
-                ("FONTSIZE", (0, 0), (-1, -1), 9),
-                ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                ("GRID", (0, 0), (-1, -1), 0.4, colors.HexColor("#e5e5e5")),
-                ("LEFTPADDING", (0, 0), (-1, -1), 6),
-                ("RIGHTPADDING", (0, 0), (-1, -1), 6),
-                ("TOPPADDING", (0, 0), (-1, -1), 5),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
-            ]
-        )
-    )
-    return table
-
-
-def _cell_style(header: bool) -> ParagraphStyle:
-    return ParagraphStyle(
-        "JoyceCellHeader" if header else "JoyceCell",
-        fontName=FONT_SANS_BOLD if header else FONT_SANS,
-        fontSize=9,
-        leading=12,
-        textColor=colors.HexColor("#171717" if header else "#404040"),
-    )
-
-
 if __name__ == "__main__":
     import argparse
 
     root = Path(__file__).resolve().parents[2]
     default_out = root / "docs" / "joyce-messaging-api.pdf"
-    parser = argparse.ArgumentParser(description="Generate Joyce messaging API PDF docs.")
-    parser.add_argument(
-        "-o",
-        "--output",
-        type=Path,
-        default=default_out,
-        help=f"Output path (default: {default_out})",
-    )
+    parser = argparse.ArgumentParser(description="Generate Joyce messaging API PDF.")
+    parser.add_argument("-o", "--output", type=Path, default=default_out)
     parser.add_argument(
         "--send-url",
-        default="https://your-joyce-host/api/v1/messaging/send/",
-        help="Example absolute send URL embedded in the guide",
+        default="https://joyce.oddjobs.tech/api/v1/messaging/send/",
     )
-    parser.add_argument("--workspace", default="", help="Optional workspace name")
+    parser.add_argument("--workspace", default="")
     args = parser.parse_args()
     path = write_messaging_api_pdf(
         args.output, send_url=args.send_url, workspace_name=args.workspace

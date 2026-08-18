@@ -26,6 +26,22 @@ server {
         root /var/www/html;
     }
 
+    # Static PDF from the git checkout. Adjust the alias to your clone path.
+    # Copy into the Certbot listen 443 server as well.
+    location = /workspace/settings/messaging-api-docs.pdf {
+        alias /home/ekeeya/jasmin-web-gui/docs/joyce-messaging-api.pdf;
+        default_type application/pdf;
+        add_header Content-Disposition 'attachment; filename="joyce-messaging-api.pdf"';
+        gzip off;
+    }
+
+    location = /docs/joyce-messaging-api.pdf {
+        alias /home/ekeeya/jasmin-web-gui/docs/joyce-messaging-api.pdf;
+        default_type application/pdf;
+        add_header Content-Disposition 'attachment; filename="joyce-messaging-api.pdf"';
+        gzip off;
+    }
+
     location / {
         proxy_pass http://127.0.0.1:9003;
         proxy_http_version 1.1;
