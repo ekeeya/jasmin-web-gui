@@ -203,7 +203,7 @@ Pick a domain, for example `example.com`. Create these names:
 | Name | What it is |
 |------|------------|
 | `joyce.example.com` | Joyce UI and Joyce APIs |
-| `sms.example.com` | Jasmin classic HTTP API (`/send`) |
+| `sms.example.com` | Jasmin HTTP: `/send` on 1401, `/secure/*` on REST 9010 |
 | `sim.example.com` | SMPPSim web UI (same thing as host port 88) |
 
 No SMPP hostname. Jasmin's built-in test SMSC listens on **TCP 2775** on the server IP. If you want an ESME to bind and try that, open **2775** on the firewall (and restrict it to known IPs if you can). Otherwise leave 2775 closed.
