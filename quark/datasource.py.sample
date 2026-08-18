@@ -3,9 +3,9 @@ import os
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": os.getenv("DB_NAME", "joyce"),
-        "USER": os.getenv("DB_USER", "joyce"),
-        "PASSWORD": os.getenv("DB_PASSWORD", "bbashjTGH^&%JHG"),
+        "NAME": os.getenv("DB_NAME", ""),
+        "USER": os.getenv("DB_USER", ""),
+        "PASSWORD": os.getenv("DB_PASSWORD", ""),
         # For a DB running on the Docker host's localhost, use host.docker.internal
         "HOST": os.getenv("DB_HOST", "host.docker.internal"),
         "PORT": os.getenv("DB_PORT", "5432"),
