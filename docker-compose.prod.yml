@@ -1,8 +1,10 @@
 # Ubuntu / server stack.
 # Images talk to each other on the compose network. Only HTTP UIs + SMPP are published.
+# restart: "no" so joyce.service (compose up --abort-on-container-exit) can stop
+# the whole stack when any container dies. systemd then restarts the unit.
 #
 #   docker compose -f docker-compose.prod.yml --env-file .env.prod build
-#   docker compose -f docker-compose.prod.yml --env-file .env.prod up -d
+#   sudo systemctl restart joyce
 
 x-joyce-environment: &joyce-environment
   DB_HOST: ${DB_HOST:-host.docker.internal}
@@ -43,7 +45,7 @@ x-joyce-environment: &joyce-environment
 services:
   redis:
     image: redis:alpine
-    restart: unless-stopped
+    restart: "no"
     healthcheck:
       test: redis-cli ping | grep PONG
     security_opt:
@@ -51,7 +53,7 @@ services:
 
   rabbit-mq:
     image: rabbitmq:4.2.3-management-alpine
-    restart: unless-stopped
+    restart: "no"
     healthcheck:
       test: rabbitmq-diagnostics -q ping
     volumes:
@@ -61,7 +63,7 @@ services:
 
   jasmin:
     image: jookies/jasmin:0.11.0
-    restart: unless-stopped
+    restart: "no"
     container_name: jasmin
     # Public: SMPP + optional classic HTTP API.
     # Not published: 8988 / 8989 / 8990 (Joyce uses those on the internal network).
@@ -86,7 +88,7 @@ services:
       context: .
       dockerfile: Dockerfile.rest
     image: joyce-jasmin-rest:0.11.0
-    restart: unless-stopped
+    restart: "no"
     container_name: jasmin_celery
     depends_on:
       rabbit-mq:
@@ -106,7 +108,7 @@ services:
       context: .
       dockerfile: Dockerfile.rest
     image: joyce-jasmin-rest:0.11.0
-    restart: unless-stopped
+    restart: "no"
     container_name: jasmin_rest
     ports:
       - "127.0.0.1:9010:8080"
@@ -129,14 +131,14 @@ services:
     container_name: smppsim
     ports:
       - "127.0.0.1:88:88"
-    restart: unless-stopped
+    restart: "no"
     security_opt:
       - no-new-privileges:true
 
   joyce:
     image: joyce-app:latest
     container_name: joyce
-    restart: unless-stopped
+    restart: "no"
     build:
       context: .
       dockerfile: Dockerfile
@@ -159,7 +161,7 @@ services:
   joyce_celery:
     image: joyce-app:latest
     container_name: joyce_celery
-    restart: unless-stopped
+    restart: "no"
     build:
       context: .
       dockerfile: Dockerfile
@@ -179,7 +181,7 @@ services:
   joyce_celery_beat:
     image: joyce-app:latest
     container_name: joyce_celery_beat
-    restart: unless-stopped
+    restart: "no"
     build:
       context: .
       dockerfile: Dockerfile
