@@ -40,4 +40,14 @@ fi
 # Collect static files for Django.
 python manage.py collectstatic --noinput
 
+# Production: GUNICORN_BIND=0.0.0.0:9000  Local compose: leave unset → runserver :8000
+if [ -n "${GUNICORN_BIND:-}" ]; then
+  exec gunicorn quark.wsgi:application \
+    --bind "${GUNICORN_BIND}" \
+    --workers "${GUNICORN_WORKERS:-3}" \
+    --timeout "${GUNICORN_TIMEOUT:-120}" \
+    --access-logfile - \
+    --error-logfile -
+fi
+
 exec python manage.py runserver 0.0.0.0:8000
