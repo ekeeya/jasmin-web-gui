@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build prod images, restart the stack via systemd, reload host nginx.
+# Build prod images, restart the stack via Supervisor, reload host nginx.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -12,17 +12,17 @@ if [[ ! -f .env.prod ]]; then
   exit 1
 fi
 
-if [[ ! -f /etc/systemd/system/joyce.service ]]; then
-  echo "joyce.service not installed; running install-systemd.sh"
-  "$ROOT/deploy/install-systemd.sh"
+if [[ ! -f /etc/supervisor/conf.d/joyce.conf ]]; then
+  echo "joyce Supervisor program not installed; running install-supervisor.sh"
+  "$ROOT/deploy/install-supervisor.sh"
 fi
 
 echo "==> Building images"
 "${COMPOSE[@]}" build
 
-echo "==> Restarting joyce.service"
-sudo systemctl restart joyce.service
-sudo systemctl --no-pager --full status joyce.service || true
+echo "==> Restarting joyce (Supervisor)"
+sudo supervisorctl restart joyce
+sudo supervisorctl status joyce || true
 
 echo "==> Reloading nginx"
 if sudo nginx -t; then

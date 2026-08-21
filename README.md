@@ -291,31 +291,34 @@ Firewall: open **80** and **443**. Open **2775** if you want clients to bind to 
 
 Feel free to publish the containers on other host ports if these clash with something else on the box. Edit the `"host:container"` mappings in `docker-compose.prod.yml`, then point `deploy/nginx.conf` `proxy_pass` at the new loopback ports. Container-to-container traffic (Joyce to Jasmin, Jasmin to `smppsim:2776`) does not use those host ports, so leave the internal names and ports as they are.
 
-### 5. Build and start with systemd
+### 5. Build and start with Supervisor
 
 ```bash
-chmod +x deploy/prod.sh deploy/install-systemd.sh
+sudo apt install -y supervisor   # once, if needed
+chmod +x deploy/prod.sh deploy/install-supervisor.sh deploy/joyce-compose.sh
 ./deploy/prod.sh
 ```
 
 That script:
 
 1. Builds the production images
-2. Installs `joyce.service` the first time (WorkingDirectory = this checkout)
-3. Runs `systemctl restart joyce`
+2. Installs the Supervisor `joyce` program the first time (directory = this checkout)
+3. Runs `supervisorctl restart joyce`
 4. Reloads host nginx after `nginx -t`
 
 Later deploys are the same command: `./deploy/prod.sh`.
 
-Useful systemd commands:
+Useful Supervisor commands:
 
 ```bash
-sudo systemctl status joyce
-sudo systemctl restart joyce
-sudo systemctl stop joyce
+sudo supervisorctl status joyce
+sudo supervisorctl restart joyce
+sudo supervisorctl stop joyce
 ```
 
-To stop the containers, use `sudo systemctl stop joyce`. That runs Compose `down` and keeps systemd from starting them again. If you run `docker compose ... down` while `joyce.service` is still active, systemd treats it as a crash and brings the stack back (including port 9000).
+To stop the containers, use `sudo supervisorctl stop joyce`. That runs Compose `down` and keeps Supervisor from starting them again until you start/restart. If you run `docker compose ... down` while `joyce` is still RUNNING, Supervisor treats it as a crash and brings the stack back (including published ports).
+
+If you previously used `joyce.service`, `install-supervisor.sh` disables that unit so systemd and Supervisor do not fight over the stack.
 
 ### 6. Check it is up
 

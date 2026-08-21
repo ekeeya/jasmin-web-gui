@@ -1,0 +1,26 @@
+; Joyce SMS stack (Docker Compose) — Supervisor program
+; Install: ./deploy/install-supervisor.sh
+; Manage:  sudo supervisorctl status joyce
+;          sudo supervisorctl restart joyce
+;          sudo supervisorctl stop joyce
+;
+; Do not run `docker compose down` while this program is RUNNING; Supervisor
+; will treat the exit as a crash and (with autorestart=true) bring it back.
+
+[program:joyce]
+command=@JOYCE_ROOT@/deploy/joyce-compose.sh
+directory=@JOYCE_ROOT@
+autostart=true
+; Match systemd Restart=yes: if compose exits, start the stack again.
+autorestart=true
+startsecs=15
+startretries=3
+stopwaitsecs=120
+stopasgroup=true
+killasgroup=true
+stopsignal=TERM
+user=root
+redirect_stderr=true
+stdout_logfile=/var/log/joyce/joyce-compose.log
+stdout_logfile_maxbytes=50MB
+stdout_logfile_backups=5

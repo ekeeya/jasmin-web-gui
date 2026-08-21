@@ -1,10 +1,10 @@
 # Ubuntu / server stack.
 # Images talk to each other on the compose network. Only HTTP UIs + SMPP are published.
-# restart: "no" so joyce.service (compose up --abort-on-container-exit) can stop
-# the whole stack when any container dies. systemd then restarts the unit.
+# restart: "no" so Supervisor's `compose up --abort-on-container-exit` can stop
+# the whole stack when any container dies. Supervisor then restarts the program.
 #
 #   docker compose -f docker-compose.prod.yml --env-file .env.prod build
-#   sudo systemctl restart joyce
+#   sudo supervisorctl restart joyce
 
 x-joyce-environment: &joyce-environment
   DB_HOST: ${DB_HOST:-host.docker.internal}

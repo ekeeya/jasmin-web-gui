@@ -3,6 +3,7 @@ venv/
 .env
 .env.prod
 deploy/joyce.service
+deploy/joyce.conf
 deploy/nginx.conf
 deploy/nginx-oddjobs.tech.conf
 .joyce_credentials_key

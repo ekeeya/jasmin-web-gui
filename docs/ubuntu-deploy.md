@@ -39,21 +39,24 @@ docker compose -f docker-compose.prod.yml --env-file .env.prod up -d
 Joyce still uses compose DNS: `jasmin:8988`, `jasmin:8989`, `jasmin:1401`, `jasmin_rest:8080`.  
 DLRs: `JOYCE_PUBLIC_BASE_URL=http://joyce:8000`.
 
-## systemd + deploy script
+## Supervisor + deploy script
 
-On the server, after the repo and `.env.prod` are in place:
+On the server, after the repo and `.env.prod` are in place (and `supervisor` is installed):
 
 ```bash
-chmod +x deploy/prod.sh deploy/install-systemd.sh
+sudo apt install -y supervisor   # once
+chmod +x deploy/prod.sh deploy/install-supervisor.sh deploy/joyce-compose.sh
 ./deploy/prod.sh
 ```
 
-That builds images, `systemctl restart joyce`, then `nginx -t` and `systemctl reload nginx`.
+That builds images, `supervisorctl restart joyce`, then `nginx -t` and `systemctl reload nginx`.
 
-First run renders `deploy/joyce.service.example` into `/etc/systemd/system/joyce.service` with this checkout as `WorkingDirectory` (for example `/home/ekeeya/jasmin-web-gui`). Do not commit a machine-local `deploy/joyce.service`. After that:
+First run renders `deploy/joyce.conf.example` into `/etc/supervisor/conf.d/joyce.conf` with this checkout as the working directory (for example `/home/ekeeya/jasmin-web-gui`). Do not commit a machine-local `deploy/joyce.conf`. After that:
 
 ```bash
-sudo systemctl status joyce
-sudo systemctl restart joyce
-sudo systemctl stop joyce
+sudo supervisorctl status joyce
+sudo supervisorctl restart joyce
+sudo supervisorctl stop joyce
 ```
+
+To stop the containers, use `sudo supervisorctl stop joyce`. That runs Compose `down` (via `deploy/joyce-compose.sh`) and keeps Supervisor from starting them again until you start/restart. If you run `docker compose ... down` while `joyce` is still RUNNING, Supervisor treats it as a crash and brings the stack back (with `autorestart=true`).
